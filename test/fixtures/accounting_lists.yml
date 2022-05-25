@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  accounting_type: MyString
+  vendor: MyString
+  amount: 9.99
+  notes: MyText
+
+two:
+  accounting_type: MyString
+  vendor: MyString
+  amount: 9.99
+  notes: MyText

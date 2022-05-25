@@ -1,0 +1,46 @@
+<p id="notice"><%= notice %></p>
+
+<div class="container">
+  <div class="card">
+    <div class="card-body">
+      <h2 class="card-title fw-bold">Bookings</h2>
+      <table class="table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Guest name</th>
+              <th>Platform</th>
+              <th>Confirmation code</th>
+              <th>Check in</th>
+              <th>Check out</th>
+              <th>Nights</th>
+              <th>Payout</th>
+              <th>Notes</th>
+              <th colspan="3"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% @bookings.each do |booking| %>
+              <tr>
+                <td><%= booking.property_id %></td>
+                <td><%= booking.guest_name %></td>
+                <td><%= booking.platform %></td>
+                <td><%= booking.confirmation_code %></td>
+                <td><%= booking.check_in %></td>
+                <td><%= booking.check_out %></td>
+                <td><%= booking.nights %></td>
+                <td><%= booking.payout %></td>
+                <td><%= booking.notes %></td>
+                <td><%= link_to 'Show', booking %></td>
+                <td><%= link_to 'Edit', edit_booking_path(booking) %></td>
+                <td><%= link_to 'Destroy', booking, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+        <br>
+        <%= link_to 'New Booking', new_booking_path %>
+    </div>
+  </div>
+</div>

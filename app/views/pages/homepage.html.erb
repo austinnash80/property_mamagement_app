@@ -1,0 +1,78 @@
+<div class="container">
+  <div class="row">
+    <div class="col-4">
+      <% @properties.where(id: 1).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <% @properties.where(id: 2).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <% @properties.where(id: 3).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-4">
+      <% @properties.where(id: 4).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <% @properties.where(id: 5).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+    <div class="col-4">
+      <% @properties.where(id: 6).each do |property| %>
+        <div class="card">
+          <img src='<%= property.picture %>' class="card-img-top" alt="...">
+          <div class="card-body">
+            <h5 class="card-title"><%= property.nickname %></h5>
+            <%= link_to 'Manage', pages_manage_property_path(property: property.id), class: "btn btn-primary text-light w150min" %>
+          </div>
+        </div>
+        <br>
+      <% end %>
+    </div>
+  </div>
+</div>

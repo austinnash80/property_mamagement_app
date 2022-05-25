@@ -1,0 +1,16 @@
+
+<%= simple_form_for(@accounting_list) do |f| %>
+  <%= f.error_notification %>
+  <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+  <div class="form-inputs">
+    <%= f.input :accounting_type %>
+    <%= f.input :vendor %>
+    <%= f.input :amount %>
+    <%= f.input :notes %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit %>
+  </div>
+<% end %>

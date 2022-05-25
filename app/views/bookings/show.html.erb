@@ -1,0 +1,49 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Property:</strong>
+  <%= @booking.property_id %>
+</p>
+
+<p>
+  <strong>Guest name:</strong>
+  <%= @booking.guest_name %>
+</p>
+
+<p>
+  <strong>Platform:</strong>
+  <%= @booking.platform %>
+</p>
+
+<p>
+  <strong>Confirmation code:</strong>
+  <%= @booking.confirmation_code %>
+</p>
+
+<p>
+  <strong>Check in:</strong>
+  <%= @booking.check_in %>
+</p>
+
+<p>
+  <strong>Check out:</strong>
+  <%= @booking.check_out %>
+</p>
+
+<p>
+  <strong>Nights:</strong>
+  <%= @booking.nights %>
+</p>
+
+<p>
+  <strong>Payout:</strong>
+  <%= @booking.payout %>
+</p>
+
+<p>
+  <strong>Notes:</strong>
+  <%= @booking.notes %>
+</p>
+
+<%= link_to 'Edit', edit_booking_path(@booking) %> |
+<%= link_to 'Back', bookings_path %>

@@ -1,0 +1,96 @@
+<% property = Property.find_by(id: params['property']) %>
+
+<div class="container">
+  <h2 class="display-4 fw-bold text-center"><%= property.nickname %></h2>
+  <br>
+  <div class="row">
+    <div class="col-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title fw-bold">Revenue <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Revenue'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@revenue_previous_year) %></p>
+          <p><strong>YTD:</strong> <%= number_to_currency(@revenue_current_year) %></p>
+          <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@revenue_current_month) %></p>
+          <p><strong><%= (Date.today - 1.month).strftime('%B') %>:</strong> <%= number_to_currency(@revenue_previous_month) %></p>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>From</th>
+                <th>Payout</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% Accounting.where(property_id: params['property']).where(r_e: 'Revenue').order(record_date: :DESC).all.each do |accounting| %>
+              <tr>
+                <td><%= accounting.record_date.present? ? accounting.record_date.strftime('%-m/%-d/%Y') : '' %></td>
+                <td><%= accounting.description %></td>
+                <td><%= accounting.amount.present? ? number_to_currency(accounting.amount) : '' %></td>
+              </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title fw-bold">Expenses <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Expense'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@expenses_previous_year) %></p>
+          <p><strong>YTD:</strong> <%= number_to_currency(@expenses_current_year) %></p>
+          <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@expenses_current_month) %></p>
+          <p><strong><%= (Date.today - 1.month).strftime('%B') %>:</strong> <%= number_to_currency(@expenses_previous_month) %></p>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>For</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% Accounting.where(property_id: params['property']).where(r_e: 'Expense').order(record_date: :DESC).all.each do |accounting| %>
+              <tr>
+                <td><%= accounting.record_date.present? ? accounting.record_date.strftime('%-m/%-d/%Y') : '' %></td>
+                <td><%= accounting.description %></td>
+                <td><%= accounting.amount.present? ? number_to_currency(accounting.amount) : '' %></td>
+              </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title fw-bold">Bookings <%= link_to 'Add New', new_booking_path(property: params['property']), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= @bookings_previous_year %> bookings | <%= @nights_previous_year %> nights</p>
+          <p><strong>YTD:</strong> <%= @bookings_current_year %> bookings | <%= @nights_current_year %> nights</p>
+          <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= @bookings_current_month %> bookings | <%= @nights_current_month %> nights</p>
+          <p><strong><%= (Date.today - 1.month).strftime('%B') %>:</strong> <%= @bookings_previous_month %> bookings | <%= @nights_previous_month %> nights</p>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Checkin</th>
+                <th>Nights</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% Booking.where(property_id: params['property']).order(check_in: :DESC).all.each do |booking| %>
+              <tr>
+                <td><%= booking.check_in.present? ? booking.check_in.strftime('%-m/%-d/%Y') : '' %></td>
+                <td><%= booking.nights %></td>
+                <td><%= booking.payout.present? ? number_to_currency(booking.payout) : '' %></td>
+              </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

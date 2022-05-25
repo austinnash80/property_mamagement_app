@@ -1,0 +1,2 @@
+class AccountingList < ApplicationRecord
+end

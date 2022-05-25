@@ -1,0 +1,30 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Property:</strong>
+  <%= @accounting.property_id %>
+</p>
+
+<p>
+  <!-- <strong>R e:</strong> -->
+  <strong>Type:</strong>
+  <%= @accounting.r_e %>
+</p>
+
+<p>
+  <strong>Description:</strong>
+  <%= @accounting.description %>
+</p>
+
+<p>
+  <strong>Amount:</strong>
+  <%= number_to_currency(@accounting.amount) %>
+</p>
+
+<p>
+  <strong>Notes:</strong>
+  <%= @accounting.notes %>
+</p>
+
+<%= link_to 'Edit', edit_accounting_path(@accounting) %> |
+<%= link_to 'Back', accountings_path %>

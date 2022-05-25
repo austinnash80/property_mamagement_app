@@ -1,0 +1,40 @@
+
+<%= simple_form_for(@accounting) do |f| %>
+  <%= f.error_notification %>
+  <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+  <div class="form-inputs">
+    <!-- Property ID - IF New then hide and take from the Params - If edit display field -->
+    <% if @accounting.property_id.blank? %>
+      <%= f.input :property_id, input_html: { value: params['property'] }, as: :hidden%>
+    <% else %>
+      <%= f.input :property_id %>
+      <br>
+    <% end %>
+    <!-- Revenue/Expense ID - IF New then hide and take from the Params - If edit display field -->
+    <% if @accounting.r_e.blank? %>
+      <%= f.input :r_e, input_html: { value: params['type'] }, as: :hidden%>
+    <% else %>
+      <%= f.input :r_e, label: 'Revenue/Expense' %>
+      <br>
+    <% end %>
+
+    <%= f.input :record_date %>
+    <br>
+    <% if params['type'] == 'Revenue' %>
+      <%= f.input :description, label: 'Source', as: :select, collection: ['Airbnb', 'Other']%>
+    <% elsif params['type'] == 'Expense' %>
+      <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type) %>
+    <% else %>
+        <%= f.input :description %>
+    <% end %>
+    <br>
+    <%= f.input :amount %>
+    <br>
+    <%= f.input :notes %>
+  </div>
+<br>
+  <div class="form-actions">
+    <%= f.button :submit, 'Submit', class: 'btn btn-primary' %>
+  </div>
+<% end %>

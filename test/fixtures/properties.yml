@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  nickname: MyString
+  address: MyString
+  picture: MyString
+  bed: 9.99
+  bath: 9.99
+  sq_ft: 1
+  notes: MyString
+
+two:
+  nickname: MyString
+  address: MyString
+  picture: MyString
+  bed: 9.99
+  bath: 9.99
+  sq_ft: 1
+  notes: MyString

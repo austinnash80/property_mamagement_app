@@ -1,0 +1,2 @@
+module AccountingListsHelper
+end

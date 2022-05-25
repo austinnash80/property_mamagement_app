@@ -1,0 +1,39 @@
+<p id="notice"><%= notice %></p>
+<div class="container">
+  <div class="card">
+    <div class="card-body">
+      <h2 class="card-title fw-bold">Accountings</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Revenue/Expense</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Notes</th>
+            <th colspan="3"></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <% @accountings.each do |accounting| %>
+            <tr>
+              <td><%= accounting.property_id %></td>
+              <td><%= accounting.r_e %></td>
+              <td><%= accounting.description %></td>
+              <td><%= accounting.amount %></td>
+              <td><%= accounting.notes %></td>
+              <td><%= link_to 'Show', accounting %></td>
+              <td><%= link_to 'Edit', edit_accounting_path(accounting) %></td>
+              <td><%= link_to 'Destroy', accounting, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <br>
+
+      <%= link_to 'New Accounting', new_accounting_path %>
+      </div>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Accounting type:</strong>
+  <%= @accounting_list.accounting_type %>
+</p>
+
+<p>
+  <strong>Vendor:</strong>
+  <%= @accounting_list.vendor %>
+</p>
+
+<p>
+  <strong>Amount:</strong>
+  <%= @accounting_list.amount %>
+</p>
+
+<p>
+  <strong>Notes:</strong>
+  <%= @accounting_list.notes %>
+</p>
+
+<%= link_to 'Edit', edit_accounting_list_path(@accounting_list) %> |
+<%= link_to 'Back', accounting_lists_path %>
