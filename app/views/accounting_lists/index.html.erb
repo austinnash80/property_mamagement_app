@@ -7,8 +7,8 @@
         <thead>
           <tr>
             <th>Accounting type</th>
-            <th>Vendor</th>
-            <th>Amount</th>
+            <!-- <th>Vendor</th> -->
+            <!-- <th>Amount</th> -->
             <th>Notes</th>
             <th colspan="3"></th>
           </tr>
@@ -18,12 +18,12 @@
           <% @accounting_lists.each do |accounting_list| %>
             <tr>
               <td><%= accounting_list.accounting_type %></td>
-              <td><%= accounting_list.vendor %></td>
-              <td><%= accounting_list.amount %></td>
+              <!-- <td><%= accounting_list.vendor %></td> -->
+              <!-- <td><%= accounting_list.amount %></td> -->
               <td><%= accounting_list.notes %></td>
               <td><%= link_to 'Show', accounting_list %></td>
               <td><%= link_to 'Edit', edit_accounting_list_path(accounting_list) %></td>
-              <td><%= link_to 'Destroy', accounting_list, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+              <td><%= link_to 'Delete', accounting_list, method: :delete, data: { confirm: 'Are you sure?' } %></td>
             </tr>
           <% end %>
         </tbody>

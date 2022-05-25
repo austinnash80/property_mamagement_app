@@ -6,6 +6,7 @@
         <thead>
           <tr>
             <th>Property</th>
+            <th>Date</th>
             <th>Revenue/Expense</th>
             <th>Description</th>
             <th>Amount</th>
@@ -17,7 +18,9 @@
         <tbody>
           <% @accountings.each do |accounting| %>
             <tr>
-              <td><%= accounting.property_id %></td>
+              <% property = Property.find_by(id: accounting.property_id) %>
+              <td><%= accounting.property_id.present? ? property.nickname : ''%></td>
+              <td><%= accounting.record_date %></td>
               <td><%= accounting.r_e %></td>
               <td><%= accounting.description %></td>
               <td><%= accounting.amount %></td>
@@ -30,8 +33,6 @@
         </tbody>
       </table>
 
-      <br>
-
-      <%= link_to 'New Accounting', new_accounting_path %>
+      <%#= link_to 'New Accounting', new_accounting_path %>
       </div>
   </div>

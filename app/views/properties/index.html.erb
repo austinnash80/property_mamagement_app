@@ -8,6 +8,7 @@
         <thead>
           <tr>
             <th>Nickname</th>
+            <th>ID</th>
             <th>Address</th>
             <th>Picture</th>
             <th>Bed</th>
@@ -19,9 +20,10 @@
         </thead>
 
         <tbody>
-          <% @properties.each do |property| %>
+          <% @properties.order(:id).each do |property| %>
             <tr>
-              <td><%= property.nickname %></td>
+              <td><%= link_to property.nickname, pages_manage_property_path(property: property.id), class: 'btn btn-sm btn-outline-secondary w100min' %></td>
+              <td><%= property.id %></td>
               <td><%= property.address %></td>
               <td><%= property.picture %></td>
               <td><%= property.bed %></td>
@@ -30,13 +32,13 @@
               <td><%= property.notes %></td>
               <td><%= link_to 'Show', property %></td>
               <td><%= link_to 'Edit', edit_property_path(property) %></td>
-              <td><%= link_to 'Destroy', property, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+              <td><%= link_to 'Delete', property, method: :delete, data: { confirm: 'Are you sure?' } %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
       <br>
-      <%= link_to 'New Property', new_property_path %>
+      <%= link_to 'New Property', new_property_path, class: 'btn btn-sm btn-outline-primary' %>
     </div>
   </div>
 </div>
