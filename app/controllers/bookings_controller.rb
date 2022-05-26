@@ -3,7 +3,11 @@ class BookingsController < ApplicationController
 
   # GET /bookings or /bookings.json
   def index
-    @bookings = Booking.all
+    if params['property'].present?
+      @bookings = Booking.where(property_id: params['property']).all
+    else
+      @bookings = Booking.all
+    end
   end
 
   # GET /bookings/1 or /bookings/1.json

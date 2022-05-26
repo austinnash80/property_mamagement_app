@@ -2,6 +2,13 @@
   <div class="card">
     <div class="card-body">
       <h2 class="card-title fw-bold">Accountings</h2>
+      <% if params['property'].present? %>
+        <% property = Property.find_by(id: params['property']) %>
+        <p><small><strong>Property:</strong> <%= property.nickname %></small></p>
+      <% end %>
+      <% if params['description'].present? %>
+        <p><small><strong>Description:</strong> <%= params['description'] %></small></p>
+      <% end %>
       <table class="table">
         <thead>
           <tr>
@@ -23,13 +30,20 @@
               <td><%= accounting.record_date %></td>
               <td><%= accounting.r_e %></td>
               <td><%= accounting.description %></td>
-              <td><%= accounting.amount %></td>
+              <td><%= number_to_currency(accounting.amount) %></td>
               <td><%= accounting.notes %></td>
               <td><%= link_to 'Show', accounting %></td>
               <td><%= link_to 'Edit', edit_accounting_path(accounting) %></td>
               <td><%= link_to 'Delete', accounting, method: :delete, data: { confirm: 'Are you sure?' } %></td>
             </tr>
           <% end %>
+          <tr class="fw-bold">
+            <td>Totals</td>
+            <td><%= @accountings_count %></td>
+            <td colspan="2"></td>
+            <td><%= number_to_currency(@accountings_sum) %></td>
+            <td colspan="4"></td>
+          </tr>
         </tbody>
       </table>
 

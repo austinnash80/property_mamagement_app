@@ -6,7 +6,7 @@
     <div class="col-4">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fw-bold">Revenue <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Revenue'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <h5 class="card-title fw-bold"><%= link_to 'Revenue', accountings_path(property: params['property'], r_e: 'Revenue') %> <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Revenue'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
           <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@revenue_previous_year) %></p>
           <p><strong>YTD:</strong> <%= number_to_currency(@revenue_current_year) %></p>
           <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@revenue_current_month) %></p>
@@ -35,7 +35,7 @@
     <div class="col-4">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fw-bold">Expenses <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Expense'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <h5 class="card-title fw-bold"><%= link_to 'Expense', accountings_path(property: params['property'], r_e: 'Expense') %> <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Expense'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
           <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@expenses_previous_year) %></p>
           <p><strong>YTD:</strong> <%= number_to_currency(@expenses_current_year) %></p>
           <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@expenses_current_month) %></p>
@@ -64,7 +64,7 @@
     <div class="col-4">
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fw-bold">Bookings <%= link_to 'Add New', new_booking_path(property: params['property']), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
+          <h5 class="card-title fw-bold"><%= link_to 'Bookings', bookings_path(property: params['property']) %> <%= link_to 'Add New', new_booking_path(property: params['property']), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
           <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= @bookings_previous_year %> bookings | <%= @nights_previous_year %> nights</p>
           <p><strong>YTD:</strong> <%= @bookings_current_year %> bookings | <%= @nights_current_year %> nights</p>
           <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= @bookings_current_month %> bookings | <%= @nights_current_month %> nights</p>
@@ -92,3 +92,5 @@
       </div>
     </div>
   </div>
+
+  <br><br>
