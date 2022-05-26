@@ -52,7 +52,7 @@
               <% Accounting.where(property_id: params['property']).where(r_e: 'Expense').order(record_date: :DESC).all.each do |accounting| %>
               <tr>
                 <td><%= accounting.record_date.present? ? accounting.record_date.strftime('%-m/%-d/%Y') : '' %></td>
-                <td><%= accounting.description %></td>
+                <td><%= link_to accounting.description, accountings_path(property: params['property'], description: accounting.description) %></td>
                 <td><%= accounting.amount.present? ? number_to_currency(accounting.amount) : '' %></td>
               </tr>
               <% end %>

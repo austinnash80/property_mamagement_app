@@ -3,7 +3,11 @@ class AccountingsController < ApplicationController
 
   # GET /accountings or /accountings.json
   def index
-    @accountings = Accounting.all
+    if params['property'].present? && params['description'].present?
+      @accountings = Accounting.where(property_id: params['property']).where(description: params['description']).all
+    else
+      @accountings = Accounting.all
+    end
   end
 
   # GET /accountings/1 or /accountings/1.json
