@@ -1,0 +1,35 @@
+<%= simple_form_for(@search) do |f| %>
+  <%= f.error_notification %>
+  <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+  <div class="form-inputs">
+    <div class="row">
+      <div class="col-2">
+        <%= f.input :property, as: :select, collection: Property.pluck(:nickname) %>
+      </div>
+      <div class="col-2">
+        <%= f.input :accounting_type, as: :select, collection: ['Revenue', 'Expense'] %>
+      </div>
+      <div class="col-2">
+        <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type) %>
+      </div>
+      <div class="col-3">
+        <%= f.input :date_range_a, label: 'Date Range Start', include_blank: true %>
+      </div>
+      <div class="col-3">
+        <%= f.input :date_range_b, label: 'Date Range End', include_blank: true %>
+      </div>
+    </div>
+    <%#= f.input :field_1 %>
+    <%#= f.input :field_2 %>
+    <%#= f.input :field_3 %>
+  </div>
+  <br>
+  <div class="row">
+    <div class="col-1">
+      <div class="form-actions">
+        <%= f.button :submit, 'Search', class: 'btn btn-primary btn-gradient' %>
+      </div>
+    </div>
+  </div>
+<% end %>

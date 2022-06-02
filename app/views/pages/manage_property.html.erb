@@ -7,10 +7,10 @@
       <div class="card">
         <div class="card-body">
           <h5 class="card-title fw-bold"><%= link_to 'Revenue', accountings_path(property: params['property'], r_e: 'Revenue') %> <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Revenue'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
-          <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@revenue_previous_year) %></p>
-          <p><strong>YTD:</strong> <%= number_to_currency(@revenue_current_year) %></p>
-          <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@revenue_current_month) %></p>
-          <p><strong><%= (Date.today - 1.month).strftime('%B') %>:</strong> <%= number_to_currency(@revenue_previous_month) %></p>
+          <p><strong><%= link_to (Date.today - 1.year).strftime('%Y'), accountings_path(property: params['property'], r_e: 'Revenue', date_range_a: (Date.today - 1.year).beginning_of_year, date_range_b: (Date.today - 1.year).end_of_year) %>:</strong> <%= number_to_currency(@revenue_previous_year) %></p>
+          <p><strong><%= link_to 'YTD', accountings_path(property: params['property'], r_e: 'Revenue', date_range_a: Date.today.beginning_of_year, date_range_b: Date.today.end_of_year) %>:</strong> <%= number_to_currency(@revenue_current_year) %></p>
+          <p><strong><%= link_to Date.today.strftime('%B'), accountings_path(property: params['property'], r_e: 'Revenue', date_range_a: Date.today.beginning_of_month, date_range_b: Date.today.end_of_month) %>:</strong> <%= number_to_currency(@revenue_current_month) %></p>
+          <p><strong><%= link_to (Date.today - 1.month).strftime('%B'), accountings_path(property: params['property'], r_e: 'Revenue', date_range_a: (Date.today - 1.month).beginning_of_month, date_range_b: (Date.today - 1.month).end_of_month) %>:</strong> <%= number_to_currency(@revenue_previous_month) %></p>
           <table class="table">
             <thead>
               <tr>
@@ -36,10 +36,10 @@
       <div class="card">
         <div class="card-body">
           <h5 class="card-title fw-bold"><%= link_to 'Expense', accountings_path(property: params['property'], r_e: 'Expense') %> <%= link_to 'Add New', new_accounting_path(property: params['property'], type: 'Expense'), class: 'btn btn-sm btn-outline-primary w100min' %></h5>
-          <p><strong><%= (Date.today - 1.year).strftime('%Y') %>:</strong> <%= number_to_currency(@expenses_previous_year) %></p>
-          <p><strong>YTD:</strong> <%= number_to_currency(@expenses_current_year) %></p>
-          <p><strong><%= Date.today.strftime('%B') %>:</strong> <%= number_to_currency(@expenses_current_month) %></p>
-          <p><strong><%= (Date.today - 1.month).strftime('%B') %>:</strong> <%= number_to_currency(@expenses_previous_month) %></p>
+          <p><strong><%= link_to (Date.today - 1.year).strftime('%Y'), accountings_path(property: params['property'], r_e: 'Expense', date_range_a: (Date.today - 1.year).beginning_of_year, date_range_b: (Date.today - 1.year).end_of_year) %>:</strong> <%= number_to_currency(@expenses_previous_year) %></p>
+          <p><strong><%= link_to 'YTD', accountings_path(property: params['property'], r_e: 'Expense', date_range_a: Date.today.beginning_of_year, date_range_b: Date.today.end_of_year) %>:</strong> <%= number_to_currency(@expenses_current_year) %></p>
+          <p><strong><%= link_to Date.today.strftime('%B'), accountings_path(property: params['property'], r_e: 'Expense', date_range_a: Date.today.beginning_of_month, date_range_b: Date.today.end_of_month) %>:</strong> <%= number_to_currency(@expenses_current_month) %></p>
+          <p><strong><%= link_to (Date.today - 1.month).strftime('%B'), accountings_path(property: params['property'], r_e: 'Expense', date_range_a: (Date.today - 1.month).beginning_of_month, date_range_b: (Date.today - 1.month).end_of_month) %>:</strong> <%= number_to_currency(@expenses_previous_month) %></p>
           <table class="table">
             <thead>
               <tr>

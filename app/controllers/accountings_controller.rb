@@ -3,13 +3,18 @@ class AccountingsController < ApplicationController
 
   # GET /accountings or /accountings.json
   def index
-    if params['property'].present? && params['description'].present?
+    @search = Search.new
+
+    if params['date_range_a'].present? && params['date_range_b'].present?
+      @accountings = Accounting.where(property_id: params['property']).where(r_e: params['r_e']).where(record_date: params['date_range_a'] .. params['date_range_b']).order(record_date: :DESC).all
+    elsif params['property'].present? && params['description'].present?
       @accountings = Accounting.where(property_id: params['property']).where(description: params['description']).order(record_date: :DESC).all
     elsif params['property'].present? && params['r_e'].present?
       @accountings = Accounting.where(property_id: params['property']).where(r_e: params['r_e']).order(record_date: :DESC).all
     else
       @accountings = Accounting.order(record_date: :DESC).all
     end
+    
     @accountings_sum = @accountings.sum(:amount)
     @accountings_count = @accountings.count
   end

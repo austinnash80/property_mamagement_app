@@ -1,0 +1,44 @@
+<p id="notice"><%= notice %></p>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title fw-bold">Searches</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>Accounting type</th>
+          <th>Description</th>
+          <th>Date range a</th>
+          <th>Date range b</th>
+          <th>Field 1</th>
+          <th>Field 2</th>
+          <th>Field 3</th>
+          <th colspan="3"></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% @searches.each do |search| %>
+          <tr>
+            <td><%= search.property %></td>
+            <td><%= search.accounting_type %></td>
+            <td><%= search.description %></td>
+            <td><%= search.date_range_a %></td>
+            <td><%= search.date_range_b %></td>
+            <td><%= search.field_1 %></td>
+            <td><%= search.field_2 %></td>
+            <td><%= search.field_3 %></td>
+            <td><%= link_to 'Show', search %></td>
+            <td><%= link_to 'Edit', edit_search_path(search) %></td>
+            <td><%= link_to 'Destroy', search, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <br>
+
+    <%= link_to 'New Search', new_search_path %>
+  </div>
+</div>

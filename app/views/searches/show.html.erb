@@ -1,0 +1,44 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Property:</strong>
+  <%= @search.property %>
+</p>
+
+<p>
+  <strong>Accounting type:</strong>
+  <%= @search.accounting_type %>
+</p>
+
+<p>
+  <strong>Description:</strong>
+  <%= @search.description %>
+</p>
+
+<p>
+  <strong>Date range a:</strong>
+  <%= @search.date_range_a %>
+</p>
+
+<p>
+  <strong>Date range b:</strong>
+  <%= @search.date_range_b %>
+</p>
+
+<p>
+  <strong>Field 1:</strong>
+  <%= @search.field_1 %>
+</p>
+
+<p>
+  <strong>Field 2:</strong>
+  <%= @search.field_2 %>
+</p>
+
+<p>
+  <strong>Field 3:</strong>
+  <%= @search.field_3 %>
+</p>
+
+<%= link_to 'Edit', edit_search_path(@search) %> |
+<%= link_to 'Back', searches_path %>

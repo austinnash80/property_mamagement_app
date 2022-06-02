@@ -1,4 +1,18 @@
 <p id="notice"><%= notice %></p>
+  <p>
+    <a class="" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
+      Search
+    </a>
+  </p>
+  <p>
+  <div class="collapse" id="collapseExample">
+    <div class="card card-body">
+      <%= render 'search_form', search: @search %>
+    </div>
+  </div>
+  </p>
+
+
   <div class="card">
     <div class="card-body">
       <h2 class="card-title fw-bold">Accountings</h2>
@@ -50,3 +64,7 @@
       <%#= link_to 'New Accounting', new_accounting_path %>
       </div>
   </div>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.min.js" integrity="sha384-cn7l7gDp0eyniUwwAZgrzD06kc/tftFf19TOAs2zVinnD/C7E91j9yyk5//jjpt/" crossorigin="anonymous"></script>
