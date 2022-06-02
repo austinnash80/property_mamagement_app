@@ -26,7 +26,7 @@ class SearchesController < ApplicationController
     respond_to do |format|
       if @search.save
         property_id = Property.find_by(nickname: @search.property)
-        format.html { redirect_to accountings_path(search: 'yes', property: property_id.id, r_e: @search.accounting_type, description: @search.description, date_range_a: @search.date_range_a.present? ? @search.date_range_a : Date.today, date_range_b: @search.date_range_b.present? ? @search.date_range_b : Date.today), notice: "" }
+        format.html { redirect_to accountings_path(search: 'yes', property: property_id.id, r_e: @search.accounting_type, description: @search.description, date_range_a: @search.date_range_a.present? ? @search.date_range_a : '2017-01-01', date_range_b: @search.date_range_b.present? ? @search.date_range_b : Date.today), notice: "" }
         # format.html { redirect_to search_url(@search), notice: "Search was successfully created." }
         format.json { render :show, status: :created, location: @search }
       else

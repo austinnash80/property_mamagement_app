@@ -5,16 +5,14 @@ class AccountingsController < ApplicationController
   def index
     @search = Search.new
 
-    if params['date_range_a'].present? && params['date_range_b'].present?
-      @accountings = Accounting.where(property_id: params['property']).where(r_e: params['r_e']).where(record_date: params['date_range_a'] .. params['date_range_b']).order(record_date: :DESC).all
-    elsif params['property'].present? && params['description'].present?
-      @accountings = Accounting.where(property_id: params['property']).where(description: params['description']).order(record_date: :DESC).all
-    elsif params['property'].present? && params['r_e'].present?
-      @accountings = Accounting.where(property_id: params['property']).where(r_e: params['r_e']).order(record_date: :DESC).all
-    else
-      @accountings = Accounting.order(record_date: :DESC).all
-    end
-    
+# All Possible Criterias 
+    params['property'].present? ? property = params['property'] : property = 1..100
+    params['description'].present? ? description = params['description'] : description = AccountingList.pluck(:accounting_type)
+    params['r_e'].present? ? r_e = params['r_e'] : r_e = ['Revenue', 'Expense']
+    params['date_range_a'].present? ? date_range_a = params['date_range_a'] : date_range_a = '2000-01-01'
+    params['date_range_b'].present? ? date_range_b = params['date_range_b'] : date_range_b = '2150-01-01'
+
+    @accountings = Accounting.where(property_id: property).where(description: description).where(r_e: r_e).where(record_date: date_range_a .. date_range_b).order(record_date: :DESC).all
     @accountings_sum = @accountings.sum(:amount)
     @accountings_count = @accountings.count
   end
