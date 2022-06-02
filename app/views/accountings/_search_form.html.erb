@@ -14,10 +14,18 @@
         <% end %>
       </div>
       <div class="col-2">
-        <%= f.input :accounting_type, as: :select, collection: ['Revenue', 'Expense'] %>
+        <% if params['r_e'].present? %>
+          <%= f.input :accounting_type, as: :select, collection: ['Revenue', 'Expense'], selected: params['r_e'] %>
+        <% else %>
+          <%= f.input :accounting_type, as: :select, collection: ['Revenue', 'Expense'] %>
+        <% end %>
       </div>
       <div class="col-2">
-        <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type) %>
+        <% if params['description'].present? %>
+          <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type), selected: params['description'] %>
+        <% else %>
+          <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type) %>
+        <% end %>
       </div>
       <div class="col-3">
         <%= f.input :date_range_a, label: 'Date Range Start', include_blank: true %>
