@@ -1,9 +1,7 @@
 <% property = Property.find_by(id: params['property']) %>
 
 <h2 class="display-6 fw-bold text-center"><%= property.nickname %> Reports</h2>
-
-<p>* expenses totals per catergory 2021 Vs 2022 (3 columns)</p>
-<p>Same for revenue - revenues by month, using days not check in</p>
+<br>
 <div class="row">
   <div class="col-4">
     <div class="card">
@@ -103,17 +101,43 @@
                 <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[13]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
                 <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[13]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
               </tr>
+              <% unless @expense_types[14].blank? %>
               <tr>
                 <td><%= @expense_types[14] %></td>
                 <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
                 <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
                 <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
               </tr>
+              <% end %>
+              <% unless @expense_types[15].blank? %>
+                <tr>
+                  <td><%= @expense_types[15] %></td>
+                  <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                  <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                  <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+                </tr>
+              <% end %>
+              <% unless @expense_types[16].blank? %>
               <tr>
-                <td><%= @expense_types[15] %></td>
-                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
-                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
-                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+                <td><%= @expense_types[16] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[16]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[16]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[16]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <% end %>
+              <% unless @expense_types[17].blank? %>
+              <tr>
+                <td><%= @expense_types[17] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[17]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[17]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[17]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <% end %>
+              <tr class="fw-bold">
+                <td>Totals</td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
               </tr>
 
           </tbody>

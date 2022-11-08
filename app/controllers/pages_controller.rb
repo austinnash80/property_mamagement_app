@@ -49,7 +49,7 @@ class PagesController < ApplicationController
     @year_3_start = '1/1/2023'
     @year_3_end = '12/31/2023'
 
-    @expense_types = AccountingList.where.not(accounting_type: 'Airbnb').order(accounting_type: :asc).pluck(:accounting_type)
+    @expense_types = AccountingList.where.not(accounting_type: ['Airbnb','Other Revenue']).order(accounting_type: :asc).pluck(:accounting_type)
 
     if params['property'].present? && params['update_booking'] == 'run'
       BookingDay.delete_all
