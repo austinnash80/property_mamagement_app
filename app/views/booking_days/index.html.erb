@@ -1,0 +1,38 @@
+<p id="notice"><%= notice %></p>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title fw-bold">Booking Days</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Property</th>
+          <th>Day rate</th>
+          <!-- <th>Extra s</th> -->
+          <!-- <th>Extra i</th> -->
+          <!-- <th>Extra b</th> -->
+          <th colspan="3"></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% @booking_days.each do |booking_day| %>
+          <tr>
+            <td><%= booking_day.day %></td>
+            <td><%= booking_day.property_id %></td>
+            <td><%= booking_day.day_rate %></td>
+            <!-- <td><%#= booking_day.extra_s %></td> -->
+            <!-- <td><%#= booking_day.extra_i %></td> -->
+            <!-- <td><%#= booking_day.extra_b %></td> -->
+            <td><%= link_to 'Show', booking_day %></td>
+            <td><%= link_to 'Edit', edit_booking_day_path(booking_day) %></td>
+            <td><%= link_to 'Destroy', booking_day, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<br>
+<%= link_to 'Add New', new_booking_day_path %>

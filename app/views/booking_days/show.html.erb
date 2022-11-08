@@ -1,0 +1,34 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Day:</strong>
+  <%= @booking_day.day %>
+</p>
+
+<p>
+  <strong>Property:</strong>
+  <%= @booking_day.property_id %>
+</p>
+
+<p>
+  <strong>Day rate:</strong>
+  <%= @booking_day.day_rate %>
+</p>
+
+<p>
+  <strong>Extra s:</strong>
+  <%= @booking_day.extra_s %>
+</p>
+
+<p>
+  <strong>Extra i:</strong>
+  <%= @booking_day.extra_i %>
+</p>
+
+<p>
+  <strong>Extra b:</strong>
+  <%= @booking_day.extra_b %>
+</p>
+
+<%= link_to 'Edit', edit_booking_day_path(@booking_day) %> |
+<%= link_to 'Back', booking_days_path %>

@@ -1,0 +1,18 @@
+
+<%= simple_form_for(@booking_day) do |f| %>
+  <%= f.error_notification %>
+  <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
+
+  <div class="form-inputs">
+    <%= f.input :day %>
+    <%= f.input :property_id %>
+    <%= f.input :day_rate %>
+    <%= f.input :extra_s %>
+    <%= f.input :extra_i %>
+    <%= f.input :extra_b %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit %>
+  </div>
+<% end %>

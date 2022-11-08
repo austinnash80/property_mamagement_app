@@ -1,6 +1,7 @@
 <% property = Property.find_by(id: params['property']) %>
 
   <h2 class="display-4 fw-bold text-center"><%= property.nickname %></h2>
+  <p class="text-center fw-bold"><%= link_to 'Reports', pages_reports_path(property: property.id), class: 'btn btn-sm btn-outline-secondary w100min' %></p>
   <br>
   <div class="row">
     <div class="col-4">

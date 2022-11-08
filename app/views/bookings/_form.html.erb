@@ -4,7 +4,14 @@
   <%= f.error_notification message: f.object.errors[:base].to_sentence if f.object.errors[:base].present? %>
 
   <div class="form-inputs">
-    <%= f.input :property_id, input_html: { value: params['property'] }, as: :hidden %>
+
+  <% if @booking.property_id.blank? %>
+    <%= f.input :property_id, input_html: { value: params['property'] }, as: :hidden%>
+  <% else %>
+    <%= f.input :property_id %>
+    <br>
+  <% end %>
+
     <br>
     <%= f.input :guest_name %>
     <br>
@@ -22,6 +29,10 @@
     <br>
     <%= f.input :check_out %>
     <br>
+    <% if @booking.nights.blank? == false %>
+      <%= f.input :nights %>
+      <br>
+    <% end %>
     <%#= f.input :nights %>
     <%= f.input :payout %>
     <br>

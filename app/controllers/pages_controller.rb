@@ -40,4 +40,32 @@ class PagesController < ApplicationController
     @previous_month_s = (Date.today - 1.month).beginning_of_month
     @previous_month_e = (Date.today - 1.month).end_of_month
   end
+
+  def reports
+    @year_1_start = '1/1/2021'
+    @year_1_end = '12/31/2021'
+    @year_2_start = '1/1/2022'
+    @year_2_end = '12/31/2022'
+    @year_3_start = '1/1/2023'
+    @year_3_end = '12/31/2023'
+
+    @expense_types = AccountingList.where.not(accounting_type: 'Airbnb').order(accounting_type: :asc).pluck(:accounting_type)
+
+    if params['property'].present? && params['update_booking'] == 'run'
+      BookingDay.delete_all
+      Booking.where(property_id: params['property']).all.each do |i|
+        nights = 0
+        while nights < i.nights
+          BookingDay.create(
+            day: i.check_in + nights,
+            property_id: params['property'],
+            day_rate: (i.payout / i.nights)
+          ).save
+          nights = nights + 1
+        end
+      end
+      redirect_to pages_reports_path(property: params['property'])
+    end
+
+  end
 end

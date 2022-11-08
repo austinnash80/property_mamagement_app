@@ -1,0 +1,318 @@
+<% property = Property.find_by(id: params['property']) %>
+
+<h2 class="display-6 fw-bold text-center"><%= property.nickname %> Reports</h2>
+
+<p>* expenses totals per catergory 2021 Vs 2022 (3 columns)</p>
+<p>Same for revenue - revenues by month, using days not check in</p>
+<div class="row">
+  <div class="col-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title fw-bold">Expenses</h5>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>2021</th>
+              <th>2022</th>
+              <th>2023</th>
+            </tr>
+          </thead>
+          <tbody>
+              <tr>
+                <td><%= @expense_types[0] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[0]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[0]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[0]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[1] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[1]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[1]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[1]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[2] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[2]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[2]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[2]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[3] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[3]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[3]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[3]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[4] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[4]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[4]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[4]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[5] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[5]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[5]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[5]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[6] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[6]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[6]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[6]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[7] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[7]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[7]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[7]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[8] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[8]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[8]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[8]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[9] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[9]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[9]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[9]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[10] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[10]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[10]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[10]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[11] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[11]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[11]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[11]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[12] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[12]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[12]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[12]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[13] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[13]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[13]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[13]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[14] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[14]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+              <tr>
+                <td><%= @expense_types[15] %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount), precision: 0) %></td>
+                <td><%= number_to_currency(Accounting.where(property_id: property.id).where(description: @expense_types[15]).where('record_date BETWEEN ? AND ?', @year_3_start, @year_3_end).sum(:amount), precision: 0) %></td>
+              </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title fw-bold">Payout <%= link_to 'Update', pages_reports_path(update_booking: 'run', property: property.id), class: 'btn btn-sm btn-outline-success w100min' %></h5>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>2021</th>
+              <th>2022</th>
+              <th>2023</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>January</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','1/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','1/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>Febuary</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2021','2/28/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2023','2/28/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>March</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2021','3/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2023','3/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>April</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2021','4/30/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2023','4/30/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>May</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2021','5/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2023','5/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>June</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2021','6/30/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2023','6/30/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>July</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2021','7/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2023','7/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>August</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2021','8/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2023','8/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>September</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2021','9/30/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2023','9/30/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>October</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2021','10/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2023','10/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>November</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2021','11/30/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2023','11/30/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr>
+              <td>December</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2021','12/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2023','12/31/2023').sum(:day_rate), precision: 0)  %></td>
+            </tr>
+            <tr class="fw-bold">
+              <td>Totals</td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','12/31/2021').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','12/31/2022').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','12/31/2023').sum(:day_rate), precision: 0) %></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title fw-bold">Nights <%= link_to 'Update', pages_reports_path(update_booking: 'run', property: property.id), class: 'btn btn-sm btn-outline-success w100min' %></h5>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>2021</th>
+              <th>2022</th>
+              <th>2023</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>January</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','1/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','1/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>Febuary</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2021','2/28/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2023','2/28/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>March</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2021','3/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2023','3/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>April</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2021','4/30/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2023','4/30/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>May</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2021','5/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2023','5/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>June</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2021','6/30/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2023','6/30/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>July</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2021','7/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2023','7/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>August</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2021','8/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2023','8/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>September</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2021','9/30/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2023','9/30/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>October</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2021','10/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2023','10/31/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>November</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2021','11/30/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2023','11/30/2023').count  %></td>
+            </tr>
+            <tr>
+              <td>December</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2021','12/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2023','12/31/2023').count  %></td>
+            </tr>
+            <tr class="fw-bold">
+              <td>Totals</td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','12/31/2021').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','12/31/2022').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','12/31/2023').count %></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
