@@ -52,7 +52,7 @@ class PagesController < ApplicationController
     @expense_types = AccountingList.where.not(accounting_type: ['Airbnb','Other Revenue']).order(accounting_type: :asc).pluck(:accounting_type)
 
     if params['property'].present? && params['update_booking'] == 'run'
-      BookingDay.delete_all
+      BookingDay.where(property_id: params['property']).delete_all
       Booking.where(property_id: params['property']).all.each do |i|
         nights = 0
         while nights < i.nights
@@ -66,6 +66,10 @@ class PagesController < ApplicationController
       end
       redirect_to pages_reports_path(property: params['property'])
     end
+
+  end
+
+  def streaming_passwords
 
   end
 end

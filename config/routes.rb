@@ -9,5 +9,6 @@ Rails.application.routes.draw do
   get 'pages/homepage'
   get 'pages/manage_property'
   get 'pages/reports'
+  get 'pages/streaming_passwords'
   root to: "pages#homepage"
 end

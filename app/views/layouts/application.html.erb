@@ -15,16 +15,18 @@
 
 
     <main>
-    <header>
-        <h1>Property Management</h1>
-        <nav>
-            <a href="/pages/homepage">Homepage</a>
-            <a href="/properties">Properties</a>
-            <a href="/bookings">Bookings</a>
-            <a href="/accountings">Revenue/Expenses</a>
-            <a href="/accounting_lists">R/E Types</a>
-        </nav>
-    </header>
+      <% unless action_name == "streaming_passwords" %>
+      <header>
+          <h1>Property Management</h1>
+          <nav>
+              <a href="/pages/homepage">Homepage</a>
+              <a href="/properties">Properties</a>
+              <a href="/bookings">Bookings</a>
+              <a href="/accountings">Revenue/Expenses</a>
+              <a href="/accounting_lists">R/E Types</a>
+          </nav>
+      </header>
+      <% end %>
     <br><br>
 </main>
   <div class="container">
