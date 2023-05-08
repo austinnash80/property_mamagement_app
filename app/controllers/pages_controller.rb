@@ -42,12 +42,12 @@ class PagesController < ApplicationController
   end
 
   def reports
-    @year_1_start = '1/1/2021'
-    @year_1_end = '12/31/2021'
-    @year_2_start = '1/1/2022'
-    @year_2_end = '12/31/2022'
-    @year_3_start = '1/1/2023'
-    @year_3_end = '12/31/2023'
+    @year_1_start = '1/1/2022'
+    @year_1_end = '12/31/2022'
+    @year_2_start = '1/1/2023'
+    @year_2_end = '12/31/2023'
+    @year_3_start = '1/1/2024'
+    @year_3_end = '12/31/2024'
 
     @expense_types = AccountingList.where.not(accounting_type: ['Airbnb','Other Revenue']).order(accounting_type: :asc).pluck(:accounting_type)
 
