@@ -14,8 +14,4 @@
     "webpack": "^4.47.0",
     "webpack-dev-server": "^3"
   }
-  // ,
-  // "engines": {
-  //   "node": "16.x"
-  // }
 }
