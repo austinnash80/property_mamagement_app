@@ -32,6 +32,8 @@ gem 'simple_form'
 
 gem 'bootsnap', '>= 1.4.4', require: false
 
+# gem 'nio4r', '2.5.7'
+
 # gem 'net-smtp', '~> 0.2.1'
 gem 'net-smtp', require: false
 gem 'net-pop', require: false
