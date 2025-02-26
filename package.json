@@ -24,8 +24,7 @@
     "babel-plugin-macros": "2.8.0",
     "webpack": "^4.46.0",
     "webpack-dev-server": "^3"
-  }
-},
+  },
 "scripts": {
   "build": "NODE_OPTIONS=--openssl-legacy-provider webpack --config config/webpack/production.js",
   "heroku-postbuild": "NODE_OPTIONS=--openssl-legacy-provider yarn run build",
@@ -33,5 +32,6 @@
   "build:production": "webpack --config config/webpack/production.js",
   "build:test": "webpack --config config/webpack/test.js",
   "clean": "rm -rf node_modules/.cache"
-}
+},
 
+}
