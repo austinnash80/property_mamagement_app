@@ -11,9 +11,9 @@
           <thead>
             <tr>
               <th>Type</th>
-              <th>2021</th>
               <th>2022</th>
               <th>2023</th>
+              <th>2024</th>
             </tr>
           </thead>
           <tbody>
@@ -153,89 +153,89 @@
           <thead>
             <tr>
               <th>Month</th>
-              <th>2021</th>
               <th>2022</th>
               <th>2023</th>
+              <th>2024</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>January</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','1/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','1/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2024','1/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>Febuary</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2021','2/28/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2023','2/28/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2024','2/28/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>March</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2021','3/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2023','3/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2024','3/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>April</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2021','4/30/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2023','4/30/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2024','4/30/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>May</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2021','5/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2023','5/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2024','5/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>June</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2021','6/30/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2023','6/30/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2024','6/30/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>July</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2021','7/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2023','7/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2024','7/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>August</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2021','8/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2023','8/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2024','8/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>September</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2021','9/30/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2023','9/30/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2024','9/30/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>October</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2021','10/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2023','10/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2024','10/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>November</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2021','11/30/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2023','11/30/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2024','11/30/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr>
               <td>December</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2021','12/31/2021').sum(:day_rate), precision: 0) %></td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2023','12/31/2023').sum(:day_rate), precision: 0)  %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2024','12/31/2024').sum(:day_rate), precision: 0)  %></td>
             </tr>
             <tr class="fw-bold">
               <td>Totals</td>
-              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','12/31/2021').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','12/31/2022').sum(:day_rate), precision: 0) %></td>
               <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','12/31/2023').sum(:day_rate), precision: 0) %></td>
+              <td><%= number_to_currency(BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2024','12/31/2024').sum(:day_rate), precision: 0) %></td>
             </tr>
           </tbody>
         </table>
@@ -258,81 +258,81 @@
           <tbody>
             <tr>
               <td>January</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','1/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','1/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','1/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2024','1/31/2024').count  %></td>
             </tr>
             <tr>
               <td>Febuary</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2021','2/28/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2022','2/28/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2023','2/28/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '2/1/2024','2/28/2024').count  %></td>
             </tr>
             <tr>
               <td>March</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2021','3/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2022','3/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2023','3/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '3/1/2024','3/31/2024').count  %></td>
             </tr>
             <tr>
               <td>April</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2021','4/30/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2022','4/30/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2023','4/30/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '4/1/2024','4/30/2024').count  %></td>
             </tr>
             <tr>
               <td>May</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2021','5/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2022','5/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2023','5/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '5/1/2024','5/31/2024').count  %></td>
             </tr>
             <tr>
               <td>June</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2021','6/30/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2022','6/30/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2023','6/30/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '6/1/2024','6/30/2024').count  %></td>
             </tr>
             <tr>
               <td>July</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2021','7/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2022','7/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2023','7/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '7/1/2024','7/31/2024').count  %></td>
             </tr>
             <tr>
               <td>August</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2021','8/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2022','8/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2023','8/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '8/1/2024','8/31/2024').count  %></td>
             </tr>
             <tr>
               <td>September</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2021','9/30/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2022','9/30/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2023','9/30/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '9/1/2024','9/30/2024').count  %></td>
             </tr>
             <tr>
               <td>October</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2021','10/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2022','10/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2023','10/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '10/1/2024','10/31/2024').count  %></td>
             </tr>
             <tr>
               <td>November</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2021','11/30/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2022','11/30/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2023','11/30/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '11/1/2024','11/30/2024').count  %></td>
             </tr>
             <tr>
               <td>December</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2021','12/31/2021').count %></td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2022','12/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2023','12/31/2023').count  %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '12/1/2024','12/31/2024').count  %></td>
             </tr>
             <tr class="fw-bold">
               <td>Totals</td>
-              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2021','12/31/2021').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2022','12/31/2022').count %></td>
               <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2023','12/31/2023').count %></td>
+              <td><%= BookingDay.where(property_id: property.id).where('day Between ? AND ?', '1/1/2024','12/31/2024').count %></td>
             </tr>
           </tbody>
         </table>

@@ -32,5 +32,11 @@
     "engines": {
     "node": "22.14.0",
     "yarn": "1.22.22"
-  }
+  },
+  "scripts": {
+  "build": "webpack --config config/webpack/production.js",
+  "build:development": "webpack --config config/webpack/development.js",
+  "build:production": "webpack --config config/webpack/production.js",
+  "build:test": "webpack --config config/webpack/test.js"
+},
 }
