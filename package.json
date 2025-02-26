@@ -28,7 +28,7 @@
   },
   "scripts": {
     "build": "webpack --mode production"
-  }
+  },
     "engines": {
     "node": "22.14.0",
     "yarn": "1.22.22"
