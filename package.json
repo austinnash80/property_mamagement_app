@@ -22,7 +22,7 @@
     "@babel/plugin-transform-regenerator": "^7.25.9",
     "@babel/plugin-transform-runtime": "^7.26.9",
     "babel-plugin-dynamic-import-node": "^2.3.3",
-    "babel-plugin-macros": "^3.1.0",
+    "babel-plugin-macros": "^2.8.0",
     "webpack": "^4.46.0",
     "webpack-dev-server": "^3"
   },
@@ -40,5 +40,8 @@
     "plugins": [
       "macros"
     ]
+  },
+  "resolutions": {
+    "babel-plugin-macros": "2.8.0"
   }
 }
