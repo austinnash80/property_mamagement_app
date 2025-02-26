@@ -39,16 +39,12 @@
     "yarn": "1.22.22"
   },
   "babel": {
-    "plugins": [
-      "macros",
-      [
-        "@babel/plugin-transform-private-methods",
-        {
-          "loose": true
-        }
-      ]
-    ]
-  },
+  "plugins": [
+    "macros",
+    ["@babel/plugin-proposal-private-methods", { "loose": true }],
+    ["@babel/plugin-transform-private-property-in-object", { "loose": true }]
+  ]
+},
   "resolutions": {
     "babel-plugin-macros": "2.8.0"
   }
