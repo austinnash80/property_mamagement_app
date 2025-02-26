@@ -32,6 +32,6 @@
   "build:production": "webpack --config config/webpack/production.js",
   "build:test": "webpack --config config/webpack/test.js",
   "clean": "rm -rf node_modules/.cache"
-},
+}
 
 }
