@@ -52,7 +52,7 @@ class PagesController < ApplicationController
     @expense_types = AccountingList.where.not(accounting_type: ['Airbnb','Other Revenue']).order(accounting_type: :asc).pluck(:accounting_type)
     # Monthly data 
     property = Property.find_by(id: params['property'])
-    @monthly_fixed_costs = mortgage + hoa + property_tax + insurance
+    @monthly_fixed_costs = mortgage
       mortgage = Accounting.where(property_id: property.id,description: 'Mortgage Payment',record_date: @year_2_start...@year_2_end).average(:amount)&.to_f || 0.0
       hoa = Accounting.where(property_id: property.id,description: 'HOA Dues',record_date: @year_2_start...@year_2_end).average(:amount)&.to_f || 0.0
       property_tax = Accounting.where(property_id: property.id,description: 'Property Tax',record_date: @year_2_start...@year_2_end).average(:amount)&.to_f || 0.0
