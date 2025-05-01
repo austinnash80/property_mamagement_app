@@ -5,10 +5,20 @@
        <% rental = Accounting.where(property_id: property.id,description: ['Management Fees', 'License & Permits', 'Cleanings', 'Basic Supplies', 'Laundry','STVR Tax']).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount)&.to_f || 0.0 %>
        <% other = Accounting.where(property_id: property.id,description: ['Improve/Replace', 'Pest Control', 'Other', 'Travel']).where('record_date BETWEEN ? AND ?', @year_2_start, @year_2_end).sum(:amount)&.to_f || 0.0 %>
 
+       <% fixed_last = Accounting.where(property_id: property.id, description: ['Mortgage Payment', 'HOA Dues', 'Property Tax', 'Insurance'])
+                          .where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount).to_f %>
+<% utilities_last = Accounting.where(property_id: property.id, description: ['Electric Bill', 'Gas Bill', 'Water Bill'])
+                              .where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount).to_f %>
+<% rental_last = Accounting.where(property_id: property.id, description: ['Management Fees', 'License & Permits', 'Cleanings', 'Basic Supplies', 'Laundry','STVR Tax'])
+                            .where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount).to_f %>
+<% other_last = Accounting.where(property_id: property.id, description: ['Improve/Replace', 'Pest Control', 'Other', 'Travel'])
+                           .where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).sum(:amount).to_f %>
+
+
 <h2 class="display-6 fw-bold text-center"><%= property.nickname %> Reports</h2>
 <br>
 <table class="table">
-  <caption class="caption-top">2024 monthly expenses</caption>
+  <caption>2024 monthly expenses</caption>
     <thead>
       <tr>
         <th>Fixed Housing</th>
@@ -26,6 +36,13 @@
         <td><%= number_to_currency(other / 12, precision: 0) %></td>
         <td><span class="fw-bold"><%= number_to_currency((fixed + utilities + rental + other)/ 12, precision: 0) %> </td>
       </tr>
+      <tr class="text-secondary">
+        <td><%= number_to_currency((fixed - fixed_last) / 12, precision: 0) %></td>
+        <td><%= number_to_currency((utilities - utilities_last) / 12, precision: 0) %></td>
+        <td><%= number_to_currency((rental - rental_last) / 12, precision: 0) %></td>
+        <td><%= number_to_currency((other - other_last) / 12, precision: 0) %></td>
+        <td><span class="fw-bold"><%= number_to_currency(((fixed + utilities + rental + other) - (fixed_last + utilities_last + rental_last + other_last)) / 12, precision: 0) %></span></td>
+     </tr>
     </tbody>
 </table>
 <br>
