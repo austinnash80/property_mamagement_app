@@ -1,17 +1,16 @@
 <% property = Property.find_by(id: params['property']) %>
 
+      <%= m = Accounting.where(property_id: property.id,description: 'Mortgage Payment').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0 %>
+       <%= h = Accounting.where(property_id: property.id,description: 'HOA Dues').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0 %>
+       <%= pr = Accounting.where(property_id: property.id,description: 'Property Tax').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0 %>
+       <%= i = Accounting.where(property_id: property.id,description: 'Insurance').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0) %>
+
 <h2 class="display-6 fw-bold text-center"><%= property.nickname %> Reports</h2>
 <br>
 <div class="card">
   <div class="card-body">
     <h5 class="card-title fw-bold">2024 Monthly Data</h5>
-    <p><span class="fw-bold">Fix costs</span> 
-    <%= number_to_currency(
-      ((Accounting.where(property_id: property.id,description: 'Mortgage Payment').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0)
-       + (Accounting.where(property_id: property.id,description: 'HOA Dues').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0)
-       + (Accounting.where(property_id: property.id,description: 'Property Tax').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0)
-       + (Accounting.where(property_id: property.id,description: 'Insurance').where('record_date BETWEEN ? AND ?', @year_1_start, @year_1_end).average(:amount)&.to_f || 0.0)
-    ), precision: 0) %> </p>
+    <p><span class="fw-bold">Fix costs:</span> <%= number_to_currency(m + h + pr + i), precision: 0) %></p>
   </div>
 </div>
 <div class="row">
