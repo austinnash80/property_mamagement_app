@@ -38,26 +38,26 @@
       </tr>
       <tr class="text-secondary">
         <td>
-          <%= number_to_currency((fixed - fixed_last) / 12, precision: 0) %>
           <%= (fixed - fixed_last) >= 0 ? "▲" : "▼" %>
+          <%= number_to_currency(((fixed - fixed_last) / 12).abs, precision: 0) %>
         </td>
         <td>
-          <%= number_to_currency((utilities - utilities_last) / 12, precision: 0) %>
           <%= (utilities - utilities_last) >= 0 ? "▲" : "▼" %>
+          <%= number_to_currency(((utilities - utilities_last) / 12).abs, precision: 0) %>
         </td>
         <td>
-          <%= number_to_currency((rental - rental_last) / 12, precision: 0) %>
           <%= (rental - rental_last) >= 0 ? "▲" : "▼" %>
+          <%= number_to_currency(((rental - rental_last) / 12).abs, precision: 0) %>
         </td>
         <td>
-          <%= number_to_currency((other - other_last) / 12, precision: 0) %>
           <%= (other - other_last) >= 0 ? "▲" : "▼" %>
+          <%= number_to_currency(((other - other_last) / 12).abs, precision: 0) %>
         </td>
         <td>
           <% total_change = (fixed + utilities + rental + other) - (fixed_last + utilities_last + rental_last + other_last) %>
           <span class="fw-bold">
-            <%= number_to_currency(total_change / 12, precision: 0) %>
             <%= total_change >= 0 ? "▲" : "▼" %>
+            <%= number_to_currency((total_change / 12).abs, precision: 0) %>
           </span>
         </td>
       </tr>
