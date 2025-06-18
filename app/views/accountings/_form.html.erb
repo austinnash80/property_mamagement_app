@@ -22,7 +22,7 @@
     <%= f.input :record_date %>
     <br>
     <% if params['type'] == 'Revenue' %>
-      <%= f.input :description, label: 'Source', as: :select, collection: ['Airbnb', 'Furnished Finder','Contribution' 'Other Revenue']%>
+      <%= f.input :description, label: 'Source', as: :select, collection: ['Airbnb', 'Furnished Finder','Contribution', 'Other Revenue']%>
     <% elsif params['type'] == 'Expense' %>
       <%= f.input :description, as: :select, collection: AccountingList.pluck(:accounting_type) %>
     <% else %>
