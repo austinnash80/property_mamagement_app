@@ -76,6 +76,31 @@ class AccountingsController < ApplicationController
     params['property'].present? ? property = params['property'] : property = 1..100
     params['description'].present? ? description = params['description'] : description = AccountingList.pluck(:accounting_type)
     params['r_e'].present? ? r_e = params['r_e'] : r_e = ['Revenue', 'Expense']
+
+    # date_range_a =
+    #   begin
+    #     if params[:date_range_a].present?
+    #       Date.parse(params[:date_range_a]).strftime("%Y-%m-%d")
+    #     else
+    #       "2000-01-01"
+    #     end
+    #   rescue ArgumentError
+    #     "2000-01-01"
+    #   end
+
+    # date_range_b =
+    #   begin
+    #     if params[:date_range_b].present?
+    #       Date.parse(params[:date_range_b]).strftime("%Y-%m-%d")
+    #     else
+    #       "2150-01-01"
+    #     end
+    #   rescue ArgumentError
+    #     "2150-01-01"
+    #   end
+
+
+
     params['date_range_a'].present? ? date_range_a = params['date_range_a'] : date_range_a = '2000-01-01'
     params['date_range_b'].present? ? date_range_b = params['date_range_b'] : date_range_b = '2150-01-01'
 
