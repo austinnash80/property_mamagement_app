@@ -1,7 +1,74 @@
 class AccountingsController < ApplicationController
   before_action :set_accounting, only: %i[ show edit update destroy ]
-
   # GET /accountings or /accountings.json
+
+  # Upload/Download
+  require "csv"
+
+# GET /accountings/export_csv
+  def export_csv
+    csv = CSV.generate(headers: true) do |out|
+      out << csv_headers
+
+      Accounting.find_each do |a|
+        out << [
+          a.id,
+          a.property_id,
+          a.r_e,
+          a.description,
+          a.amount,
+          a.notes,
+          a.record_date,
+          a.created_at,
+          a.updated_at
+        ]
+      end
+    end
+
+    send_data csv,
+      filename: "accountings-#{Time.zone.now.strftime('%Y-%m-%d_%H%M')}.csv",
+      type: "text/csv"
+  end
+
+  # POST /accountings/import_csv
+  def import_csv
+    file = params[:file]
+    unless file&.respond_to?(:read)
+      redirect_to accountings_path, alert: "Please choose a CSV file to upload."
+      return
+    end
+
+    rows = []
+    CSV.foreach(file.path, headers: true) { |row| rows << row.to_h }
+
+    # Upsert by id if present, otherwise create new rows.
+    Accounting.transaction do
+      rows.each_with_index do |h, idx|
+        attrs = sanitize_csv_row(h)
+
+        if attrs[:id].present?
+          rec = Accounting.find_by(id: attrs[:id])
+          if rec
+            rec.update!(attrs.except(:id, :created_at, :updated_at))
+          else
+            Accounting.create!(attrs.except(:created_at, :updated_at))
+          end
+        else
+          Accounting.create!(attrs.except(:id, :created_at, :updated_at))
+        end
+      rescue ActiveRecord::RecordInvalid => e
+        raise ActiveRecord::Rollback, "Row #{idx + 1}: #{e.record.errors.full_messages.join(', ')}"
+      end
+    end
+
+    redirect_to accountings_path, notice: "Import complete (#{rows.size} rows processed)."
+  rescue => e
+    redirect_to accountings_path, alert: "Import failed: #{e.message}"
+  end
+
+
+
+
   def index
     @search = Search.new
 
@@ -79,4 +146,33 @@ class AccountingsController < ApplicationController
     def accounting_params
       params.require(:accounting).permit(:property_id, :r_e, :description, :amount, :notes, :record_date)
     end
+
+  def csv_headers
+    %w[
+      id
+      property_id
+      r_e
+      description
+      amount
+      notes
+      record_date
+      created_at
+      updated_at
+    ]
+  end
+
+  # Accepts strings from CSV and casts to the right Ruby types.
+  def sanitize_csv_row(h)
+    {
+      id:          h["id"].presence,
+      property_id: h["property_id"].presence&.to_i,
+      r_e:         h["r_e"].to_s.presence,
+      description: h["description"].to_s.presence,
+      amount:      h["amount"].presence && BigDecimal(h["amount"].to_s),
+      notes:       h["notes"].to_s,
+      record_date: h["record_date"].presence && Date.parse(h["record_date"].to_s),
+      created_at:  h["created_at"].presence && Time.zone.parse(h["created_at"].to_s),
+      updated_at:  h["updated_at"].presence && Time.zone.parse(h["updated_at"].to_s)
+    }
+  end
 end

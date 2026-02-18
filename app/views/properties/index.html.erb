@@ -1,6 +1,17 @@
 <p id="notice"><%= notice %></p>
 
-<div class="container">
+
+<div class="d-flex gap-3 align-items-center mb-3">
+  <%= link_to "Download CSV", export_csv_properties_path, class: "btn btn-outline-primary" %>
+
+  <%= form_with url: import_csv_properties_path, multipart: true, method: :post, local: true do |f| %>
+    <div class="d-flex gap-2 align-items-center">
+      <%= f.file_field :file, accept: ".csv", class: "form-control" %>
+      <%= f.submit "Upload CSV", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+</div>
+
   <div class="card">
     <div class="card-body">
       <h2 class="card-title fw-bold">Properties</h2>
@@ -41,4 +52,3 @@
       <%= link_to 'New Property', new_property_path, class: 'btn btn-sm btn-outline-primary' %>
     </div>
   </div>
-</div>
