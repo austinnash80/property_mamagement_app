@@ -48,6 +48,8 @@ class PagesController < ApplicationController
     @year_2_end = '12/31/2024'
     @year_3_start = '1/1/2025'
     @year_3_end = '12/31/2025'
+    @year_4_start = '1/1/2026'
+    @year_4_end = '12/31/2026'
 
     @expense_types = AccountingList.where.not(accounting_type: ['Airbnb','Other Revenue']).order(accounting_type: :asc).pluck(:accounting_type)
     # Monthly data 
