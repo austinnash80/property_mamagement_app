@@ -104,7 +104,15 @@ namespace :portfolio do
       text = [d.title, d.vendor, d.description, d.metadata["po_job"], d.line_items.map { |li| li.values_at("description", "department", "class_name").join(" ") }.join(" ")].join(" | ")
       flags = PortfolioImport.flags_for(text)
       prop  = d.property_guess.presence || PortfolioImport.guess_property(text)
-      d.update_columns(flags: flags.join(" "), property_guess: prop, suggested_group: PortfolioImport.suggested_group(prop, d.occurred_on, flags, region: PortfolioImport.region_hint(text)))
+      group = PortfolioImport.suggested_group(prop, d.occurred_on, flags, region: PortfolioImport.region_hint(text))
+      if d.source == "icloud"
+        path = (d.metadata["path"] || d.metadata["folder"]).to_s
+        parts = path.split("/")
+        sub = parts.length >= 2 ? parts[1..-1].reject { |x| x == File.basename(path) && parts.length > 2 && d.metadata["path"] }.first(2).join(" / ") : nil
+        sub = parts[1] if parts.length == 2 && d.metadata["path"] # file directly in property folder
+        group = "#{prop || parts[0]} · #{(sub.presence || 'root folder')}"
+      end
+      d.update_columns(flags: flags.join(" "), property_guess: prop, suggested_group: group)
     end
     puts "regrouped #{Portfolio::SourceDocument.unreviewed.count}"
   end
