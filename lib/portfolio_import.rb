@@ -48,7 +48,8 @@ module PortfolioImport
 
   # Softer hint used only for the suggested group when no property is known.
   def self.region_hint(text)
-    return "Desert (Cortez/Tanglewood)" if text.to_s =~ /timo'?s|jackson and foster|roto-rooter|premier residential|vantage point|desert|coachella|iid\b/i
+    return "Desert (Cortez/Tanglewood)" if text.to_s =~ /timo'?s|jackson and foster|roto-rooter|premier residential|vantage point|desert|coachella|iid\b|la quinta|palm desert|indio|cathedral city|palm springs|#6630|#6874/i
+    return "San Diego (Trellis/Pacific/Playa/Office)" if text.to_s =~ /genesee|sports arena|#680\b|#0680|san diego|point loma|clairemont|mission valley|imperial beach|lemon grove|#6653|#1032/i
     return "San Diego (Trellis/Pacific/Playa)" if text.to_s =~ /point loma|alvarado|valley plumbing|sun valley|all seasons|pats plumbing|extreme plumbing|protec|xyg|precision door|mr\.? rooter/i
     nil
   end

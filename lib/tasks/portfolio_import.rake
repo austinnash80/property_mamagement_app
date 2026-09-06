@@ -103,7 +103,7 @@ namespace :portfolio do
   desc "Recompute property guesses, flags and suggested groups for inbox docs still unreviewed"
   task regroup: :environment do
     Portfolio::SourceDocument.unreviewed.find_each do |d|
-      text = [d.title, d.vendor, d.description, d.metadata["po_job"], d.line_items.map { |li| li.values_at("description", "department", "class_name").join(" ") }.join(" ")].join(" | ")
+      text = [d.title, d.vendor, d.description, d.metadata["po_job"], d.metadata["store"], d.metadata["origin"], d.line_items.map { |li| li.values_at("description", "department", "class_name").join(" ") }.join(" ")].join(" | ")
       flags = PortfolioImport.flags_for(text)
       prop  = d.property_guess.presence || PortfolioImport.guess_property(text)
       group = PortfolioImport.suggested_group(prop, d.occurred_on, flags, region: PortfolioImport.region_hint(text))
