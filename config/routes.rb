@@ -1,24 +1,8 @@
 Rails.application.routes.draw do
 
-  # ---- Project Portfolio (independent section) ----
-  namespace :portfolio do
-    root to: "properties#index"
-    resources :properties do
-      collection { get :export_csv }
-    end
-    resources :vendors do
-      collection { get :export_csv }
-    end
-    resources :projects do
-      collection { get :export_csv }
-      resources :work_items, shallow: true
-      resources :expenses,   shallow: true do
-        collection { get :export_csv }
-      end
-      resources :photos,     shallow: true
-      resources :documents,  shallow: true
-    end
-  end
+  # Project Portfolio: independent section, routes in config/routes/portfolio.rb
+  draw(:portfolio)
+
   resources :booking_days
   resources :searches
   resources :accounting_lists do
