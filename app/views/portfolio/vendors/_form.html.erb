@@ -1,0 +1,15 @@
+<%= render "portfolio/shared/errors", record: @vendor %>
+<%= simple_form_for(@vendor, url: (@vendor.persisted? ? portfolio_vendor_path(@vendor) : portfolio_vendors_path)) do |f| %>
+  <div class="row">
+    <div class="col-md-6"><%= f.input :name %></div>
+    <div class="col-md-6"><%= f.input :trade, collection: Portfolio::TRADES, include_blank: true, prompt: "Select trade" %></div>
+    <div class="col-md-4"><%= f.input :contact_name %></div>
+    <div class="col-md-4"><%= f.input :phone %></div>
+    <div class="col-md-4"><%= f.input :email %></div>
+    <div class="col-md-6"><%= f.input :website %></div>
+    <div class="col-md-6"><%= f.input :license_number, label: "Contractor license #" %></div>
+    <div class="col-12"><%= f.input :notes, as: :text, input_html: { rows: 3 } %></div>
+  </div>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", portfolio_vendors_path, class: "btn btn-link" %>
+<% end %>

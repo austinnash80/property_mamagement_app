@@ -1,0 +1,25 @@
+<div class="d-flex justify-content-between align-items-center mb-3 pf-actions">
+  <h2 class="h4 mb-0">Vendors &amp; Subcontractors</h2>
+  <div>
+    <%= link_to "Download CSV", export_csv_portfolio_vendors_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "New Vendor", new_portfolio_vendor_path, class: "btn btn-primary btn-sm" %>
+  </div>
+</div>
+<div class="card"><div class="card-body p-0">
+<table class="table table-hover mb-0">
+  <thead><tr><th>Name</th><th>Trade</th><th>Contact</th><th>License #</th><th class="text-end">Paid</th><th></th></tr></thead>
+  <tbody>
+    <% @vendors.each do |v| %>
+      <tr>
+        <td><%= link_to v.name, portfolio_vendor_path(v), class: "text-decoration-none" %></td>
+        <td><%= v.trade %></td>
+        <td class="small"><%= [v.contact_name, v.phone, v.email].compact_blank.join(" · ") %></td>
+        <td><%= v.license_number %></td>
+        <td class="text-end"><%= money(v.total_paid) %></td>
+        <td class="text-end pf-actions"><%= link_to "Edit", edit_portfolio_vendor_path(v), class: "small" %></td>
+      </tr>
+    <% end %>
+    <% if @vendors.empty? %><tr><td colspan="6" class="pf-muted">No vendors yet.</td></tr><% end %>
+  </tbody>
+</table>
+</div></div>

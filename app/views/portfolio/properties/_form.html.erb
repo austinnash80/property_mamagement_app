@@ -1,0 +1,16 @@
+<%= render "portfolio/shared/errors", record: @property %>
+<%= simple_form_for(@property, url: (@property.persisted? ? portfolio_property_path(@property) : portfolio_properties_path), html: { multipart: true }) do |f| %>
+  <div class="row">
+    <div class="col-md-6"><%= f.input :name %></div>
+    <div class="col-md-6"><%= f.input :address %></div>
+    <div class="col-md-3"><%= f.input :property_type, collection: Portfolio::PROPERTY_TYPES, include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :status, collection: %w[owned sold], include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :acquired_on, as: :date, html5: true %></div>
+    <div class="col-md-3"><%= f.input :sold_on, as: :date, html5: true %></div>
+    <div class="col-md-2"><%= f.input :position, hint: "Sort order" %></div>
+    <div class="col-md-10"><%= f.input :cover_photo, as: :file, hint: (@property.cover_photo.attached? ? "Current: #{@property.cover_photo.filename}" : nil) %></div>
+    <div class="col-12"><%= f.input :notes, as: :text, input_html: { rows: 3 } %></div>
+  </div>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", (@property.persisted? ? portfolio_property_path(@property) : portfolio_properties_path), class: "btn btn-link" %>
+<% end %>

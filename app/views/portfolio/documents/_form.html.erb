@@ -1,0 +1,12 @@
+<%= render "portfolio/shared/errors", record: @record %>
+<%= simple_form_for(@record, url: (@record.persisted? ? portfolio_document_path(@record) : portfolio_project_documents_path(@project)), html: { multipart: true }) do |f| %>
+  <div class="row">
+    <div class="col-md-3"><%= f.input :kind, collection: Portfolio::DOCUMENT_KINDS.map { |k| [k.capitalize, k] }, include_blank: false %></div>
+    <div class="col-md-6"><%= f.input :title %></div>
+    <div class="col-md-3"><%= f.input :issued_on, as: :date, html5: true %></div>
+    <div class="col-md-6"><%= f.input :file, as: :file, hint: (@record.file.attached? ? "Current: #{@record.file.filename}" : nil) %></div>
+    <div class="col-md-6"><%= f.input :notes %></div>
+  </div>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", portfolio_project_path(@project, anchor: "documents"), class: "btn btn-link" %>
+<% end %>

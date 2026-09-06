@@ -1,0 +1,18 @@
+<%= render "portfolio/shared/errors", record: @record %>
+<%= simple_form_for(@record, url: (@record.persisted? ? portfolio_photo_path(@record) : portfolio_project_photos_path(@project)), html: { multipart: true }) do |f| %>
+  <div class="row">
+    <% if @record.persisted? %>
+      <div class="col-12 mb-3"><%= safe_image(@record, :thumb, style: "max-height:200px") %></div>
+      <div class="col-md-6"><%= f.input :image, as: :file, input_html: { accept: "image/*" }, hint: "Replace image (optional)" %></div>
+    <% else %>
+      <div class="col-md-6"><%= f.input :images, as: :file, input_html: { multiple: true, accept: "image/*", name: "portfolio_photo[images][]" }, label: "Images", hint: "Select many at once; each becomes a photo with the settings below" %></div>
+    <% end %>
+    <div class="col-md-2"><%= f.input :stage, collection: Portfolio::PHOTO_STAGES.map { |s| [s.capitalize, s] }, include_blank: false %></div>
+    <div class="col-md-2"><%= f.input :taken_on, as: :date, html5: true %></div>
+    <div class="col-md-2"><%= f.input :position, hint: "Sort order" %></div>
+    <div class="col-md-6"><%= f.input :caption %></div>
+    <div class="col-md-6"><%= f.input :work_item_id, label: "Work item", collection: @project.work_items, label_method: :title, value_method: :id, include_blank: "— whole project —" %></div>
+  </div>
+  <%= f.button :submit, (@record.persisted? ? "Save" : "Upload"), class: "btn btn-primary" %>
+  <%= link_to "Cancel", portfolio_project_path(@project, anchor: "photos"), class: "btn btn-link" %>
+<% end %>

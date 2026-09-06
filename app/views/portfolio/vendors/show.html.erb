@@ -1,0 +1,38 @@
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1"><%= @vendor.name %></h2>
+    <div class="pf-muted"><%= @vendor.trade %></div>
+    <div class="small mt-1">
+      <% if @vendor.contact_name.present? %><div>Contact: <%= @vendor.contact_name %></div><% end %>
+      <% if @vendor.phone.present? %><div>Phone: <%= @vendor.phone %></div><% end %>
+      <% if @vendor.email.present? %><div>Email: <%= mail_to @vendor.email %></div><% end %>
+      <% if @vendor.website.present? %><div>Web: <%= link_to @vendor.website, @vendor.website, target: "_blank" %></div><% end %>
+      <% if @vendor.license_number.present? %><div>License #: <%= @vendor.license_number %></div><% end %>
+    </div>
+    <% if @vendor.notes.present? %><p class="mt-2"><%= simple_format(@vendor.notes) %></p><% end %>
+  </div>
+  <div class="pf-actions">
+    <%= link_to "Edit", edit_portfolio_vendor_path(@vendor), class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Delete", portfolio_vendor_path(@vendor), method: :delete, data: { confirm: "Delete this vendor? Work items and expenses keep their data but lose the vendor link." }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+</div>
+
+<h3 class="h5 mt-4">Total paid: <%= money(@vendor.total_paid) %></h3>
+
+<h3 class="h5 mt-4">Projects</h3>
+<ul>
+  <% @projects.each do |p| %>
+    <li><%= link_to p.title, portfolio_project_path(p) %> <span class="pf-muted small">— <%= p.property.name %>, <%= p.date_range %></span></li>
+  <% end %>
+  <% if @projects.empty? %><li class="pf-muted">Not linked to any projects yet.</li><% end %>
+</ul>
+
+<h3 class="h5 mt-4">Work performed</h3>
+<table class="table table-sm">
+  <thead><tr><th>Project</th><th>Work item</th><th>Trade</th><th>Dates</th></tr></thead>
+  <tbody>
+    <% @vendor.work_items.includes(:project).each do |w| %>
+      <tr><td><%= link_to w.project.title, portfolio_project_path(w.project) %></td><td><%= w.title %></td><td><%= w.trade %></td><td class="small"><%= pdate(w.started_on) %> – <%= pdate(w.completed_on) %></td></tr>
+    <% end %>
+  </tbody>
+</table>

@@ -1,0 +1,17 @@
+<%= render "portfolio/shared/errors", record: @project %>
+<%= simple_form_for(@project, url: (@project.persisted? ? portfolio_project_path(@project) : portfolio_projects_path)) do |f| %>
+  <div class="row">
+    <div class="col-md-6"><%= f.input :property_id, label: "Property", collection: Portfolio::Property.ordered, label_method: :name, value_method: :id, include_blank: false %></div>
+    <div class="col-md-6"><%= f.input :title, placeholder: "e.g. Full kitchen remodel" %></div>
+    <div class="col-12"><%= f.input :summary, hint: "One line shown in lists" %></div>
+    <div class="col-12"><%= f.input :description, as: :text, input_html: { rows: 6 }, hint: "Full write-up of what was done" %></div>
+    <div class="col-md-3"><%= f.input :started_on, as: :date, html5: true %></div>
+    <div class="col-md-3"><%= f.input :completed_on, as: :date, html5: true %></div>
+    <div class="col-md-3"><%= f.input :status, collection: Portfolio::PROJECT_STATUSES.map { |s| [s.humanize, s] }, include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :permit_number %></div>
+    <div class="col-12"><%= f.input :permit_notes, as: :text, input_html: { rows: 2 } %></div>
+    <div class="col-12"><%= f.input :notes, as: :text, input_html: { rows: 2 }, hint: "Internal, not part of the portfolio narrative" %></div>
+  </div>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", (@project.persisted? ? portfolio_project_path(@project) : portfolio_projects_path), class: "btn btn-link" %>
+<% end %>

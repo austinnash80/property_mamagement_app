@@ -1,0 +1,20 @@
+<%= render "portfolio/shared/errors", record: @record %>
+<%= simple_form_for(@record, url: (@record.persisted? ? portfolio_expense_path(@record) : portfolio_project_expenses_path(@project)), html: { multipart: true }) do |f| %>
+  <div class="row">
+    <div class="col-md-3"><%= f.input :purchased_on, as: :date, html5: true %></div>
+    <div class="col-md-3"><%= f.input :amount %></div>
+    <div class="col-md-6"><%= f.input :description, placeholder: "e.g. Tile, thinset, grout" %></div>
+    <div class="col-md-3"><%= f.input :category, collection: Portfolio::EXPENSE_CATEGORIES.map { |c| [c.capitalize, c] }, include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :source, placeholder: "Home Depot, Amazon, Costco…", hint: "Store if not a vendor below" %></div>
+    <div class="col-md-3"><%= f.input :vendor_id, label: "Sub / vendor", collection: Portfolio::Vendor.ordered, label_method: :name, value_method: :id, include_blank: "— none —" %></div>
+    <div class="col-md-3"><%= f.input :work_item_id, label: "Work item", collection: @project.work_items, label_method: :title, value_method: :id, include_blank: "— none —" %></div>
+    <div class="col-md-3"><%= f.input :invoice_number %></div>
+    <div class="col-md-9"><%= f.input :receipts, as: :file, input_html: { multiple: true, accept: "image/*,.pdf" }, hint: "Invoice / receipt files (PDF or image). Existing files are kept." %></div>
+    <div class="col-12"><%= f.input :notes %></div>
+  </div>
+  <% if @record.receipts.attached? %>
+    <div class="small mb-3">Attached: <% @record.receipts.each do |r| %><%= link_to r.filename, url_for(r), target: "_blank" %> <% end %></div>
+  <% end %>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", portfolio_project_path(@project), class: "btn btn-link" %>
+<% end %>

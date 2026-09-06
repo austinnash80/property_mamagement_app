@@ -1,0 +1,17 @@
+<%= render "portfolio/shared/errors", record: @record %>
+<%= simple_form_for(@record, url: (@record.persisted? ? portfolio_work_item_path(@record) : portfolio_project_work_items_path(@project))) do |f| %>
+  <div class="row">
+    <div class="col-md-8"><%= f.input :title, placeholder: "e.g. Demo existing cabinets and tile" %></div>
+    <div class="col-md-4"><%= f.input :trade, collection: Portfolio::TRADES, prompt: "Select trade" %></div>
+    <div class="col-12"><%= f.input :description, as: :text, input_html: { rows: 4 } %></div>
+    <div class="col-md-3"><%= f.input :performed_by, collection: Portfolio::PERFORMED_BY.map { |k, v| [v, k] }, include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :vendor_id, label: "Sub / vendor", collection: Portfolio::Vendor.ordered, label_method: :name, value_method: :id, include_blank: "— none —", hint: link_to("Add vendor", new_portfolio_vendor_path, target: "_blank") %></div>
+    <div class="col-md-2"><%= f.input :started_on, as: :date, html5: true %></div>
+    <div class="col-md-2"><%= f.input :completed_on, as: :date, html5: true %></div>
+    <div class="col-md-2"><%= f.input :hours, hint: "Your labor hours" %></div>
+    <div class="col-md-2"><%= f.input :position, hint: "Sort order" %></div>
+    <div class="col-md-10"><%= f.input :notes %></div>
+  </div>
+  <%= f.button :submit, class: "btn btn-primary" %>
+  <%= link_to "Cancel", portfolio_project_path(@project), class: "btn btn-link" %>
+<% end %>

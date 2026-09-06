@@ -1,0 +1,3 @@
+<nav class="small mb-2"><%= link_to @project.property.name, portfolio_property_path(@project.property) %> › <%= link_to @project.title, portfolio_project_path(@project) %></nav>
+<h2 class="h4">Edit <%= @record.model_name.human %></h2>
+<%= render "form" %>

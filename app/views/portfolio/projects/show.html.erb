@@ -1,0 +1,164 @@
+<nav class="small mb-2 pf-actions">
+  <%= link_to @project.property.name, portfolio_property_path(@project.property) %> ›
+  <%= @project.title %>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1"><%= @project.title %></h2>
+    <div class="pf-muted"><%= @project.property.name %> · <%= @project.property.address %></div>
+    <div class="mt-1">
+      <%= status_badge(@project.status) %>
+      <span class="small pf-muted ms-2"><%= @project.date_range.presence || "No dates" %></span>
+      <% if @project.permit_number.present? %><span class="badge bg-info text-dark ms-2">Permit <%= @project.permit_number %></span><% end %>
+    </div>
+  </div>
+  <div class="pf-actions text-end">
+    <%= link_to "Edit", edit_portfolio_project_path(@project), class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Delete", portfolio_project_path(@project), method: :delete, data: { confirm: "Delete this project and everything in it?" }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-3"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Total cost</div><div class="h5 mb-0"><%= money(@project.total_cost) %></div></div></div></div>
+  <div class="col-sm-3"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Work items</div><div class="h5 mb-0"><%= @work_items.size %></div></div></div></div>
+  <div class="col-sm-3"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Subs used</div><div class="h5 mb-0"><%= @project.vendors.count %></div></div></div></div>
+  <div class="col-sm-3"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Photos</div><div class="h5 mb-0"><%= @photos.size %></div></div></div></div>
+</div>
+
+<% if @project.summary.present? %><p class="lead fs-6"><%= @project.summary %></p><% end %>
+<% if @project.description.present? %><div class="card mb-3"><div class="card-body"><%= simple_format(@project.description) %></div></div><% end %>
+<% if @project.permit_notes.present? %><div class="small"><strong>Permit notes:</strong> <%= @project.permit_notes %></div><% end %>
+
+<%# ---------------- Work items ---------------- %>
+<section class="pf-section" id="work_items">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Scope of Work</h3>
+    <%= link_to "Add work item", new_portfolio_project_work_item_path(@project), class: "btn btn-outline-primary btn-sm pf-actions" %>
+  </div>
+  <table class="table table-sm mt-2">
+    <thead><tr><th>Trade</th><th>Work</th><th>Performed by</th><th>Dates</th><th class="text-end">Hours</th><th class="pf-actions"></th></tr></thead>
+    <tbody>
+      <% @work_items.each do |w| %>
+        <tr>
+          <td><span class="badge bg-light text-dark border"><%= w.trade %></span></td>
+          <td><strong><%= w.title %></strong><% if w.description.present? %><div class="small pf-muted"><%= simple_format(w.description, {}, wrapper_tag: "span") %></div><% end %></td>
+          <td class="small"><%= w.performed_by_label %><% if w.vendor %> — <%= link_to w.vendor.name, portfolio_vendor_path(w.vendor) %><% end %></td>
+          <td class="small text-nowrap"><%= pdate(w.started_on, "%-m/%-d/%y") %><%= " – #{pdate(w.completed_on, '%-m/%-d/%y')}" if w.completed_on %></td>
+          <td class="text-end"><%= w.hours %></td>
+          <td class="text-end pf-actions text-nowrap"><%= link_to "Edit", edit_portfolio_work_item_path(w), class: "small" %> · <%= link_to "Delete", portfolio_work_item_path(w), method: :delete, data: { confirm: "Delete this work item?" }, class: "small text-danger" %></td>
+        </tr>
+      <% end %>
+      <% if @work_items.empty? %><tr><td colspan="6" class="pf-muted">No work items yet.</td></tr><% end %>
+    </tbody>
+  </table>
+</section>
+
+<%# ---------------- Subs ---------------- %>
+<% vendors = @project.vendors.to_a %>
+<% if vendors.any? %>
+<section class="pf-section" id="vendors">
+  <h3 class="h5">Subcontractors &amp; Vendors</h3>
+  <ul class="mb-0">
+    <% vendors.each do |v| %>
+      <% items = @work_items.select { |w| w.vendor_id == v.id } %>
+      <% paid  = @expenses.select { |e| e.vendor_id == v.id }.sum { |e| e.amount.to_d } %>
+      <li><%= link_to v.name, portfolio_vendor_path(v) %><% if v.trade.present? %> <span class="pf-muted small">(<%= v.trade %>)</span><% end %>
+        <% if items.any? %> — <%= items.map(&:title).join(", ") %><% end %>
+        <% if paid > 0 %> <span class="pf-muted small">· <%= money(paid) %></span><% end %>
+      </li>
+    <% end %>
+  </ul>
+</section>
+<% end %>
+
+<%# ---------------- Photos ---------------- %>
+<section class="pf-section" id="photos">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Photos</h3>
+    <%= link_to "Upload photos", new_portfolio_project_photo_path(@project), class: "btn btn-outline-primary btn-sm pf-actions" %>
+  </div>
+  <% Portfolio::PHOTO_STAGES.each do |stage| %>
+    <% group = @photos.select { |p| p.stage == stage } %>
+    <% next if group.empty? %>
+    <h4 class="h6 mt-3"><%= stage_badge(stage) %> <span class="pf-muted small"><%= group.size %></span></h4>
+    <div class="pf-gallery">
+      <% group.each do |photo| %>
+        <figure>
+          <% if photo.image.attached? %>
+            <%= link_to url_for(photo.image), target: "_blank" do %>
+              <%= safe_image(photo, :thumb, alt: photo.caption) %>
+            <% end %>
+          <% end %>
+          <figcaption>
+            <div><%= photo.caption.presence || photo.image.filename %></div>
+            <div class="pf-muted"><%= pdate(photo.taken_on, "%-m/%-d/%Y") if photo.taken_on %><%= " · #{photo.work_item.title}" if photo.work_item %></div>
+            <div class="pf-actions"><%= link_to "Edit", edit_portfolio_photo_path(photo) %> · <%= link_to "Delete", portfolio_photo_path(photo), method: :delete, data: { confirm: "Delete this photo?" }, class: "text-danger" %></div>
+          </figcaption>
+        </figure>
+      <% end %>
+    </div>
+  <% end %>
+  <% if @photos.empty? %><p class="pf-muted mt-2">No photos yet.</p><% end %>
+</section>
+
+<%# ---------------- Expenses ---------------- %>
+<section class="pf-section" id="expenses">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Expenses &amp; Invoices</h3>
+    <div class="pf-actions">
+      <%= link_to "CSV", export_csv_portfolio_project_expenses_path(@project), class: "btn btn-outline-secondary btn-sm" %>
+      <%= link_to "Add expense", new_portfolio_project_expense_path(@project), class: "btn btn-outline-primary btn-sm" %>
+    </div>
+  </div>
+  <table class="table table-sm mt-2">
+    <thead><tr><th>Date</th><th>Description</th><th>Vendor / Source</th><th>Category</th><th>Work item</th><th>Receipt</th><th class="text-end">Amount</th><th class="pf-actions"></th></tr></thead>
+    <tbody>
+      <% @expenses.each do |e| %>
+        <tr>
+          <td class="small text-nowrap"><%= pdate(e.purchased_on, "%-m/%-d/%Y") %></td>
+          <td><%= e.description %><% if e.invoice_number.present? %> <span class="pf-muted small">#<%= e.invoice_number %></span><% end %></td>
+          <td class="small"><%= e.vendor ? link_to(e.vendor.name, portfolio_vendor_path(e.vendor)) : e.source %></td>
+          <td class="small"><%= e.category&.capitalize %></td>
+          <td class="small"><%= e.work_item&.title %></td>
+          <td class="small">
+            <% e.receipts.each do |r| %>
+              <%= link_to "#{file_icon(r.blob)} #{r.filename.to_s.truncate(24)}", url_for(r), target: "_blank", class: "text-decoration-none" %><br>
+            <% end %>
+          </td>
+          <td class="text-end"><%= money(e.amount) %></td>
+          <td class="text-end pf-actions text-nowrap"><%= link_to "Edit", edit_portfolio_expense_path(e), class: "small" %> · <%= link_to "Delete", portfolio_expense_path(e), method: :delete, data: { confirm: "Delete this expense?" }, class: "small text-danger" %></td>
+        </tr>
+      <% end %>
+      <% if @expenses.empty? %><tr><td colspan="8" class="pf-muted">No expenses yet.</td></tr><% end %>
+    </tbody>
+    <tfoot><tr><th colspan="6" class="text-end">Total</th><th class="text-end"><%= money(@project.total_cost) %></th><th></th></tr></tfoot>
+  </table>
+</section>
+
+<%# ---------------- Documents ---------------- %>
+<section class="pf-section" id="documents">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Documents <span class="pf-muted small">permits, plans, contracts, warranties</span></h3>
+    <%= link_to "Add document", new_portfolio_project_document_path(@project), class: "btn btn-outline-primary btn-sm pf-actions" %>
+  </div>
+  <table class="table table-sm mt-2">
+    <thead><tr><th>Kind</th><th>Title</th><th>Date</th><th>File</th><th class="pf-actions"></th></tr></thead>
+    <tbody>
+      <% @documents.each do |d| %>
+        <tr>
+          <td><span class="badge bg-light text-dark border"><%= d.kind.capitalize %></span></td>
+          <td><%= d.title %><% if d.notes.present? %><div class="small pf-muted"><%= d.notes %></div><% end %></td>
+          <td class="small"><%= pdate(d.issued_on) %></td>
+          <td class="small"><% if d.file.attached? %><%= link_to "#{file_icon(d.file.blob)} #{d.file.filename}", url_for(d.file), target: "_blank", class: "text-decoration-none" %><% end %></td>
+          <td class="text-end pf-actions text-nowrap"><%= link_to "Edit", edit_portfolio_document_path(d), class: "small" %> · <%= link_to "Delete", portfolio_document_path(d), method: :delete, data: { confirm: "Delete this document?" }, class: "small text-danger" %></td>
+        </tr>
+      <% end %>
+      <% if @documents.empty? %><tr><td colspan="5" class="pf-muted">No documents yet.</td></tr><% end %>
+    </tbody>
+  </table>
+</section>
+
+<% if @project.notes.present? %>
+  <section class="pf-section"><h3 class="h6">Internal notes</h3><div class="small"><%= simple_format(@project.notes) %></div></section>
+<% end %>

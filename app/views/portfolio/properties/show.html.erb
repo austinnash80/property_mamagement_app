@@ -1,0 +1,58 @@
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1"><%= @property.name %></h2>
+    <div class="pf-muted"><%= @property.address %></div>
+    <div class="mt-1">
+      <%= status_badge(@property.status) %>
+      <span class="badge bg-light text-dark"><%= @property.property_type&.capitalize %></span>
+      <% if @property.acquired_on || @property.sold_on %>
+        <span class="small pf-muted ms-2">Acquired <%= pdate(@property.acquired_on) %><%= " · Sold #{pdate(@property.sold_on)}" if @property.sold_on %></span>
+      <% end %>
+    </div>
+    <% if @property.notes.present? %><p class="mt-2 mb-0"><%= simple_format(@property.notes) %></p><% end %>
+  </div>
+  <div class="pf-actions text-end">
+    <%= link_to "New Project", new_portfolio_project_path(property_id: @property.id), class: "btn btn-primary btn-sm" %>
+    <%= link_to "Edit", edit_portfolio_property_path(@property), class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Delete", portfolio_property_path(@property), method: :delete, data: { confirm: "Delete this property and ALL its projects, photos and receipts?" }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Projects</div><div class="h5 mb-0"><%= @projects.size %></div></div></div></div>
+  <div class="col-sm-4"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Documented cost</div><div class="h5 mb-0"><%= money(@property.total_cost) %></div></div></div></div>
+  <div class="col-sm-4"><div class="card"><div class="card-body py-2"><div class="small pf-muted">Photos</div><div class="h5 mb-0"><%= @projects.sum { |p| p.photos.size } %></div></div></div></div>
+</div>
+
+<h3 class="h5">Projects <span class="pf-muted small">(newest first)</span></h3>
+<% if @projects.empty? %>
+  <p class="pf-muted">No projects yet.</p>
+<% end %>
+<% @projects.each do |project| %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between">
+        <div>
+          <h5 class="mb-1"><%= link_to project.title, portfolio_project_path(project), class: "text-decoration-none" %></h5>
+          <div class="small pf-muted"><%= project.date_range.presence || "No dates" %> · <%= status_badge(project.status) %></div>
+          <% if project.summary.present? %><p class="mb-1 mt-2"><%= project.summary %></p><% end %>
+          <div class="small">
+            <% project.trades.each do |t| %><span class="badge bg-light text-dark border"><%= t %></span> <% end %>
+          </div>
+        </div>
+        <div class="text-end">
+          <div class="h5 mb-0"><%= money(project.total_cost) %></div>
+          <div class="small pf-muted"><%= project.work_items.size %> work items · <%= project.photos.size %> photos</div>
+        </div>
+      </div>
+      <% after = project.photos.select { |p| p.stage == "after" }.first(4) %>
+      <% if after.any? %>
+        <div class="d-flex gap-2 mt-2">
+          <% after.each do |photo| %>
+            <%= safe_image(photo, :thumb, style: "height:70px;width:100px;object-fit:cover;border-radius:.3rem") %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

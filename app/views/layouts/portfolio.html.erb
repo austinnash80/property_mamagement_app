@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Project Portfolio</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <style>
+      body { background: #f6f7f9; }
+      .pf-nav a { text-decoration: none; margin-right: 1.25rem; color: #334; font-weight: 500; }
+      .pf-nav a:hover { color: #000; }
+      .pf-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .75rem; }
+      .pf-gallery figure { margin: 0; background: #fff; border: 1px solid #e3e5e8; border-radius: .4rem; overflow: hidden; }
+      .pf-gallery img { width: 100%; height: 160px; object-fit: cover; display: block; }
+      .pf-gallery figcaption { font-size: .8rem; padding: .35rem .5rem; }
+      .pf-cover { width: 100%; height: 140px; object-fit: cover; border-radius: .4rem .4rem 0 0; }
+      .pf-muted { color: #6c757d; }
+      .pf-section { margin-top: 2rem; }
+      @media print { .pf-nav, .pf-actions, .btn, form { display: none !important; } body { background: #fff; } }
+    </style>
+  </head>
+  <body>
+    <header class="bg-white border-bottom mb-4">
+      <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between">
+        <div>
+          <h1 class="h4 mb-1"><%= link_to "Project Portfolio", portfolio_root_path, class: "text-dark text-decoration-none" %></h1>
+          <nav class="pf-nav small">
+            <%= link_to "Properties", portfolio_properties_path %>
+            <%= link_to "All Projects", portfolio_projects_path %>
+            <%= link_to "Vendors / Subs", portfolio_vendors_path %>
+            <a href="/" class="pf-muted">← Property Management</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <div class="container pb-5">
+      <% if notice.present? %><div class="alert alert-success py-2"><%= notice %></div><% end %>
+      <% if alert.present?  %><div class="alert alert-danger py-2"><%= alert %></div><% end %>
+      <%= yield %>
+    </div>
+  </body>
+</html>
