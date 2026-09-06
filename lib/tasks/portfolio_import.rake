@@ -6,8 +6,10 @@ namespace :portfolio do
   # rake "portfolio:import_homedepot[orders.json,receipts.json,/path/to/homedepot]"
   desc "Import Home Depot orders (harvested JSON) into the portfolio inbox"
   task :import_homedepot, [:orders_json, :receipts_json, :dir] => :environment do |_, args|
-    orders   = JSON.parse(File.read(args[:orders_json]))
-    receipts = args[:receipts_json] && File.exist?(args[:receipts_json].to_s) ? JSON.parse(File.read(args[:receipts_json])) : {}
+    raw      = JSON.parse(File.read(args[:orders_json]))
+    # accept either the raw pf_orders map or the combined export {orders:, receipts:}
+    orders   = raw["orders"] || raw
+    receipts = raw["receipts"] || (args[:receipts_json] && File.exist?(args[:receipts_json].to_s) ? JSON.parse(File.read(args[:receipts_json])) : {})
     dir      = args[:dir] || File.expand_path("~/Projects/portfolio-sources/homedepot")
     created = updated = 0
     orders.each do |key, rec|
