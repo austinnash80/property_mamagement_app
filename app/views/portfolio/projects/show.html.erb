@@ -159,6 +159,26 @@
   </table>
 </section>
 
+<%# ---------------- Source documents ---------------- %>
+<% sdocs = @project.source_documents.by_date.includes(files_attachments: :blob) %>
+<% if sdocs.any? %>
+<section class="pf-section" id="source_documents">
+  <h3 class="h5">Source documents <span class="pf-muted small"><%= sdocs.size %> assigned from the Inbox · <%= money(sdocs.sum { |d| d.amount.to_f }) %></span></h3>
+  <table class="table table-sm">
+    <thead><tr><th>Date</th><th>Title</th><th>Vendor</th><th>Files</th><th class="text-end">Amount</th><th></th></tr></thead>
+    <tbody>
+      <% sdocs.each do |d| %>
+        <tr><td class="small text-nowrap"><%= pdate(d.occurred_on, "%-m/%-d/%Y") %></td>
+          <td><%= link_to d.title.to_s.truncate(70), portfolio_source_document_path(d), class: "text-decoration-none" %><% d.flag_list.each do |fl| %> <span class="badge bg-warning text-dark"><%= fl %></span><% end %></td>
+          <td class="small"><%= d.vendor %></td><td class="small"><%= d.files.size %></td>
+          <td class="text-end"><%= money(d.amount) if d.amount %></td>
+          <td class="small"><%= d.metadata["promoted_as"] ? "→ #{d.metadata['promoted_as']}" : "" %></td></tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+<% end %>
+
 <% if @project.notes.present? %>
   <section class="pf-section"><h3 class="h6">Internal notes</h3><div class="small"><%= simple_format(@project.notes) %></div></section>
 <% end %>

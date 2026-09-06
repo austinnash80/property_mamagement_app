@@ -29,6 +29,7 @@
             <%= link_to "Properties", portfolio_properties_path %>
             <%= link_to "All Projects", portfolio_projects_path %>
             <%= link_to "Vendors / Subs", portfolio_vendors_path %>
+            <%= link_to "Inbox#{(n = Portfolio::SourceDocument.unreviewed.count) > 0 ? " (#{n})" : ""}", portfolio_inbox_path %>
             <a href="/" class="pf-muted">← Property Management</a>
           </nav>
         </div>

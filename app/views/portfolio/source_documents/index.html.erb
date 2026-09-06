@@ -1,0 +1,114 @@
+<% total_unreviewed = @counts[:status]["unreviewed"].to_i %>
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="h4 mb-0">Inbox <span class="pf-muted small"><%= total_unreviewed %> unreviewed · <%= @counts[:status]["keep"].to_i %> kept · <%= @counts[:status]["discard"].to_i %> discarded</span></h2>
+  <div class="pf-actions">
+    <%= link_to "CSV", export_csv_portfolio_source_documents_path, class: "btn btn-outline-secondary btn-sm" %>
+  </div>
+</div>
+
+<%# ---------- filters ---------- %>
+<%= form_with url: portfolio_inbox_path, method: :get, local: true, class: "card mb-3" do |f| %>
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-2"><label class="form-label small mb-0">Status</label>
+        <%= f.select :status, options_for_select([["Unreviewed", "unreviewed"], ["Kept", "keep"], ["Discarded", "discard"], ["All", "all"]], @f["status"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Source</label>
+        <%= f.select :source, options_for_select([["Any", ""]] + @counts[:source].map { |k, v| ["#{k} (#{v})", k] }, @f["source"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Property guess</label>
+        <%= f.select :property, options_for_select([["Any", ""], ["No guess", "none"]] + @counts[:property].reject { |k, _| k.blank? }.map { |k, v| ["#{k} (#{v})", k] }, @f["property"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-1"><label class="form-label small mb-0">Year</label>
+        <%= f.select :year, options_for_select([["Any", ""]] + @counts[:year].map { |k, v| ["#{k} (#{v})", k] }, @f["year"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Vendor</label>
+        <%= f.select :vendor, options_for_select([["Any", ""]] + @vendors.map { |k, v| ["#{k.to_s.truncate(28)} (#{v})", k] }, @f["vendor"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-1"><label class="form-label small mb-0">Flag</label>
+        <%= f.select :flag, options_for_select([["Any", ""], ["Cabinet", "CABINET"], ["Flooring", "FLOORING"], ["Tile", "TILE"], ["Plumbing", "PLUMBING"], ["Electrical", "ELECTRICAL"], ["Roofing", "ROOFING"], ["HVAC", "HVAC"], ["Appliance", "APPLIANCE"], ["Permit", "PERMIT"]], @f["flag"]), {}, class: "form-select form-select-sm" %></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Search</label>
+        <%= f.text_field :q, value: @f["q"], class: "form-control form-control-sm", placeholder: "title, vendor, line items" %></div>
+      <div class="col-md-2 d-flex gap-1">
+        <%= f.hidden_field :group, value: @f["group"] %>
+        <%= f.submit "Filter", class: "btn btn-primary btn-sm" %>
+        <%= link_to "Reset", portfolio_inbox_path, class: "btn btn-outline-secondary btn-sm" %>
+        <%= link_to((@f["sort"] == "amount" ? "By date" : "By amount"), portfolio_inbox_path(@f.merge(sort: (@f["sort"] == "amount" ? nil : "amount"))), class: "btn btn-outline-secondary btn-sm") %>
+      </div>
+    </div>
+    <div class="small mt-2">
+      <span class="pf-muted">Suggested groups:</span>
+      <% @counts[:group].first(30).each do |g, n| %>
+        <%= link_to "#{g.presence || 'Ungrouped'} (#{n})", portfolio_inbox_path(@f.merge(group: g)), class: "badge rounded-pill text-decoration-none #{@f['group'] == g ? 'bg-primary' : 'bg-light text-dark border'}" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# ---------- bulk action bar + list ---------- %>
+<%= form_with url: bulk_portfolio_source_documents_path, method: :post, local: true, id: "bulkform" do |f| %>
+  <div class="card mb-3 sticky-top" style="top:0; z-index:5">
+    <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
+      <label class="small"><input type="checkbox" id="checkall"> <b>Select all</b> <span id="selcount" class="pf-muted"></span></label>
+      <span class="vr"></span>
+      <button name="act" value="keep" class="btn btn-success btn-sm">Keep</button>
+      <button name="act" value="discard" class="btn btn-outline-danger btn-sm">Not keep</button>
+      <button name="act" value="unreview" class="btn btn-outline-secondary btn-sm">Back to unreviewed</button>
+      <span class="vr"></span>
+      <%= select_tag :project_id, options_for_select([["— assign to existing project —", ""]] + @projects.map { |p| ["#{p.property.name}: #{p.title}", p.id] }), class: "form-select form-select-sm w-auto" %>
+      <button name="act" value="assign" class="btn btn-primary btn-sm">Assign</button>
+      <span class="vr"></span>
+      <%= select_tag :new_property_id, options_for_select(Portfolio::Property.ordered.map { |p| [p.name, p.id] }), class: "form-select form-select-sm w-auto" %>
+      <%= text_field_tag :new_title, nil, placeholder: "New project title", class: "form-control form-control-sm w-auto" %>
+      <button name="act" value="create_project" class="btn btn-outline-primary btn-sm">Create project from selected</button>
+      <span class="vr"></span>
+      <button name="act" value="promote" class="btn btn-outline-dark btn-sm" title="Turn assigned docs into project expenses / documents / photos">Promote to project records</button>
+      <button name="act" value="delete" class="btn btn-link btn-sm text-danger" data-confirm="Permanently delete the selected documents and their files?">Delete</button>
+    </div>
+  </div>
+
+  <% if @docs.empty? %><p class="pf-muted">Nothing matches these filters.</p><% end %>
+
+  <% @grouped.sort_by { |g, ds| [-(ds.sum { |d| d.amount.to_f }), g.to_s] }.each do |group, docs| %>
+    <div class="card mb-3">
+      <div class="card-header py-2 d-flex justify-content-between align-items-center">
+        <div><label class="mb-0"><input type="checkbox" class="grpcheck"> <strong><%= group %></strong></label>
+          <span class="pf-muted small ms-2"><%= docs.size %> docs · <%= money(docs.sum { |d| d.amount.to_f }) %><%= " · #{docs.map(&:occurred_on).compact.minmax.map { |d| d.strftime('%b %Y') }.uniq.join(' – ')}" if docs.any?(&:occurred_on) %></span></div>
+        <div class="small pf-muted"><%= docs.map(&:vendor).compact.uniq.first(4).join(", ") %></div>
+      </div>
+      <table class="table table-sm table-hover mb-0">
+        <tbody>
+          <% docs.each do |d| %>
+            <tr class="<%= 'table-success' if d.status == 'keep' %><%= 'table-secondary text-muted' if d.status == 'discard' %>">
+              <td style="width:28px"><%= check_box_tag "ids[]", d.id, false, class: "rowcheck", id: "ids_#{d.id}" %></td>
+              <td class="small text-nowrap" style="width:90px"><%= pdate(d.occurred_on, "%-m/%-d/%y") %></td>
+              <td style="width:70px">
+                <% img = d.image_files.first %>
+                <% if img %><%= image_tag img.variant(resize_to_limit: [64, 64]), style: "height:40px;border-radius:3px" rescue nil %>
+                <% elsif d.files.attached? %><span class="badge bg-light text-dark border">📄 <%= d.files.size %></span><% end %>
+              </td>
+              <td>
+                <%= link_to d.title.presence || "(untitled)", portfolio_source_document_path(d), class: "text-decoration-none fw-semibold" %>
+                <div class="small pf-muted"><%= d.vendor %><%= " · #{d.kind}" if d.kind.present? && d.kind != 'other' %>
+                  <% d.flag_list.each do |fl| %><span class="badge bg-warning text-dark ms-1"><%= fl %></span><% end %>
+                  <% if d.line_items.any? %><span class="ms-1"><%= d.line_items.size %> items: <%= d.line_items.first(3).map { |li| li["description"].to_s.truncate(40) }.join("; ") %></span><% end %>
+                </div>
+              </td>
+              <td class="small" style="width:120px"><%= d.property_guess.presence || "—" %></td>
+              <td class="small" style="width:160px"><%= d.project ? link_to(d.project.title.truncate(30), portfolio_project_path(d.project)) : "" %></td>
+              <td class="text-end text-nowrap" style="width:90px"><%= money(d.amount) if d.amount %></td>
+              <td class="text-nowrap" style="width:80px"><%= status_badge(d.status) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>
+
+<script>
+  (function(){
+    var form=document.getElementById('bulkform'); if(!form) return;
+    var all=document.getElementById('checkall'); var count=document.getElementById('selcount');
+    function upd(){ var n=form.querySelectorAll('.rowcheck:checked').length; count.textContent=n?('('+n+' selected)'):''; }
+    all.addEventListener('change',function(){ form.querySelectorAll('.rowcheck').forEach(function(c){c.checked=all.checked}); upd(); });
+    form.querySelectorAll('.grpcheck').forEach(function(g){ g.addEventListener('change',function(){ g.closest('.card').querySelectorAll('.rowcheck').forEach(function(c){c.checked=g.checked}); upd(); }); });
+    form.addEventListener('change',upd);
+    form.addEventListener('submit',function(e){ if(!form.querySelectorAll('.rowcheck:checked').length){ e.preventDefault(); alert('Select at least one document first.'); } var b=e.submitter; if(b&&b.dataset.confirm&&!confirm(b.dataset.confirm)) e.preventDefault(); });
+  })();
+</script>

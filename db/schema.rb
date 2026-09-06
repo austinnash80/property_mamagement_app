@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_09_06_010000) do
+ActiveRecord::Schema.define(version: 2026_09_06_030000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -163,6 +163,33 @@ ActiveRecord::Schema.define(version: 2026_09_06_010000) do
     t.datetime "updated_at", precision: 6, null: false
   end
 
+  create_table "portfolio_source_documents", force: :cascade do |t|
+    t.string "source", null: false
+    t.string "source_ref"
+    t.date "occurred_on"
+    t.string "vendor"
+    t.string "title"
+    t.text "description"
+    t.string "property_guess"
+    t.string "suggested_group"
+    t.decimal "amount", precision: 12, scale: 2
+    t.string "kind", default: "other"
+    t.string "flags"
+    t.string "status", default: "unreviewed"
+    t.bigint "project_id"
+    t.bigint "work_item_id"
+    t.jsonb "metadata", default: {}
+    t.text "notes"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["occurred_on"], name: "index_portfolio_source_documents_on_occurred_on"
+    t.index ["project_id"], name: "index_portfolio_source_documents_on_project_id"
+    t.index ["source", "source_ref"], name: "index_portfolio_source_documents_on_source_and_source_ref", unique: true
+    t.index ["source"], name: "index_portfolio_source_documents_on_source"
+    t.index ["status"], name: "index_portfolio_source_documents_on_status"
+    t.index ["work_item_id"], name: "index_portfolio_source_documents_on_work_item_id"
+  end
+
   create_table "portfolio_vendors", force: :cascade do |t|
     t.string "name", null: false
     t.string "trade"
@@ -228,6 +255,8 @@ ActiveRecord::Schema.define(version: 2026_09_06_010000) do
   add_foreign_key "portfolio_photos", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_photos", "portfolio_work_items", column: "work_item_id"
   add_foreign_key "portfolio_projects", "portfolio_properties", column: "property_id"
+  add_foreign_key "portfolio_source_documents", "portfolio_projects", column: "project_id"
+  add_foreign_key "portfolio_source_documents", "portfolio_work_items", column: "work_item_id"
   add_foreign_key "portfolio_work_items", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_work_items", "portfolio_vendors", column: "vendor_id"
 end

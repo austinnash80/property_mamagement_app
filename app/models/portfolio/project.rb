@@ -4,6 +4,7 @@ class Portfolio::Project < ApplicationRecord
   has_many :expenses,   -> { order(:purchased_on, :id) },          class_name: "Portfolio::Expense",  dependent: :destroy
   has_many :photos,     -> { order(:position, :taken_on, :id) },   class_name: "Portfolio::Photo",    dependent: :destroy
   has_many :documents,  -> { order(:issued_on, :id) },             class_name: "Portfolio::Document", dependent: :destroy
+  has_many :source_documents, class_name: "Portfolio::SourceDocument", dependent: :nullify
 
   validates :title, presence: true
   validates :status, inclusion: { in: Portfolio::PROJECT_STATUSES }

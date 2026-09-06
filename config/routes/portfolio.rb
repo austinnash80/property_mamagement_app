@@ -21,6 +21,13 @@ namespace :portfolio, path: "portfolio" do   # SUBDOMAIN: change path to ""
     collection { get :export_csv }
   end
 
+  # Inbox: harvested source documents awaiting triage
+  get "inbox", to: "source_documents#index", as: :inbox
+  resources :source_documents, only: %i[index show update destroy] do
+    collection { post :bulk; get :export_csv }
+    member     { post :promote }
+  end
+
   resources :vendors do
     collection { get :export_csv }
   end
