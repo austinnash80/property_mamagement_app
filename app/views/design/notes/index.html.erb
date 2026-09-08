@@ -1,0 +1,31 @@
+<div class="d-flex justify-content-between align-items-center mb-3 dc-actions">
+  <h2 class="h4 mb-0">Notes <span class="dc-muted small"><%= @notes.size %></span></h2>
+  <%= link_to "New note", new_design_note_path(concept_id: params[:concept_id].presence), class: "btn btn-primary btn-sm" %>
+</div>
+
+<div class="card dc-note mb-4 dc-actions">
+  <div class="card-body pb-2">
+    <%= simple_form_for(Design::Note.new(concept_id: params[:concept_id].presence), url: design_notes_path, html: { class: "row g-2" }) do |f| %>
+      <%= hidden_field_tag :quick, 1 %>
+      <div class="col-12 mb-0"><%= f.input :body, as: :text, label: "Quick note", input_html: { rows: 3, placeholder: "Jot down an idea… the first line becomes the title" }, wrapper_html: { class: "mb-2" } %></div>
+      <div class="col-md-4"><%= f.input :concept_id, label: false, collection: @concepts, label_method: :title, value_method: :id, include_blank: "— no concept —", wrapper_html: { class: "mb-2" } %></div>
+      <div class="col-md-5"><%= f.input :tags, label: false, placeholder: "tags, comma separated", wrapper_html: { class: "mb-2" } %></div>
+      <div class="col-md-3"><%= f.button :submit, "Save note", class: "btn btn-primary w-100" %></div>
+    <% end %>
+  </div>
+</div>
+
+<%= form_tag design_notes_path, method: :get, class: "row g-2 mb-3 dc-actions" do %>
+  <div class="col-md-5"><%= text_field_tag :q, params[:q], class: "form-control form-control-sm", placeholder: "Search title, body, tags" %></div>
+  <div class="col-md-4"><%= select_tag :concept_id, options_from_collection_for_select(@concepts, :id, :title, params[:concept_id]), include_blank: "All concepts", class: "form-select form-select-sm" %></div>
+  <div class="col-md-3"><%= submit_tag "Filter", name: nil, class: "btn btn-outline-secondary btn-sm" %> <%= link_to "Clear", design_notes_path, class: "btn btn-link btn-sm" %></div>
+<% end %>
+
+<div class="row g-3">
+  <% @notes.each do |note| %>
+    <div class="col-md-6 col-lg-4"><%= render "card", note: note %></div>
+  <% end %>
+</div>
+<% if @notes.empty? %>
+  <p class="dc-muted"><%= params[:q].present? || params[:concept_id].present? ? "No notes match." : "No notes yet. Use the quick-note box above." %></p>
+<% end %>

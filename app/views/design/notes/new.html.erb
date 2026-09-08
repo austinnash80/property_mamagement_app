@@ -1,0 +1,3 @@
+<nav class="small mb-2"><%= link_to "Notes", design_notes_path %><% if @note.concept %> › <%= link_to @note.concept.title, design_concept_path(@note.concept) %><% end %> › New</nav>
+<h2 class="h4">New note</h2>
+<%= render "form" %>

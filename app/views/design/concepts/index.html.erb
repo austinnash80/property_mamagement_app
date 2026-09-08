@@ -1,0 +1,13 @@
+<div class="d-flex justify-content-between align-items-center mb-3 dc-actions">
+  <h2 class="h4 mb-0">Concepts</h2>
+  <%= link_to "New concept", new_design_concept_path, class: "btn btn-primary btn-sm" %>
+</div>
+
+<div class="row g-3">
+  <% @concepts.each do |concept| %>
+    <div class="col-md-6 col-lg-4"><%= render "card", concept: concept %></div>
+  <% end %>
+</div>
+<% if @concepts.empty? %>
+  <p class="dc-muted">No concepts yet. A concept is a container for one design idea and holds its notes, images and (later) floor plans.</p>
+<% end %>

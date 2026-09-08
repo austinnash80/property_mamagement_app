@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_09_06_030000) do
+ActiveRecord::Schema.define(version: 2026_09_08_000000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -86,6 +86,45 @@ ActiveRecord::Schema.define(version: 2026_09_06_030000) do
     t.string "notes"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "design_concepts", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "kind", default: "other"
+    t.string "status", default: "idea"
+    t.string "location"
+    t.string "summary"
+    t.text "description"
+    t.integer "position", default: 0
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["position"], name: "index_design_concepts_on_position"
+  end
+
+  create_table "design_images", force: :cascade do |t|
+    t.bigint "concept_id"
+    t.string "title"
+    t.text "caption"
+    t.string "category", default: "inspiration"
+    t.string "tags"
+    t.string "source"
+    t.integer "position", default: 0
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["category"], name: "index_design_images_on_category"
+    t.index ["concept_id"], name: "index_design_images_on_concept_id"
+  end
+
+  create_table "design_notes", force: :cascade do |t|
+    t.bigint "concept_id"
+    t.string "title"
+    t.text "body", null: false
+    t.string "tags"
+    t.boolean "pinned", default: false, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["concept_id"], name: "index_design_notes_on_concept_id"
+    t.index ["pinned"], name: "index_design_notes_on_pinned"
   end
 
   create_table "portfolio_documents", force: :cascade do |t|
@@ -248,6 +287,8 @@ ActiveRecord::Schema.define(version: 2026_09_06_030000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "design_images", "design_concepts", column: "concept_id"
+  add_foreign_key "design_notes", "design_concepts", column: "concept_id"
   add_foreign_key "portfolio_documents", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_expenses", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_expenses", "portfolio_vendors", column: "vendor_id"

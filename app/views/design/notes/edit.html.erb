@@ -1,0 +1,3 @@
+<nav class="small mb-2"><%= link_to "Notes", design_notes_path %> › <%= link_to @note.title, design_note_path(@note) %></nav>
+<h2 class="h4">Edit note</h2>
+<%= render "form" %>

@@ -1,0 +1,4 @@
+<nav class="small mb-2"><%= link_to "Images", design_images_path %><% if @image.concept %> › <%= link_to @image.concept.title, design_concept_path(@image.concept) %><% end %> › Upload</nav>
+<h2 class="h4">Upload images</h2>
+<%= render "form" %>
+<%= render "design/shared/cli_help" %>

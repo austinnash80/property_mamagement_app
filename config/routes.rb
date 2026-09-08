@@ -3,6 +3,9 @@ Rails.application.routes.draw do
   # Project Portfolio: independent section, routes in config/routes/portfolio.rb
   draw(:portfolio)
 
+  # Design Center: independent section, routes in config/routes/design.rb
+  draw(:design)
+
   resources :booking_days
   resources :searches
   resources :accounting_lists do

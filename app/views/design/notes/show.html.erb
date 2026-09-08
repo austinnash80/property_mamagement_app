@@ -1,0 +1,19 @@
+<nav class="small mb-2 dc-actions"><%= link_to "Notes", design_notes_path %><% if @note.concept %> › <%= link_to @note.concept.title, design_concept_path(@note.concept) %><% end %></nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1"><%= @note.title %><% if @note.pinned %> <span title="Pinned">📌</span><% end %></h2>
+    <div class="small dc-muted">
+      Created <%= dc_date(@note.created_at) %><% if @note.updated_at - @note.created_at > 60 %> · updated <%= dc_date(@note.updated_at) %><% end %>
+      <% if @note.concept %> · <%= link_to @note.concept.title, design_concept_path(@note.concept) %><% end %>
+    </div>
+    <% if @note.tag_list.any? %><div class="mt-1"><%= dc_tags(@note.tag_list) %></div><% end %>
+  </div>
+  <div class="dc-actions text-end text-nowrap">
+    <%= link_to (@note.pinned ? "Unpin" : "Pin"), toggle_pin_design_note_path(@note), method: :patch, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Edit", edit_design_note_path(@note), class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Delete", design_note_path(@note), method: :delete, data: { confirm: "Delete this note?" }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+</div>
+
+<div class="card dc-note <%= 'pinned' if @note.pinned %>"><div class="card-body"><%= simple_format(@note.body) %></div></div>

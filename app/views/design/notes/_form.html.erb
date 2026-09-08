@@ -1,0 +1,12 @@
+<%= render "design/shared/errors", record: @note %>
+<%= simple_form_for(@note, url: (@note.persisted? ? design_note_path(@note) : design_notes_path)) do |f| %>
+  <div class="row">
+    <div class="col-md-8"><%= f.input :title, hint: "Optional. The first line of the note is used when blank" %></div>
+    <div class="col-md-4"><%= f.input :concept_id, label: "Concept", collection: Design::Concept.ordered, label_method: :title, value_method: :id, include_blank: "— none —" %></div>
+    <div class="col-12"><%= f.input :body, as: :text, label: "Note", input_html: { rows: 14 } %></div>
+    <div class="col-md-8"><%= f.input :tags, hint: "Comma separated" %></div>
+    <div class="col-md-4 pt-md-4"><%= f.input :pinned, as: :boolean, label: "Pin to top" %></div>
+  </div>
+  <%= f.button :submit, (@note.persisted? ? "Save" : "Save note"), class: "btn btn-primary" %>
+  <%= link_to "Cancel", (@note.persisted? ? design_note_path(@note) : (@note.concept ? design_concept_path(@note.concept) : design_notes_path)), class: "btn btn-link" %>
+<% end %>

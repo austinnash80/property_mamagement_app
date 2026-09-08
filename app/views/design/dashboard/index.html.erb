@@ -1,0 +1,76 @@
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1">Dashboard</h2>
+    <div class="dc-muted">Collect ideas, inspiration images and design concepts. Floor-plan drawing and rendering arrive in later phases.</div>
+  </div>
+  <div class="dc-actions text-end">
+    <%= link_to "New concept", new_design_concept_path, class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "New note", new_design_note_path, class: "btn btn-outline-primary btn-sm" %>
+    <%= link_to "Upload images", new_design_image_path, class: "btn btn-primary btn-sm" %>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <% { "Concepts" => [@counts[:concepts], design_concepts_path], "Notes" => [@counts[:notes], design_notes_path], "Images" => [@counts[:images], design_images_path] }.each do |label, (count, path)| %>
+    <div class="col-sm-4">
+      <%= link_to path, class: "text-decoration-none text-dark" do %>
+        <div class="card"><div class="card-body py-2"><div class="small dc-muted"><%= label %></div><div class="h5 mb-0"><%= count %></div></div></div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<section id="concepts">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="h5 mb-0">Concepts</h3>
+    <%= link_to "All concepts", design_concepts_path, class: "small" %>
+  </div>
+  <% if @concepts.any? %>
+    <div class="row g-3">
+      <% @concepts.first(6).each do |concept| %>
+        <div class="col-md-6 col-lg-4"><%= render "design/concepts/card", concept: concept %></div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="dc-muted">No concepts yet. A concept is a container for one design idea (a floor plan, a kitchen, a whole house) and holds its notes and images. <%= link_to "Create the first one", new_design_concept_path %>.</p>
+  <% end %>
+</section>
+
+<section class="dc-section" id="notes">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="h5 mb-0">Recent notes</h3>
+    <%= link_to "All notes", design_notes_path, class: "small" %>
+  </div>
+  <% if @notes.any? %>
+    <div class="row g-3">
+      <% @notes.each do |note| %>
+        <div class="col-md-6 col-lg-4"><%= render "design/notes/card", note: note %></div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="dc-muted">No notes yet. <%= link_to "Write one", new_design_note_path %> or use the quick-note box on the Notes page.</p>
+  <% end %>
+</section>
+
+<section class="dc-section" id="images">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="h5 mb-0">Recent images</h3>
+    <%= link_to "All images", design_images_path, class: "small" %>
+  </div>
+  <% if @images.any? %>
+    <%= render "design/images/gallery", images: @images %>
+  <% else %>
+    <p class="dc-muted">No images yet. <%= link_to "Upload some", new_design_image_path %>, or import a folder from the terminal (see the Images page).</p>
+  <% end %>
+</section>
+
+<section class="dc-section" id="roadmap">
+  <h3 class="h5">Roadmap</h3>
+  <div class="card dc-phase"><div class="card-body small">
+    <ol class="mb-0">
+      <li><strong>Phase 1 (now):</strong> section structure, concepts, notes and an image library with browser and terminal uploads.</li>
+      <li><strong>Phase 2:</strong> floor-plan editor. Draw rooms, walls, doors and windows to scale and save plans to a concept.</li>
+      <li><strong>Phase 3:</strong> full home designs with 3D views and high-quality renderings.</li>
+    </ol>
+  </div></div>
+</section>

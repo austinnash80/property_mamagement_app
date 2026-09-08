@@ -1,0 +1,19 @@
+<div class="d-flex justify-content-between align-items-center mb-3 dc-actions">
+  <h2 class="h4 mb-0">Images <span class="dc-muted small"><%= @images.size %></span></h2>
+  <%= link_to "Upload images", new_design_image_path(concept_id: params[:concept_id].presence), class: "btn btn-primary btn-sm" %>
+</div>
+
+<%= form_tag design_images_path, method: :get, class: "row g-2 mb-3 dc-actions" do %>
+  <div class="col-md-4"><%= text_field_tag :q, params[:q], class: "form-control form-control-sm", placeholder: "Search title, caption, tags, source" %></div>
+  <div class="col-md-3"><%= select_tag :category, options_for_select(dc_options(Design::IMAGE_CATEGORIES), params[:category]), include_blank: "All categories", class: "form-select form-select-sm" %></div>
+  <div class="col-md-3"><%= select_tag :concept_id, options_from_collection_for_select(@concepts, :id, :title, params[:concept_id]), include_blank: "All concepts", class: "form-select form-select-sm" %></div>
+  <div class="col-md-2"><%= submit_tag "Filter", name: nil, class: "btn btn-outline-secondary btn-sm" %> <%= link_to "Clear", design_images_path, class: "btn btn-link btn-sm" %></div>
+<% end %>
+
+<% if @images.any? %>
+  <%= render "gallery", images: @images %>
+<% else %>
+  <p class="dc-muted"><%= params.values_at(:q, :category, :concept_id).any?(&:present?) ? "No images match." : "No images yet. Upload some with the button above, or import from the terminal:" %></p>
+<% end %>
+
+<%= render "design/shared/cli_help" %>

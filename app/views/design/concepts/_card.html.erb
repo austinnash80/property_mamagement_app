@@ -1,0 +1,12 @@
+<div class="card h-100">
+  <% if (cover = concept.cover) %>
+    <%= link_to design_concept_path(concept) do %><%= dc_image_tag(cover, :thumb, class: "dc-cover", alt: cover.display_title) %><% end %>
+  <% end %>
+  <div class="card-body">
+    <h5 class="card-title mb-1"><%= link_to concept.title, design_concept_path(concept), class: "text-decoration-none" %></h5>
+    <% if concept.location.present? %><div class="small dc-muted"><%= concept.location %></div><% end %>
+    <div class="mt-2"><%= dc_status_badge(concept.status) %> <span class="badge bg-light text-dark border"><%= dc_label(concept.kind) %></span></div>
+    <% if concept.summary.present? %><p class="small mt-2 mb-0"><%= concept.summary %></p><% end %>
+    <div class="mt-2 small dc-muted"><%= pluralize(concept.notes.size, "note") %> · <%= pluralize(concept.images.size, "image") %></div>
+  </div>
+</div>

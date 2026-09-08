@@ -1,0 +1,20 @@
+<%= render "design/shared/errors", record: @image %>
+<%= simple_form_for(@image, url: (@image.persisted? ? design_image_path(@image) : design_images_path), html: { multipart: true }) do |f| %>
+  <div class="row">
+    <% if @image.persisted? %>
+      <div class="col-12 mb-3"><%= dc_image_tag(@image, :thumb, style: "max-height:240px") %></div>
+      <div class="col-md-6"><%= f.input :file, as: :file, input_html: { accept: "image/*" }, hint: "Replace image (optional)" %></div>
+    <% else %>
+      <div class="col-md-6"><%= f.input :files, as: :file, input_html: { multiple: true, accept: "image/*", name: "design_image[files][]" }, label: "Images", hint: "Select one or many; each becomes its own image with the details below" %></div>
+    <% end %>
+    <div class="col-md-3"><%= f.input :category, collection: dc_options(Design::IMAGE_CATEGORIES), include_blank: false %></div>
+    <div class="col-md-3"><%= f.input :concept_id, label: "Concept", collection: Design::Concept.ordered, label_method: :title, value_method: :id, include_blank: "— none —" %></div>
+    <div class="col-md-6"><%= f.input :title, hint: (@image.persisted? ? nil : "Optional. Leave blank to use each file's name") %></div>
+    <div class="col-md-6"><%= f.input :source, hint: "Where it came from: a URL, book, magazine, your own sketch…" %></div>
+    <div class="col-12"><%= f.input :caption, as: :text, input_html: { rows: 3 } %></div>
+    <div class="col-md-8"><%= f.input :tags, hint: "Comma separated, e.g. kitchen island, white oak" %></div>
+    <div class="col-md-4"><%= f.input :position, hint: "Sort order within a concept" %></div>
+  </div>
+  <%= f.button :submit, (@image.persisted? ? "Save" : "Upload"), class: "btn btn-primary" %>
+  <%= link_to "Cancel", (@image.persisted? ? design_image_path(@image) : (@image.concept ? design_concept_path(@image.concept) : design_images_path)), class: "btn btn-link" %>
+<% end %>

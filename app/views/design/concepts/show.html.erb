@@ -1,0 +1,48 @@
+<nav class="small mb-2 dc-actions"><%= link_to "Concepts", design_concepts_path %> › <%= @concept.title %></nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h2 class="h4 mb-1"><%= @concept.title %></h2>
+    <% if @concept.location.present? %><div class="dc-muted"><%= @concept.location %></div><% end %>
+    <div class="mt-1"><%= dc_status_badge(@concept.status) %> <span class="badge bg-light text-dark border"><%= dc_label(@concept.kind) %></span></div>
+  </div>
+  <div class="dc-actions text-end">
+    <%= link_to "Edit", edit_design_concept_path(@concept), class: "btn btn-outline-secondary btn-sm" %>
+    <%= link_to "Delete", design_concept_path(@concept), method: :delete, data: { confirm: "Delete this concept? Its notes and images are kept and become unassigned." }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+</div>
+
+<% if @concept.summary.present? %><p class="lead fs-6"><%= @concept.summary %></p><% end %>
+<% if @concept.description.present? %><div class="card mb-3"><div class="card-body"><%= simple_format(@concept.description) %></div></div><% end %>
+
+<section class="dc-section" id="images">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Images <span class="dc-muted small"><%= @images.size %></span></h3>
+    <%= link_to "Upload images", new_design_image_path(concept_id: @concept.id), class: "btn btn-outline-primary btn-sm dc-actions" %>
+  </div>
+  <div class="mt-2">
+    <% if @images.any? %>
+      <%= render "design/images/gallery", images: @images %>
+    <% else %>
+      <p class="dc-muted mb-0">No images yet.</p>
+    <% end %>
+  </div>
+</section>
+
+<section class="dc-section" id="notes">
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Notes <span class="dc-muted small"><%= @notes.size %></span></h3>
+    <%= link_to "Add note", new_design_note_path(concept_id: @concept.id), class: "btn btn-outline-primary btn-sm dc-actions" %>
+  </div>
+  <div class="row g-3 mt-1">
+    <% @notes.each do |note| %>
+      <div class="col-md-6 col-lg-4"><%= render "design/notes/card", note: note %></div>
+    <% end %>
+  </div>
+  <% if @notes.empty? %><p class="dc-muted mt-2 mb-0">No notes yet.</p><% end %>
+</section>
+
+<section class="dc-section" id="plans">
+  <h3 class="h5">Floor plans <span class="badge bg-light text-dark border">Phase 2</span></h3>
+  <div class="card dc-phase"><div class="card-body small dc-muted">Scaled floor plans drawn for this concept will live here. Until then, upload plan sketches as images with the <em>Floor plan</em> category.</div></div>
+</section>

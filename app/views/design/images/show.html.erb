@@ -1,0 +1,33 @@
+<nav class="small mb-2 dc-actions"><%= link_to "Images", design_images_path %><% if @image.concept %> › <%= link_to @image.concept.title, design_concept_path(@image.concept, anchor: "images") %><% end %></nav>
+
+<div class="row g-4">
+  <div class="col-lg-8 text-center">
+    <% if @image.file.attached? %>
+      <%= link_to url_for(@image.file), target: "_blank", title: "Open original" do %>
+        <%= dc_image_tag(@image, :large, class: "dc-large", alt: @image.display_title) %>
+      <% end %>
+    <% end %>
+  </div>
+  <div class="col-lg-4">
+    <h2 class="h4 mb-1"><%= @image.display_title %></h2>
+    <div class="mb-2">
+      <span class="badge bg-light text-dark border"><%= dc_label(@image.category) %></span>
+      <% if @image.concept %><%= link_to @image.concept.title, design_concept_path(@image.concept), class: "badge bg-secondary text-decoration-none" %><% end %>
+    </div>
+    <% if @image.caption.present? %><div class="mb-2"><%= simple_format(@image.caption) %></div><% end %>
+    <% if @image.tag_list.any? %><div class="mb-2"><%= dc_tags(@image.tag_list) %></div><% end %>
+    <dl class="row small mb-3">
+      <% if @image.source.present? %><dt class="col-4">Source</dt><dd class="col-8"><%= dc_source(@image.source) %></dd><% end %>
+      <% if @image.file.attached? %>
+        <dt class="col-4">File</dt><dd class="col-8 text-break"><%= @image.file.filename %></dd>
+        <dt class="col-4">Size</dt><dd class="col-8"><%= number_to_human_size(@image.file.byte_size) %><% if (m = @image.file.metadata)["width"] %> · <%= m["width"] %>×<%= m["height"] %><% end %></dd>
+      <% end %>
+      <dt class="col-4">Uploaded</dt><dd class="col-8"><%= dc_date(@image.created_at) %></dd>
+    </dl>
+    <div class="dc-actions">
+      <%= link_to "Edit", edit_design_image_path(@image), class: "btn btn-outline-secondary btn-sm" %>
+      <% if @image.file.attached? %><%= link_to "Original", url_for(@image.file), target: "_blank", class: "btn btn-outline-secondary btn-sm" %><% end %>
+      <%= link_to "Delete", design_image_path(@image), method: :delete, data: { confirm: "Delete this image?" }, class: "btn btn-outline-danger btn-sm" %>
+    </div>
+  </div>
+</div>

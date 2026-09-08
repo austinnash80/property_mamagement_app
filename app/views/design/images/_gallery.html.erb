@@ -1,0 +1,11 @@
+<div class="dc-gallery">
+  <% images.each do |image| %>
+    <figure>
+      <%= link_to design_image_path(image) do %><%= dc_image_tag(image, :thumb, alt: image.display_title, loading: "lazy") %><% end %>
+      <figcaption>
+        <div class="text-truncate" title="<%= image.display_title %>"><%= image.display_title %></div>
+        <div class="dc-muted text-truncate"><%= dc_label(image.category) %><% if image.concept %> · <%= link_to image.concept.title, design_concept_path(image.concept), class: "text-decoration-none" %><% end %></div>
+      </figcaption>
+    </figure>
+  <% end %>
+</div>

@@ -1,0 +1,9 @@
+<div class="card dc-phase mt-3">
+  <div class="card-body small">
+    <strong>Importing from the terminal / Claude Code.</strong> Point the task at a file or a folder (searched recursively); duplicates are skipped by checksum.
+    <pre class="mb-1 mt-2"><code>export DISABLE_SPRING=1 &amp;&amp; source ~/.zshrc
+rails 'design:import_images[/path/to/folder,Concept title,inspiration,"tag one, tag two"]'
+rails 'design:add_note[/path/to/idea.md,Concept title]'</code></pre>
+    Concept title, category and tags are optional. Categories: <%= Design::IMAGE_CATEGORIES.join(", ") %>.
+  </div>
+</div>
