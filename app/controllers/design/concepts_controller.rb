@@ -28,9 +28,9 @@ class Design::ConceptsController < Design::BaseController
 
   # HTML from the edit form, or JSON from the 3D view saving its render settings.
   def update
-    attrs = concept_params
+    attrs = concept_params.to_h
     if (rs = params.dig(:design_concept, :render_settings)).is_a?(ActionController::Parameters)
-      attrs[:render_settings] = (@concept.render_settings || {}).merge(rs.permit(:roof, :exterior, :roofColor, :floor).to_h)
+      attrs["render_settings"] = (@concept.render_settings || {}).merge(rs.permit(:roof, :exterior, :roofColor, :floor).to_h)
     end
     if @concept.update(attrs)
       respond_to do |f|
@@ -57,6 +57,6 @@ class Design::ConceptsController < Design::BaseController
   end
 
   def concept_params
-    params.require(:design_concept).permit(:title, :kind, :status, :location, :summary, :description, :position)
+    params.fetch(:design_concept, {}).permit(:title, :kind, :status, :location, :summary, :description, :position)
   end
 end
