@@ -1,0 +1,13 @@
+<div class="d-flex justify-content-between align-items-center mb-3 dc-actions">
+  <h2 class="h4 mb-0">Floor plans <span class="dc-muted small"><%= @plans.size %></span></h2>
+  <span class="small dc-muted">New plans are created from a concept page.</span>
+</div>
+<%= content_for :head do %><style><%= render "design/floor_plans/card_css" %></style><% end %>
+<div class="row g-3">
+  <% @plans.each do |plan| %>
+    <div class="col-md-6 col-lg-4"><%= render "card", plan: plan, show_concept: true %></div>
+  <% end %>
+</div>
+<% if @plans.empty? %>
+  <p class="dc-muted">No floor plans yet. Open a <%= link_to "concept", design_concepts_path %> and click "New floor plan".</p>
+<% end %>

@@ -1,0 +1,8 @@
+<nav class="small mb-2"><%= link_to "Concepts", design_concepts_path %> › <%= link_to @concept.title, design_concept_path(@concept) %> › <%= link_to @plan.name, design_floor_plan_path(@plan) %></nav>
+<h2 class="h4">Floor plan settings</h2>
+<%= render "form" %>
+<% if @plan.persisted? %>
+  <div class="mt-4 dc-actions">
+    <%= link_to "Delete this floor plan", design_floor_plan_path(@plan), method: :delete, data: { confirm: "Delete \"#{@plan.name}\" and its drawing?" }, class: "btn btn-outline-danger btn-sm" %>
+  </div>
+<% end %>

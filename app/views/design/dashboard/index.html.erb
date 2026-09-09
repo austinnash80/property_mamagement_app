@@ -11,8 +11,8 @@
 </div>
 
 <div class="row g-3 mb-4">
-  <% { "Concepts" => [@counts[:concepts], design_concepts_path], "Notes" => [@counts[:notes], design_notes_path], "Images" => [@counts[:images], design_images_path] }.each do |label, (count, path)| %>
-    <div class="col-sm-4">
+  <% { "Concepts" => [@counts[:concepts], design_concepts_path], "Notes" => [@counts[:notes], design_notes_path], "Images" => [@counts[:images], design_images_path], "Floor plans" => [@counts[:plans], design_floor_plans_path] }.each do |label, (count, path)| %>
+    <div class="col-sm-3">
       <%= link_to path, class: "text-decoration-none text-dark" do %>
         <div class="card"><div class="card-body py-2"><div class="small dc-muted"><%= label %></div><div class="h5 mb-0"><%= count %></div></div></div>
       <% end %>
@@ -68,8 +68,8 @@
   <h3 class="h5">Roadmap</h3>
   <div class="card dc-phase"><div class="card-body small">
     <ol class="mb-0">
-      <li><strong>Phase 1 (now):</strong> section structure, concepts, notes and an image library with browser and terminal uploads.</li>
-      <li><strong>Phase 2:</strong> floor-plan editor. Draw rooms, walls, doors and windows to scale and save plans to a concept.</li>
+      <li><strong>Phase 1 (done):</strong> section structure, concepts, notes and an image library with browser and terminal uploads.</li>
+      <li><strong>Phase 2 (in progress):</strong> floor-plan editor. Walls, rooms, doors, windows and labels drawn to scale with snapping, dimensions and areas; one plan per level, saved to a concept. Next: multi-level stacking, stairs and fixtures, dimension strings, PDF export.</li>
       <li><strong>Phase 3:</strong> full home designs with 3D views and high-quality renderings.</li>
     </ol>
   </div></div>

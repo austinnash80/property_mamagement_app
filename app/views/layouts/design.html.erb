@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@rails/ujs@6.1.7/lib/assets/compiled/rails-ujs.js"></script>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= yield :head %>
     <style>
       body { background: #f4f3ef; }
       .dc-header { background: #1f2a37; color: #fff; }
@@ -39,6 +40,7 @@
             <%= link_to "Concepts", design_concepts_path %>
             <%= link_to "Notes", design_notes_path %>
             <%= link_to "Images", design_images_path %>
+            <%= link_to "Floor plans", design_floor_plans_path %>
           </nav>
         </div>
         <nav class="dc-nav small">
@@ -48,7 +50,7 @@
       </div>
     </header>
 
-    <div class="container pb-5">
+    <div class="<%= content_for?(:wide) ? "container-fluid px-4" : "container" %> pb-5">
       <% if notice.present? %><div class="alert alert-success py-2"><%= notice %></div><% end %>
       <% if alert.present?  %><div class="alert alert-danger py-2"><%= alert %></div><% end %>
       <%= yield %>

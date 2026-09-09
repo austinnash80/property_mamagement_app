@@ -43,6 +43,15 @@
 </section>
 
 <section class="dc-section" id="plans">
-  <h3 class="h5">Floor plans <span class="badge bg-light text-dark border">Phase 2</span></h3>
-  <div class="card dc-phase"><div class="card-body small dc-muted">Scaled floor plans drawn for this concept will live here. Until then, upload plan sketches as images with the <em>Floor plan</em> category.</div></div>
+  <div class="d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Floor plans <span class="dc-muted small"><%= @plans.size %></span></h3>
+    <%= link_to "New floor plan", new_design_concept_floor_plan_path(@concept), class: "btn btn-outline-primary btn-sm dc-actions" %>
+  </div>
+  <%= content_for :head do %><style><%= render "design/floor_plans/card_css" %></style><% end %>
+  <div class="row g-3 mt-1">
+    <% @plans.each do |plan| %>
+      <div class="col-md-6 col-lg-4"><%= render "design/floor_plans/card", plan: plan %></div>
+    <% end %>
+  </div>
+  <% if @plans.empty? %><p class="dc-muted mt-2 mb-0">No floor plans yet. Create one per level and draw walls, rooms, doors and windows to scale.</p><% end %>
 </section>

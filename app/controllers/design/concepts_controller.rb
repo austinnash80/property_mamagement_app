@@ -8,6 +8,7 @@ class Design::ConceptsController < Design::BaseController
   def show
     @notes  = @concept.notes
     @images = @concept.images.with_attached_file
+    @plans  = @concept.floor_plans.with_attached_thumbnail
   end
 
   def new

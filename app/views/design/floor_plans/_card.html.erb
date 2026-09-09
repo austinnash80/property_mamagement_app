@@ -1,0 +1,27 @@
+<div class="card h-100">
+  <%= link_to design_floor_plan_path(plan), class: "fp-thumb-link" do %>
+    <% if plan.thumbnail.attached? %>
+      <%= image_tag plan.thumbnail, class: "fp-thumb", alt: plan.name %>
+    <% else %>
+      <div class="fp-thumb fp-thumb-empty dc-muted small">Empty plan · open to start drawing</div>
+    <% end %>
+  <% end %>
+  <div class="card-body py-2">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <strong><%= link_to plan.name, design_floor_plan_path(plan), class: "text-decoration-none" %></strong>
+        <% if plan.level.present? %><span class="dc-muted small">· <%= plan.level %></span><% end %>
+        <% if local_assigns[:show_concept] %><div class="small"><%= link_to plan.concept.title, design_concept_path(plan.concept), class: "text-decoration-none" %></div><% end %>
+      </div>
+      <span class="small dc-muted text-nowrap"><%= dc_date(plan.updated_at, "%-m/%-d/%y") %></span>
+    </div>
+    <div class="small dc-muted mt-1">
+      <%= pluralize(plan.rooms.size, "room") %> · <%= plan.total_area_sqft.round.to_s(:delimited) %> sq ft · <%= plan.walls.size %> walls · <%= plan.doors_count %> doors · <%= plan.windows_count %> windows
+    </div>
+    <div class="small mt-1 dc-actions">
+      <%= link_to "Open editor", design_floor_plan_path(plan) %> ·
+      <%= link_to "Settings", edit_design_floor_plan_path(plan) %> ·
+      <%= link_to "Delete", design_floor_plan_path(plan), method: :delete, data: { confirm: "Delete \"#{plan.name}\" and its drawing?" }, class: "text-danger" %>
+    </div>
+  </div>
+</div>

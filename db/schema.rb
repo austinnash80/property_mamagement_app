@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_09_08_000000) do
+ActiveRecord::Schema.define(version: 2026_09_08_120000) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -99,6 +99,21 @@ ActiveRecord::Schema.define(version: 2026_09_08_000000) do
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.index ["position"], name: "index_design_concepts_on_position"
+  end
+
+  create_table "design_floor_plans", force: :cascade do |t|
+    t.bigint "concept_id", null: false
+    t.string "name", null: false
+    t.string "level"
+    t.decimal "width_ft", precision: 7, scale: 2, default: "60.0", null: false
+    t.decimal "depth_ft", precision: 7, scale: 2, default: "40.0", null: false
+    t.jsonb "data", default: {}, null: false
+    t.text "notes"
+    t.integer "position", default: 0
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["concept_id"], name: "index_design_floor_plans_on_concept_id"
+    t.index ["position"], name: "index_design_floor_plans_on_position"
   end
 
   create_table "design_images", force: :cascade do |t|
@@ -287,6 +302,7 @@ ActiveRecord::Schema.define(version: 2026_09_08_000000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "design_floor_plans", "design_concepts", column: "concept_id"
   add_foreign_key "design_images", "design_concepts", column: "concept_id"
   add_foreign_key "design_notes", "design_concepts", column: "concept_id"
   add_foreign_key "portfolio_documents", "portfolio_projects", column: "project_id"

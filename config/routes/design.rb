@@ -14,7 +14,12 @@ namespace :design, path: "design" do
 
   # Concepts: one container per design idea (a floor plan, a kitchen, a whole
   # house). Notes and images can belong to a concept or stand alone.
-  resources :concepts
+  resources :concepts do
+    # Floor plans are drawn per concept. Shallow: new/create/index nest under
+    # the concept, show (the editor)/edit/update/destroy are top-level.
+    resources :floor_plans, shallow: true
+  end
+  resources :floor_plans, only: :index   # all plans across concepts
 
   resources :notes do
     member { patch :toggle_pin }
