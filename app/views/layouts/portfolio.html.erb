@@ -36,9 +36,8 @@
               <%= link_to "Inbox#{(n = Portfolio::SourceDocument.unreviewed.count) > 0 ? " (#{n})" : ""}", portfolio_inbox_path %>
               <a href="/design" class="pf-muted">Design Center</a>
               <a href="/" class="pf-muted">← Property Management</a>
-            <% else %>
-              <a href="/portfolio/inbox" class="pf-muted small">Sign in</a>
             <% end %>
+            <%= render "application/account_menu", link_class: "pf-muted small" %>
           </nav>
         </div>
       </div>

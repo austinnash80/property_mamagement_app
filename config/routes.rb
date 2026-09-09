@@ -1,5 +1,11 @@
 Rails.application.routes.draw do
 
+  # Sign in (single account, persistent cookie). See ApplicationController.
+  get    "login",  to: "sessions#new"
+  post   "login",  to: "sessions#create"
+  delete "logout", to: "sessions#destroy"
+  resource :account, only: %i[edit update]
+
   # Project Portfolio: independent section, routes in config/routes/portfolio.rb
   draw(:portfolio)
 

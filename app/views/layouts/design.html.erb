@@ -15,6 +15,7 @@
       .dc-header h1 a { color: #fff; }
       .dc-nav a { text-decoration: none; margin-right: 1.25rem; color: #c9d1dc; font-weight: 500; }
       .dc-nav a:hover { color: #fff; }
+      .dc-nav .dc-account, .dc-nav .btn-link.dc-account { color: #c9d1dc; text-decoration: none; font-weight: 500; font-size: inherit; margin-right: 1.25rem; }
       .dc-muted { color: #6c757d; }
       .dc-section { margin-top: 2rem; }
       .dc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
@@ -46,6 +47,7 @@
         <nav class="dc-nav small">
           <a href="/portfolio">Project Portfolio</a>
           <a href="/">← Property Management</a>
+          <%= render "application/account_menu", link_class: "dc-account" %>
         </nav>
       </div>
     </header>

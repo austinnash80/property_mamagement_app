@@ -3,7 +3,7 @@ require "csv"
 class Portfolio::BaseController < ApplicationController
   layout "portfolio"
 
-  # License reviewers may browse the portfolio without the password: read-only
+  # License reviewers may browse the portfolio without signing in: read-only
   # pages of properties, projects and vendors. The inbox, CSV exports and every
   # form or write action stay locked.
   PUBLIC_CONTROLLERS = %w[portfolio/properties portfolio/projects portfolio/vendors].freeze

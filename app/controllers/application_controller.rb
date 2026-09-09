@@ -1,31 +1,40 @@
 class ApplicationController < ActionController::Base
-  # One shared password for the whole app (HTTP Basic). Set APP_PASSWORD (and
-  # optionally APP_USER) in the environment / Heroku config vars. When
-  # APP_PASSWORD is blank (local development) the app is open.
-  # Controllers can override public_request? to allow anonymous reads
-  # (the portfolio does this for license reviewers).
-  before_action :require_password
-  helper_method :signed_in?
+  # Single-account sign-in with a persistent cookie: the browser stays signed in
+  # until the user signs out or changes their password. Controllers can override
+  # public_request? to allow anonymous reads (the portfolio does, for reviewers).
+  before_action :require_login
+  helper_method :signed_in?, :current_user
 
   private
 
-  def require_password
-    return if ENV["APP_PASSWORD"].blank? || public_request?
-    authenticate_or_request_with_http_basic("Nash Properties") { |user, pass| valid_credentials?(user, pass) }
+  def current_user
+    return @current_user if defined?(@current_user)
+    token = cookies.signed[:remember_token]
+    @current_user = token.present? ? User.find_by(remember_token: token) : nil
   end
 
-  def valid_credentials?(user, pass)
-    ActiveSupport::SecurityUtils.secure_compare(pass.to_s, ENV["APP_PASSWORD"].to_s) &&
-      (ENV["APP_USER"].blank? || ActiveSupport::SecurityUtils.secure_compare(user.to_s, ENV["APP_USER"].to_s))
+  def signed_in?
+    current_user.present?
+  end
+
+  def require_login
+    return if signed_in? || public_request?
+    return if Rails.env.development? && User.none?   # fresh dev database: nothing to sign in with yet
+    session[:return_to] = request.fullpath if request.get?
+    redirect_to login_path, alert: "Please sign in."
   end
 
   def public_request?
     false
   end
 
-  # True when no password is configured or the browser sent valid credentials.
-  def signed_in?
-    return true if ENV["APP_PASSWORD"].blank?
-    authenticate_with_http_basic { |user, pass| valid_credentials?(user, pass) } || false
+  def sign_in(user)
+    cookies.permanent.signed[:remember_token] = { value: user.remember_token, httponly: true, secure: Rails.env.production?, same_site: :lax }
+    @current_user = user
+  end
+
+  def sign_out
+    cookies.delete(:remember_token)
+    @current_user = nil
   end
 end

@@ -1,0 +1,9 @@
+<%# Shared sign-in / sign-out control for the section headers. %>
+<% if signed_in? %>
+  <span class="d-inline-flex align-items-center gap-2">
+    <%= link_to "Password", edit_account_path, class: local_assigns[:link_class] || "" %>
+    <%= button_to "Sign out", logout_path, method: :delete, class: "btn btn-link btn-sm p-0 align-baseline #{local_assigns[:link_class]}", form_class: "d-inline" %>
+  </span>
+<% else %>
+  <%= link_to "Sign in", login_path, class: local_assigns[:link_class] || "" %>
+<% end %>
