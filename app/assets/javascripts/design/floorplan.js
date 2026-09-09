@@ -7,6 +7,10 @@
 
   var WALL_TYPES = { exterior: 0.5, interior: 0.375 };  // thickness in ft (6", 4.5")
   var OPENING_WIDTH = { door: 3, window: 4 };
+  // Door kinds (default width / height in ft) and window defaults. Heights matter in the 3D view.
+  var DOOR_KINDS = { exterior: { label: "Exterior door", w: 3, h: 6.67 }, interior: { label: "Interior door", w: 2.667, h: 6.67 }, garage: { label: "Garage door", w: 9, h: 7 } };
+  var WINDOW_DEF = { w: 4, sill: 3, h: 3.67 };
+  function doorKind(o, w) { return o.kind || (w && w.type === "interior" ? "interior" : "exterior"); }
   // Fixture catalog: default footprint in ft (w across, h deep). Glyphs are drawn in drawFixture.
   var FIXTURES = {
     stairs: { label: "Stairs", w: 3, h: 12 }, toilet: { label: "Toilet", w: 1.5, h: 2.5 }, sink: { label: "Sink", w: 2, h: 1.75 },
@@ -61,6 +65,7 @@
     '    <button class="btn btn-outline-secondary" data-tool="line" title="Guide line (L): a thin dashed reference line that shows its length, e.g. a setback. Not shown in 3D.">Line</button>' +
     '  </div>' +
     '  <select class="form-select form-select-sm w-auto fp-kind d-none" title="Which fixture to place"></select>' +
+    '  <select class="form-select form-select-sm w-auto fp-doorkind d-none" title="Which kind of door to place"><option value="auto">Door: match wall</option><option value="exterior">Exterior door</option><option value="interior">Interior door</option><option value="garage">Garage door</option></select>' +
     '  <div class="btn-group btn-group-sm" role="group">' +
     '    <button class="btn btn-outline-secondary" data-act="undo" title="Undo (Ctrl+Z)">Undo</button>' +
     '    <button class="btn btn-outline-secondary" data-act="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>' +
@@ -121,6 +126,7 @@
     SNAPS.forEach(function (s) { var o = document.createElement("option"); o.value = s[0]; o.textContent = s[1]; if (Math.abs(s[0] - self.data.grid) < 1e-6) o.selected = true; snap.appendChild(o); });
     snap.addEventListener("change", function () { self.data.grid = +snap.value; self.markDirty(); self.render(); });
     this.kindSel = this.root.querySelector(".fp-kind");
+    this.doorKindSel = this.root.querySelector(".fp-doorkind");
     Object.keys(FIXTURES).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = FIXTURES[k].label; self.kindSel.appendChild(o); });
     var uw = this.root.querySelector(".fp-underlay-wrap"), us = this.root.querySelector(".fp-underlay"), sibs = this.opts.siblings || [];
     if (sibs.length) {
@@ -320,6 +326,7 @@
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
     this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
+    this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
   };
   P.act = function (a) {
@@ -465,9 +472,11 @@
     }
     if (this.tool === "door" || this.tool === "window") {
       var nw = this.nearestWall(p, 12); if (!nw) return;
-      var kind = this.tool, width = OPENING_WIDTH[kind], oid = uid();
-      var pos = this.snapVal(clamp(nw.pr.pos, width / 2, Math.max(width / 2, nw.pr.len - width / 2)));
-      this.commit(function () { this.data.openings.push({ id: oid, type: kind, wall: nw.wall.id, pos: pos, width: width, swing: 1, hinge: 0 }); this.sel = { type: "opening", id: oid }; });
+      var otype = this.tool, oid = uid(), op = { id: oid, type: otype, wall: nw.wall.id, swing: 1, hinge: 0 };
+      if (otype === "door") { var dk = this.doorKindSel.value === "auto" ? doorKind({}, nw.wall) : this.doorKindSel.value; op.kind = dk; op.width = DOOR_KINDS[dk].w; op.height = DOOR_KINDS[dk].h; }
+      else { op.width = WINDOW_DEF.w; op.sill = WINDOW_DEF.sill; op.height = WINDOW_DEF.h; }
+      op.pos = this.snapVal(clamp(nw.pr.pos, op.width / 2, Math.max(op.width / 2, nw.pr.len - op.width / 2)));
+      this.commit(function () { this.data.openings.push(op); this.sel = { type: "opening", id: oid }; });
       return;
     }
     if (this.tool === "fixture") {
@@ -541,11 +550,14 @@
         '<div class="fp-row">' + f("X (ft)", "x", el.x, 'type="number" step="0.5"') + f("Y (ft)", "y", el.y, 'type="number" step="0.5"') + '</div>' +
         f("Area", "area", sqft(el.w * el.h), "readonly");
     } else if (this.sel.type === "opening") {
-      html = '<h6>' + (el.type === "door" ? "Door" : "Window") + '</h6>' +
-        '<div class="fp-field"><label>Type</label><select class="form-select form-select-sm" data-prop="type"><option value="door"' + (el.type === "door" ? " selected" : "") + '>Door</option><option value="window"' + (el.type === "window" ? " selected" : "") + '>Window</option></select></div>' +
-        f("Width (ft)", "width", el.width, 'type="number" step="0.25" min="1"') +
+      var isDoor = el.type === "door", dkNow = isDoor ? doorKind(el, this.wallOf(el)) : null;
+      html = '<h6>' + (isDoor ? "Door" : "Window") + '</h6>' +
+        '<div class="fp-field"><label>Type</label><select class="form-select form-select-sm" data-prop="type"><option value="door"' + (isDoor ? " selected" : "") + '>Door</option><option value="window"' + (!isDoor ? " selected" : "") + '>Window</option></select></div>' +
+        (isDoor ? '<div class="fp-field"><label>Door type</label><select class="form-select form-select-sm" data-prop="kind">' + Object.keys(DOOR_KINDS).map(function (k) { return '<option value="' + k + '"' + (dkNow === k ? " selected" : "") + '>' + DOOR_KINDS[k].label + '</option>'; }).join("") + '</select></div>' : "") +
+        '<div class="fp-row">' + f("Width (ft)", "width", el.width, 'type="number" step="0.25" min="1"') + f("Height (ft)", "height", el.height != null ? el.height : (isDoor ? DOOR_KINDS[dkNow].h : WINDOW_DEF.h), 'type="number" step="0.25" min="0.5"') + '</div>' +
+        (!isDoor ? f("Sill height (ft)", "sill", el.sill != null ? el.sill : WINDOW_DEF.sill, 'type="number" step="0.25" min="0"') : "") +
         f("Position from wall start (ft)", "pos", Math.round(el.pos * 100) / 100, 'type="number" step="0.25"') +
-        (el.type === "door" ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">Flip swing</button><button class="btn btn-outline-secondary btn-sm" data-btn="hinge">Flip hinge</button></div>' : "");
+        (isDoor ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">' + (dkNow === "garage" ? "Flip inside" : "Flip swing") + '</button>' + (dkNow !== "garage" ? '<button class="btn btn-outline-secondary btn-sm" data-btn="hinge">Flip hinge</button>' : "") + '</div>' : "");
     } else if (this.sel.type === "fixture") {
       var kinds = Object.keys(FIXTURES).map(function (k) { return '<option value="' + k + '"' + (el.kind === k ? " selected" : "") + '>' + FIXTURES[k].label + '</option>'; }).join("");
       html = '<h6>Fixture</h6>' +
@@ -573,12 +585,21 @@
           if (name === "type" && self.sel.type === "wall") { cur.type = v; cur.thickness = WALL_TYPES[v]; self.lastWallType = v; }
           else if (name === "thickness_in") cur.thickness = Math.max(1, +v || 6) / 12;
           else if (name === "p1" || name === "p2") { var m = v.split(/[ ,]+/).map(Number); if (m.length >= 2 && m.every(isFinite)) { if (name === "p1") { cur.x1 = m[0]; cur.y1 = m[1]; } else { cur.x2 = m[0]; cur.y2 = m[1]; } } }
-          else if (name === "type") cur.type = v;
-          else if (name === "kind") { cur.kind = v; }
+          else if (name === "type") {
+            cur.type = v;
+            if (self.sel.type === "opening") {
+              if (v === "window") { delete cur.kind; cur.width = WINDOW_DEF.w; cur.sill = WINDOW_DEF.sill; cur.height = WINDOW_DEF.h; }
+              else { var dk2 = doorKind({}, self.wallOf(cur)); cur.kind = dk2; cur.width = DOOR_KINDS[dk2].w; cur.height = DOOR_KINDS[dk2].h; delete cur.sill; }
+            }
+          }
+          else if (name === "kind") {
+            cur.kind = v;
+            if (self.sel.type === "opening" && DOOR_KINDS[v]) { cur.width = DOOR_KINDS[v].w; cur.height = DOOR_KINDS[v].h; }
+          }
           else if (name === "label") cur.label = v;
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
-          else if (["w", "h", "x", "y", "width", "size"].indexOf(name) >= 0) { var n = +v; if (isFinite(n) && (name === "x" || name === "y" || n > 0)) cur[name] = n; }
+          else if (["w", "h", "x", "y", "width", "size", "height", "sill"].indexOf(name) >= 0) { var n = +v; if (isFinite(n) && (name === "x" || name === "y" || name === "sill" || n > 0)) cur[name] = n; }
         };
         if (live) { run(); self.render(); } else self.commit(run);
       };
@@ -680,10 +701,17 @@
       var A = S(c.x - sg.ux * half, c.y - sg.uy * half), B = S(c.x + sg.ux * half, c.y + sg.uy * half);
       ctx.strokeStyle = C.bg; ctx.lineWidth = t + 2; ctx.lineCap = "butt"; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
       var selected = o.ui && self.sel && self.sel.id === op.id;
-      if (op.type === "door") {
+      if (op.type === "door" && doorKind(op, w) === "garage") {
+        // sectional garage door: panel line across the opening + dashed track showing where it retracts
+        var gdir = op.swing || 1, depth = Math.min(op.width, 7) * s;
+        ctx.strokeStyle = selected ? C.sel : C.door; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+        ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x + sg.nx * gdir * depth, A.y + sg.ny * gdir * depth); ctx.lineTo(B.x + sg.nx * gdir * depth, B.y + sg.ny * gdir * depth); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = C.wall; [A, B].forEach(function (j) { ctx.beginPath(); ctx.moveTo(j.x - sg.nx * t / 2, j.y - sg.ny * t / 2); ctx.lineTo(j.x + sg.nx * t / 2, j.y + sg.ny * t / 2); ctx.stroke(); });
+      } else if (op.type === "door") {
         var hinge = op.hinge ? B : A, other = op.hinge ? A : B, dir = (op.swing || 1) * (op.hinge ? -1 : 1);
         var leaf = { x: hinge.x + sg.nx * dir * op.width * s, y: hinge.y + sg.ny * dir * op.width * s };
-        ctx.strokeStyle = selected ? C.sel : C.door; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(hinge.x, hinge.y); ctx.lineTo(leaf.x, leaf.y); ctx.stroke();
+        ctx.strokeStyle = selected ? C.sel : C.door; ctx.lineWidth = doorKind(op, w) === "interior" ? 1.5 : 2.5; ctx.beginPath(); ctx.moveTo(hinge.x, hinge.y); ctx.lineTo(leaf.x, leaf.y); ctx.stroke();
         var a0 = Math.atan2(other.y - hinge.y, other.x - hinge.x), a1 = Math.atan2(leaf.y - hinge.y, leaf.x - hinge.x);
         ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(hinge.x, hinge.y, op.width * s, a0, a1, dir * (op.hinge ? -1 : 1) < 0); ctx.stroke(); ctx.setLineDash([]);
         // jambs

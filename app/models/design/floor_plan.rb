@@ -3,7 +3,7 @@
 #   grid      snap size in ft (0.5 = 6")
 #   walls     [{id, x1, y1, x2, y2, type: "exterior"|"interior", thickness}]
 #   rooms     [{id, name, x, y, w, h}]
-#   openings  [{id, type: "door"|"window", wall, pos, width, swing, hinge}]  (pos = ft from wall start)
+#   openings  [{id, type: "door"|"window", wall, pos, width, swing, hinge, height, kind (door: exterior|interior|garage), sill (window)}]  (pos = ft from wall start)
 #   labels    [{id, text, x, y, size}]
 #   fixtures  [{id, kind, x, y, w, h, rot, label}]   (stairs, plumbing, appliances, furniture; see FIXTURES in the JS)
 #   guides    [{id, x1, y1, x2, y2, label}]   reference-only dashed lines (setbacks, distances); never rendered in 3D

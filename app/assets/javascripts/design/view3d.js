@@ -6,7 +6,7 @@
   "use strict";
 
   var WALL_H = 9, FLOOR_T = 1, DOOR_H = 6.67, SILL = 3, HEAD = 6.67, OVERHANG = 1.5, TILE = 4; // TILE = texture tile size in ft
-  var C = { interior: "#f4f3ee", slab: "#b9b6ad", ground: "#c9d3bf", door: "#8a5a2b", glass: "#9ccbe8", frame: "#ffffff" };
+  var C = { interior: "#f4f3ee", slab: "#b9b6ad", ground: "#c9d3bf", door: "#8a5a2b", garage: "#dcd8cf", glass: "#9ccbe8", frame: "#ffffff" };
   var EXTERIORS = { stucco: { label: "Stucco (cream)", kind: "stucco", color: "#e6dcc6" }, white: { label: "White", kind: "stucco", color: "#f3f1ea" }, gray: { label: "Warm gray", kind: "stucco", color: "#b9b3a6" }, siding: { label: "Wood siding", kind: "siding", color: "#c9b48f" }, brick: { label: "Brick", kind: "brick", color: "#9a5a44" } };
   var ROOF_COLORS = { asphalt: { label: "Asphalt shingle", kind: "shingle", color: "#5a5b5e" }, brown: { label: "Brown shingle", kind: "shingle", color: "#6b5040" }, tile: { label: "Terracotta tile", kind: "tile", color: "#b5623f" }, metal: { label: "Standing-seam metal", kind: "metal", color: "#6d7a86" } };
   var FLOORS = { wood: { label: "Wood", kind: "wood", color: "#c9a878" }, tile: { label: "Tile", kind: "tilefloor", color: "#cfcac0" }, concrete: { label: "Concrete", kind: "concrete", color: "#b4b1aa" } };
@@ -212,16 +212,23 @@
       var half = o.width / 2, a = Math.max(cursor, Math.min(o.pos, len - half) - half), b = Math.min(len, a + o.width);
       piece(cursor, a, 0, WALL_H, null, null, true);
       if (o.type === "door") {
-        piece(a, b, DOOR_H, WALL_H, null, null, false);
-        piece(a + 0.05, b - 0.05, 0, DOOR_H - 0.02, self.mat(C.door, { roughness: 0.6 }), 0.15, false);
-        piece(a, b, DOOR_H, DOOR_H + 0.12, frame, t + 0.1, false);
-        piece(a - 0.06, a + 0.06, 0, DOOR_H + 0.12, frame, t + 0.1, false); piece(b - 0.06, b + 0.06, 0, DOOR_H + 0.12, frame, t + 0.1, false);
+        var kind = o.kind || (w.type === "interior" ? "interior" : "exterior"), dh = Math.min(WALL_H - 0.3, o.height || (kind === "garage" ? 7 : DOOR_H));
+        piece(a, b, dh, WALL_H, null, null, false);
+        if (kind === "garage") {
+          piece(a + 0.05, b - 0.05, 0, dh - 0.02, self.mat(C.garage, { roughness: 0.7 }), 0.2, false);
+          var panels = Math.max(3, Math.round(dh / 1.75)); for (var pi = 1; pi < panels; pi++) piece(a + 0.05, b - 0.05, dh * pi / panels - 0.02, dh * pi / panels + 0.02, self.mat("#b9b4a9"), 0.24, false);
+        } else {
+          piece(a + 0.05, b - 0.05, 0, dh - 0.02, self.mat(C.door, { roughness: 0.6 }), 0.15, false);
+        }
+        piece(a, b, dh, dh + 0.12, frame, t + 0.1, false);
+        piece(a - 0.06, a + 0.06, 0, dh + 0.12, frame, t + 0.1, false); piece(b - 0.06, b + 0.06, 0, dh + 0.12, frame, t + 0.1, false);
       } else {
-        piece(a, b, 0, SILL, null, null, false);
-        piece(a, b, HEAD, WALL_H, null, null, false);
-        piece(a, b, SILL, HEAD, self.mat(C.glass, { transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.3 }), 0.08, false);
-        piece(a - 0.06, b + 0.06, SILL - 0.12, SILL, frame, t + 0.14, false); piece(a - 0.06, b + 0.06, HEAD, HEAD + 0.12, frame, t + 0.1, false);
-        piece(a - 0.06, a + 0.06, SILL, HEAD, frame, t + 0.1, false); piece(b - 0.06, b + 0.06, SILL, HEAD, frame, t + 0.1, false);
+        var sill = o.sill != null ? +o.sill : SILL, head = Math.min(WALL_H - 0.3, sill + (o.height ? +o.height : HEAD - SILL));
+        piece(a, b, 0, sill, null, null, false);
+        piece(a, b, head, WALL_H, null, null, false);
+        piece(a, b, sill, head, self.mat(C.glass, { transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.3 }), 0.08, false);
+        piece(a - 0.06, b + 0.06, sill - 0.12, sill, frame, t + 0.14, false); piece(a - 0.06, b + 0.06, head, head + 0.12, frame, t + 0.1, false);
+        piece(a - 0.06, a + 0.06, sill, head, frame, t + 0.1, false); piece(b - 0.06, b + 0.06, sill, head, frame, t + 0.1, false);
       }
       cursor = b;
     });
