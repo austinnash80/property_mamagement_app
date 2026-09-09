@@ -1,0 +1,49 @@
+<% content_for :wide, "1" %>
+<% content_for :head do %>
+  <style>
+    .v3-wrap { position: relative; height: calc(100vh - 150px); min-height: 480px; background: #dfe7ee; border: 1px solid #e3e5e8; border-radius: .4rem; overflow: hidden; }
+    .v3-wrap canvas { display: block; width: 100%; height: 100%; }
+    .v3-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .5rem .75rem; background: #f8f9fa; border: 1px solid #e3e5e8; border-bottom: 0; border-radius: .4rem .4rem 0 0; }
+    .v3-bar + .v3-wrap { border-radius: 0 0 .4rem .4rem; }
+    .v3-hint { position: absolute; left: 10px; bottom: 8px; font-size: .75rem; color: #4b5563; background: rgba(255,255,255,.8); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
+    .v3-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #4b5563; font-size: .95rem; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <%= javascript_include_tag "design/view3d" %>
+<% end %>
+
+<div class="d-flex justify-content-between align-items-center mb-2 dc-actions">
+  <div>
+    <nav class="small"><%= link_to "Concepts", design_concepts_path %> › <%= link_to @concept.title, design_concept_path(@concept, anchor: "plans") %> › <%= link_to @plan.name, design_floor_plan_path(@plan) %> › 3D</nav>
+    <h2 class="h5 mb-0"><%= @concept.title %> <span class="dc-muted small">· 3D view</span></h2>
+  </div>
+  <div>
+    <%= link_to "Back to editor", design_floor_plan_path(@plan), class: "btn btn-outline-secondary btn-sm" %>
+  </div>
+</div>
+
+<div class="v3-bar">
+  <span class="small text-muted">Levels</span>
+  <span id="v3-levels" class="d-flex flex-wrap gap-2"></span>
+  <button class="btn btn-outline-secondary btn-sm" id="v3-reset">Reset view</button>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <span class="small text-muted" id="v3-status"></span>
+    <button class="btn btn-primary btn-sm" id="v3-render" title="Save a high-resolution still of this view into the concept's images">Save rendering</button>
+  </div>
+</div>
+<div class="v3-wrap" id="v3-wrap"><div class="v3-hint">Drag to orbit · right-drag to pan · wheel to zoom</div></div>
+
+<script type="application/json" id="v3-levels-data"><%= raw @levels.to_json.gsub("</", "<\\/") %></script>
+<script>
+  (function () {
+    var levels = JSON.parse(document.getElementById("v3-levels-data").textContent);
+    window.v3 = DesignView3D.mount(document.getElementById("v3-wrap"), {
+      levels: levels,
+      currentId: <%= @plan.id %>,
+      renderUrl: <%= renderings_design_floor_plan_path(@plan).to_json.html_safe %>,
+      csrf: document.querySelector('meta[name="csrf-token"]').content,
+      ui: { levels: document.getElementById("v3-levels"), reset: document.getElementById("v3-reset"), render: document.getElementById("v3-render"), status: document.getElementById("v3-status") }
+    });
+  })();
+</script>

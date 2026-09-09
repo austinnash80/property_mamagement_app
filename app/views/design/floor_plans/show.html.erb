@@ -24,6 +24,7 @@
     <h2 class="h5 mb-0"><%= @plan.name %><% if @plan.level.present? %> <span class="dc-muted small">· <%= @plan.level %></span><% end %></h2>
   </div>
   <div>
+    <%= link_to "3D view", view3d_design_floor_plan_path(@plan), class: "btn btn-outline-primary btn-sm" %>
     <%= link_to "Settings", edit_design_floor_plan_path(@plan), class: "btn btn-outline-secondary btn-sm" %>
     <%= link_to "Back to concept", design_concept_path(@concept, anchor: "plans"), class: "btn btn-outline-secondary btn-sm" %>
   </div>

@@ -1,6 +1,6 @@
 class Design::FloorPlansController < Design::BaseController
   before_action :set_concept, only: %i[new create]
-  before_action :set_plan,    only: %i[show edit update destroy]
+  before_action :set_plan,    only: %i[show edit update destroy view3d renderings]
 
   def index
     @plans = Design::FloorPlan.includes(:concept).with_attached_thumbnail.order(updated_at: :desc)
@@ -12,6 +12,23 @@ class Design::FloorPlansController < Design::BaseController
     @plan_json = @plan.data_with_defaults
     # Other levels of the same concept, offered as a faint underlay in the editor.
     @siblings  = @concept.floor_plans.where.not(id: @plan.id).map { |p| { id: p.id, name: p.name, level: p.level, data: p.data_with_defaults } }
+  end
+
+  # Phase 3: 3D model of every level of the concept, built client-side from the plan JSON.
+  def view3d
+    @levels = @concept.floor_plans.ordered.map { |p| { id: p.id, name: p.name, level: p.level, position: p.position, data: p.data_with_defaults } }
+  end
+
+  # The 3D view posts a JPEG still; it becomes an image in the concept library.
+  def renderings
+    image = Design::Image.new(concept: @concept, category: "rendering", title: "3D rendering — #{@plan.name}",
+                              caption: "Rendered from the floor plan \"#{@plan.name}\" on #{Time.zone.now.strftime('%b %-d, %Y')}.", source: "Design Center 3D view")
+    Design.attach_data_url(image.file, params[:image], "#{@plan.name.parameterize}-rendering-#{Time.zone.now.strftime('%Y%m%d-%H%M%S')}")
+    if image.save
+      render json: { ok: true, url: design_image_path(image), id: image.id }
+    else
+      render json: { ok: false, errors: image.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   def new

@@ -20,6 +20,7 @@
     </div>
     <div class="small mt-1 dc-actions">
       <%= link_to "Open editor", design_floor_plan_path(plan) %> ·
+      <%= link_to "3D view", view3d_design_floor_plan_path(plan) %> ·
       <%= link_to "Settings", edit_design_floor_plan_path(plan) %> ·
       <%= link_to "Delete", design_floor_plan_path(plan), method: :delete, data: { confirm: "Delete \"#{plan.name}\" and its drawing?" }, class: "text-danger" %>
     </div>

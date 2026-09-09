@@ -37,9 +37,7 @@ class Design::FloorPlan < ApplicationRecord
 
   # "data:image/png;base64,...." from the editor's canvas snapshot.
   def thumbnail_from_data_url(url)
-    return if url.blank?
-    m = url.match(%r{\Adata:(image/\w+);base64,(.+)\z}m) or return
-    thumbnail.attach(io: StringIO.new(Base64.decode64(m[2])), filename: "#{name.parameterize}-thumb.png", content_type: m[1])
+    Design.attach_data_url(thumbnail, url, "#{name.parameterize}-thumb")
   end
 
   private

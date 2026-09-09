@@ -17,7 +17,12 @@ namespace :design, path: "design" do
   resources :concepts do
     # Floor plans are drawn per concept. Shallow: new/create/index nest under
     # the concept, show (the editor)/edit/update/destroy are top-level.
-    resources :floor_plans, shallow: true
+    resources :floor_plans, shallow: true do
+      member do
+        get  :view3d       # 3D model built from the plan geometry
+        post :renderings   # save a still from the 3D view into the image library
+      end
+    end
   end
   resources :floor_plans, only: :index   # all plans across concepts
 
