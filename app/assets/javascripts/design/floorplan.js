@@ -150,7 +150,7 @@
     c.addEventListener("pointerdown", function (e) { self.onDown(e); });
     c.addEventListener("pointermove", function (e) { self.onMove(e); });
     c.addEventListener("pointerup", function (e) { self.onUp(e); });
-    c.addEventListener("dblclick", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); });
+    c.addEventListener("dblclick", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else if (self.tool === "select") { var q = self.pt(e), wp = self.toWorld(q.x, q.y); if (!self.roomAt(wp)) self.roomFromArea(wp); } });
     c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else self.setTool("select"); });
     c.addEventListener("wheel", function (e) { e.preventDefault(); var q = self.pt(e); self.zoomAt(Math.exp(-e.deltaY * 0.0015), q.x, q.y); }, { passive: false });
     c.addEventListener("pointerleave", function () { self.mouse = null; self.hover = null; self.render(); });
@@ -395,7 +395,53 @@
     if ((this.tool === "wall" || this.tool === "line") && this.draft) { var sp = this.snapPoint(p); this.draft.cur = this.ortho(this.draft.start, sp); this.draft.cur.snapped = sp.snapped; }
     if (this.tool === "door" || this.tool === "window") { var nw = this.nearestWall(p, 12); this.hover = nw ? nw.wall.id : null; }
     this.hoverRoom = this.draft ? null : this.roomAt(p);
+    this.hoverArea = (!this.hoverRoom && !this.draft && this.tool === "select") ? this.enclosedAt(p) : null;
     this.render();
+  };
+
+  // Area enclosed by walls around point p (no Room rectangle needed). Walls are rasterised
+  // onto a 3" grid and the space around p is flood-filled; a fill that escapes to the edge
+  // of the drawing area is open, not a room. Returns { x, y, w, h, area } in ft or null.
+  P.enclosedAt = function (p) {
+    var cell = 0.25, pad = 1, W = this.widthFt, H = this.depthFt, nx = Math.ceil((W + 2 * pad) / cell), ny = Math.ceil((H + 2 * pad) / cell), ox = -pad, oy = -pad;
+    var key = JSON.stringify(this.data.walls) + "|" + W + "x" + H;
+    if (this._rasterKey !== key) {
+      var ras = new Uint8Array(nx * ny);
+      this.data.walls.forEach(function (w) {
+        var t = Math.max(w.thickness || WALL_TYPES[w.type] || 0.5, 0.375) / 2 + cell * 0.36;
+        var x0 = Math.max(0, Math.floor((Math.min(w.x1, w.x2) - t - ox) / cell)), x1 = Math.min(nx - 1, Math.ceil((Math.max(w.x1, w.x2) + t - ox) / cell));
+        var y0 = Math.max(0, Math.floor((Math.min(w.y1, w.y2) - t - oy) / cell)), y1 = Math.min(ny - 1, Math.ceil((Math.max(w.y1, w.y2) + t - oy) / cell));
+        for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) {
+          if (project({ x: ox + (x + 0.5) * cell, y: oy + (y + 0.5) * cell }, w).d <= t) ras[y * nx + x] = 1;
+        }
+      });
+      this._raster = ras; this._rasterKey = key; this._region = null;
+    }
+    var cx = Math.floor((p.x - ox) / cell), cy = Math.floor((p.y - oy) / cell);
+    if (cx < 0 || cy < 0 || cx >= nx || cy >= ny) return null;
+    var start = cy * nx + cx, ras2 = this._raster;
+    if (ras2[start]) return null;
+    if (this._region && this._region.seen[start]) return this._region.open ? null : this._region;
+    var seen = new Uint8Array(nx * ny), stack = [start], count = 0, minx = cx, maxx = cx, miny = cy, maxy = cy, open = false;
+    while (stack.length) {
+      var i = stack.pop(); if (seen[i]) continue; seen[i] = 1; if (ras2[i]) continue;
+      var x = i % nx, y = (i - x) / nx;
+      if (x === 0 || y === 0 || x === nx - 1 || y === ny - 1) open = true;
+      count++; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+      if (x > 0) stack.push(i - 1); if (x < nx - 1) stack.push(i + 1); if (y > 0) stack.push(i - nx); if (y < ny - 1) stack.push(i + nx);
+    }
+    var region = { seen: seen, open: open, area: count * cell * cell, x: ox + minx * cell, y: oy + miny * cell, w: (maxx - minx + 1) * cell, h: (maxy - miny + 1) * cell };
+    this._region = region;
+    return open ? null : region;
+  };
+
+  // Double-click inside an enclosed area (Select tool) turns it into a Room.
+  P.roomFromArea = function (p) {
+    var a = this.enclosedAt(p); if (!a) return false;
+    var id = uid(), n = this.data.rooms.length + 1, r4 = function (v) { return Math.round(v * 4) / 4; };
+    this.commit(function () { this.data.rooms.push({ id: id, name: "Room " + n, x: r4(a.x), y: r4(a.y), w: r4(a.w), h: r4(a.h) }); this.sel = { type: "room", id: id }; });
+    this.hoverArea = null; this.focusProp("name");
+    return true;
   };
   P.roomAt = function (p) {
     for (var i = this.data.rooms.length - 1; i >= 0; i--) { var r = this.data.rooms[i]; if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r.id; }
@@ -786,17 +832,14 @@
         var sp = this.snapPoint(this.mouse), sc = S(sp.x, sp.y);
         ctx.strokeStyle = C.draft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sc.x - 6, sc.y); ctx.lineTo(sc.x + 6, sc.y); ctx.moveTo(sc.x, sc.y - 6); ctx.lineTo(sc.x, sc.y + 6); ctx.stroke();
       }
-      // hover tooltip: room name, size and area
-      var hr = this.hoverRoom && this.mouse ? this.find("room", this.hoverRoom) : null;
-      if (hr && !this.drag) {
-        var hp = S(hr.x, hr.y); ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(hp.x, hp.y, hr.w * s, hr.h * s); ctx.setLineDash([]);
-        var mp = S(this.mouse.x, this.mouse.y), lines = [hr.name || "Room", ftIn(hr.w) + " × " + ftIn(hr.h) + "  ·  " + sqft(hr.w * hr.h)];
-        ctx.font = "600 12px system-ui, sans-serif"; var tw = Math.max(ctx.measureText(lines[0]).width, (ctx.font = "12px system-ui, sans-serif", ctx.measureText(lines[1]).width)) + 16;
-        var tx = Math.min(mp.x + 14, cw - tw - 4), ty = Math.max(mp.y - 44, 4);
-        ctx.fillStyle = "rgba(31,42,55,.92)"; ctx.beginPath(); ctx.rect(tx, ty, tw, 38); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.font = "600 12px system-ui, sans-serif"; ctx.fillText(lines[0], tx + 8, ty + 12);
-        ctx.font = "12px system-ui, sans-serif"; ctx.fillText(lines[1], tx + 8, ty + 27);
+      // hover tooltip: a Room's name, size and area — or any wall-enclosed area
+      var hr = this.hoverRoom && this.mouse ? this.find("room", this.hoverRoom) : null, ha = !hr && this.hoverArea && this.mouse ? this.hoverArea : null;
+      if ((hr || ha) && !this.drag) {
+        var box = hr || ha, hp = S(box.x, box.y);
+        ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(hp.x, hp.y, box.w * s, box.h * s); ctx.setLineDash([]);
+        var lines = hr ? [hr.name || "Room", ftIn(hr.w) + " × " + ftIn(hr.h) + "  ·  " + sqft(hr.w * hr.h)]
+                       : ["Enclosed area", ftIn(ha.w) + " × " + ftIn(ha.h) + " inside walls  ·  " + sqft(ha.area), "Double-click to make it a room"];
+        this.tooltip(ctx, S(this.mouse.x, this.mouse.y), lines, cw);
       }
       // handles
       this.handles().forEach(function (h) { ctx.fillStyle = "#fff"; ctx.strokeStyle = C.sel; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(h.s.x - HANDLE / 2, h.s.y - HANDLE / 2, HANDLE, HANDLE); ctx.fill(); ctx.stroke(); });
@@ -923,6 +966,15 @@
     sc.onload = function () { self.setStatus(self.dirty ? "Unsaved changes" : "Ready"); go(); };
     sc.onerror = function () { self.setStatus("Ready"); alert("The PDF library could not be loaded (offline?). Use PNG instead."); };
     document.head.appendChild(sc);
+  };
+
+  P.tooltip = function (ctx, at, lines, cw) {
+    var fonts = ["600 12px system-ui, sans-serif", "12px system-ui, sans-serif", "11px system-ui, sans-serif"], tw = 0;
+    lines.forEach(function (l, i) { ctx.font = fonts[Math.min(i, 2)]; tw = Math.max(tw, ctx.measureText(l).width); });
+    tw += 16; var th = 10 + lines.length * 15, tx = Math.min(at.x + 14, cw - tw - 4), ty = Math.max(at.y - th - 6, 4);
+    ctx.fillStyle = "rgba(31,42,55,.92)"; ctx.beginPath(); ctx.rect(tx, ty, tw, th); ctx.fill();
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    lines.forEach(function (l, i) { ctx.fillStyle = i === 2 ? "#c9d1dc" : "#fff"; ctx.font = fonts[Math.min(i, 2)]; ctx.fillText(l, tx + 8, ty + 12 + i * 15); });
   };
 
   P.fitText = function (ctx, text, maxW) {
