@@ -514,7 +514,8 @@
     var f = function (label, name, value, attrs) { return '<div class="fp-field"><label>' + label + '</label><input class="form-control form-control-sm" data-prop="' + name + '" value="' + esc(value) + '" ' + (attrs || "") + '></div>'; };
     if (!el) {
       html = '<h6>Plan</h6><div class="small text-muted mb-2">' + esc(this.opts.name || "") + ' · ' + ftIn(this.widthFt) + ' × ' + ftIn(this.depthFt) + ' drawing area</div>' +
-        '<div class="small">Nothing selected. Pick a tool above, or click an element to edit it here.</div>';
+        '<div class="small">Nothing selected. Pick a tool above, or click an element to edit it here.</div>' +
+        (this.opts.settingsUrl ? '<div class="small mt-2"><a href="' + this.opts.settingsUrl + '">Change the lot / drawing size</a> (Settings).</div>' : "");
     } else if (this.sel.type === "wall") {
       var s = seg(el);
       html = '<h6>Wall</h6>' +

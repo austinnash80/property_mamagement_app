@@ -27,6 +27,11 @@
   <span class="small text-muted">Levels</span>
   <span id="v3-levels" class="d-flex flex-wrap gap-2"></span>
   <button class="btn btn-outline-secondary btn-sm" id="v3-reset">Reset view</button>
+  <span class="vr d-none d-md-inline"></span>
+  <label class="small text-nowrap">Roof <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roof"></select></label>
+  <label class="small text-nowrap">Exterior <select class="form-select form-select-sm d-inline-block w-auto" id="v3-exterior"></select></label>
+  <label class="small text-nowrap">Roof color <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roofColor"></select></label>
+  <label class="small text-nowrap">Floors <select class="form-select form-select-sm d-inline-block w-auto" id="v3-floor"></select></label>
   <div class="ms-auto d-flex align-items-center gap-2">
     <span class="small text-muted" id="v3-status"></span>
     <button class="btn btn-primary btn-sm" id="v3-render" title="Save a high-resolution still of this view into the concept's images">Save rendering</button>
@@ -42,8 +47,11 @@
       levels: levels,
       currentId: <%= @plan.id %>,
       renderUrl: <%= renderings_design_floor_plan_path(@plan).to_json.html_safe %>,
+      settingsUrl: <%= design_concept_path(@concept, format: :json).to_json.html_safe %>,
+      settings: <%= raw (@concept.render_settings || {}).to_json %>,
       csrf: document.querySelector('meta[name="csrf-token"]').content,
-      ui: { levels: document.getElementById("v3-levels"), reset: document.getElementById("v3-reset"), render: document.getElementById("v3-render"), status: document.getElementById("v3-status") }
+      ui: { levels: document.getElementById("v3-levels"), reset: document.getElementById("v3-reset"), render: document.getElementById("v3-render"), status: document.getElementById("v3-status"),
+            roof: document.getElementById("v3-roof"), exterior: document.getElementById("v3-exterior"), roofColor: document.getElementById("v3-roofColor"), floor: document.getElementById("v3-floor") }
     });
   })();
 </script>

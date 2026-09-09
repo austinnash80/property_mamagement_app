@@ -49,6 +49,7 @@
       concept: <%= @concept.title.to_json.html_safe %>,
       siblings: JSON.parse(document.getElementById("fp-siblings").textContent),
       saveUrl: <%= design_floor_plan_path(@plan, format: :json).to_json.html_safe %>,
+      settingsUrl: <%= edit_design_floor_plan_path(@plan).to_json.html_safe %>,
       csrf: document.querySelector('meta[name="csrf-token"]').content
     });
   })();

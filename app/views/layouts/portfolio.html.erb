@@ -4,6 +4,8 @@
     <title>Project Portfolio</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <%# rails-ujs powers `method: :delete` links and data-confirm dialogs %>
+    <script src="https://cdn.jsdelivr.net/npm/@rails/ujs@6.1.7/lib/assets/compiled/rails-ujs.js"></script>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <style>
@@ -18,9 +20,10 @@
       .pf-muted { color: #6c757d; }
       .pf-section { margin-top: 2rem; }
       @media print { .pf-nav, .pf-actions, .btn, form { display: none !important; } body { background: #fff; } }
+      .pf-public .pf-actions, .pf-public .pf-private { display: none !important; }
     </style>
   </head>
-  <body>
+  <body class="<%= 'pf-public' unless signed_in? %>">
     <header class="bg-white border-bottom mb-4">
       <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between">
         <div>
@@ -29,9 +32,13 @@
             <%= link_to "Properties", portfolio_properties_path %>
             <%= link_to "All Projects", portfolio_projects_path %>
             <%= link_to "Vendors / Subs", portfolio_vendors_path %>
-            <%= link_to "Inbox#{(n = Portfolio::SourceDocument.unreviewed.count) > 0 ? " (#{n})" : ""}", portfolio_inbox_path %>
-            <a href="/design" class="pf-muted">Design Center</a>
-            <a href="/" class="pf-muted">← Property Management</a>
+            <% if signed_in? %>
+              <%= link_to "Inbox#{(n = Portfolio::SourceDocument.unreviewed.count) > 0 ? " (#{n})" : ""}", portfolio_inbox_path %>
+              <a href="/design" class="pf-muted">Design Center</a>
+              <a href="/" class="pf-muted">← Property Management</a>
+            <% else %>
+              <a href="/portfolio/inbox" class="pf-muted small">Sign in</a>
+            <% end %>
           </nav>
         </div>
       </div>

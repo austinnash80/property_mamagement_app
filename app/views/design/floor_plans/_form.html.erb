@@ -4,8 +4,8 @@
     <div class="col-md-5"><%= f.input :name, hint: "e.g. Main floor, Second floor, Basement" %></div>
     <div class="col-md-3"><%= f.input :level, hint: "Optional label" %></div>
     <div class="col-md-2"><%= f.input :position, hint: "Sort order" %></div>
-    <div class="col-md-3"><%= f.input :width_ft, label: "Drawing width (ft)", input_html: { step: 1 } %></div>
-    <div class="col-md-3"><%= f.input :depth_ft, label: "Drawing depth (ft)", input_html: { step: 1 }, hint: "The dashed drawing area in the editor. Lot or footprint size works well; you can change it later." %></div>
+    <div class="col-md-3"><%= f.input :width_ft, label: "Lot / drawing width (ft)", input_html: { step: 1 } %></div>
+    <div class="col-md-3"><%= f.input :depth_ft, label: "Lot / drawing depth (ft)", input_html: { step: 1 }, hint: "The dashed rectangle in the editor. Use your lot size (e.g. 65 × 100) so the plan sits on the lot; you can change it any time." %></div>
     <div class="col-12"><%= f.input :notes, as: :text, input_html: { rows: 4 } %></div>
   </div>
   <%= f.button :submit, (@plan.persisted? ? "Save settings" : "Create and open editor"), class: "btn btn-primary" %>

@@ -26,11 +26,22 @@ class Design::ConceptsController < Design::BaseController
     end
   end
 
+  # HTML from the edit form, or JSON from the 3D view saving its render settings.
   def update
-    if @concept.update(concept_params)
-      redirect_to design_concept_path(@concept), notice: "Concept updated."
+    attrs = concept_params
+    if (rs = params.dig(:design_concept, :render_settings)).is_a?(ActionController::Parameters)
+      attrs[:render_settings] = (@concept.render_settings || {}).merge(rs.permit(:roof, :exterior, :roofColor, :floor).to_h)
+    end
+    if @concept.update(attrs)
+      respond_to do |f|
+        f.html { redirect_to design_concept_path(@concept), notice: "Concept updated." }
+        f.json { render json: { ok: true, render_settings: @concept.render_settings } }
+      end
     else
-      render :edit, status: :unprocessable_entity
+      respond_to do |f|
+        f.html { render :edit, status: :unprocessable_entity }
+        f.json { render json: { ok: false, errors: @concept.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
