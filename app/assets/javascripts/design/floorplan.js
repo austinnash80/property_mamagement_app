@@ -394,7 +394,12 @@
     }
     if ((this.tool === "wall" || this.tool === "line") && this.draft) { var sp = this.snapPoint(p); this.draft.cur = this.ortho(this.draft.start, sp); this.draft.cur.snapped = sp.snapped; }
     if (this.tool === "door" || this.tool === "window") { var nw = this.nearestWall(p, 12); this.hover = nw ? nw.wall.id : null; }
+    this.hoverRoom = this.draft ? null : this.roomAt(p);
     this.render();
+  };
+  P.roomAt = function (p) {
+    for (var i = this.data.rooms.length - 1; i >= 0; i--) { var r = this.data.rooms[i]; if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r.id; }
+    return null;
   };
 
   P.dragMove = function (d, p) {
@@ -780,6 +785,18 @@
       if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "label")) {
         var sp = this.snapPoint(this.mouse), sc = S(sp.x, sp.y);
         ctx.strokeStyle = C.draft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sc.x - 6, sc.y); ctx.lineTo(sc.x + 6, sc.y); ctx.moveTo(sc.x, sc.y - 6); ctx.lineTo(sc.x, sc.y + 6); ctx.stroke();
+      }
+      // hover tooltip: room name, size and area
+      var hr = this.hoverRoom && this.mouse ? this.find("room", this.hoverRoom) : null;
+      if (hr && !this.drag) {
+        var hp = S(hr.x, hr.y); ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(hp.x, hp.y, hr.w * s, hr.h * s); ctx.setLineDash([]);
+        var mp = S(this.mouse.x, this.mouse.y), lines = [hr.name || "Room", ftIn(hr.w) + " × " + ftIn(hr.h) + "  ·  " + sqft(hr.w * hr.h)];
+        ctx.font = "600 12px system-ui, sans-serif"; var tw = Math.max(ctx.measureText(lines[0]).width, (ctx.font = "12px system-ui, sans-serif", ctx.measureText(lines[1]).width)) + 16;
+        var tx = Math.min(mp.x + 14, cw - tw - 4), ty = Math.max(mp.y - 44, 4);
+        ctx.fillStyle = "rgba(31,42,55,.92)"; ctx.beginPath(); ctx.rect(tx, ty, tw, 38); ctx.fill();
+        ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.font = "600 12px system-ui, sans-serif"; ctx.fillText(lines[0], tx + 8, ty + 12);
+        ctx.font = "12px system-ui, sans-serif"; ctx.fillText(lines[1], tx + 8, ty + 27);
       }
       // handles
       this.handles().forEach(function (h) { ctx.fillStyle = "#fff"; ctx.strokeStyle = C.sel; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.rect(h.s.x - HANDLE / 2, h.s.y - HANDLE / 2, HANDLE, HANDLE); ctx.fill(); ctx.stroke(); });
