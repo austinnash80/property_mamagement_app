@@ -150,7 +150,14 @@
     c.addEventListener("pointerdown", function (e) { self.onDown(e); });
     c.addEventListener("pointermove", function (e) { self.onMove(e); });
     c.addEventListener("pointerup", function (e) { self.onUp(e); });
-    c.addEventListener("dblclick", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else if (self.tool === "select") { var q = self.pt(e), wp = self.toWorld(q.x, q.y); if (!self.roomAt(wp)) self.roomFromArea(wp); } });
+    c.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      if (self.draft) return self.finishWall();
+      if (self.tool !== "select") return;
+      var q = self.pt(e), wp = self.toWorld(q.x, q.y), hit = self.hitTest(wp);
+      if (hit && (hit.type === "label" || hit.type === "room")) { self.sel = hit; self.updatePanel(); self.inlineEdit(hit.type, self.find(hit.type, hit.id)); }
+      else if (!self.roomAt(wp)) self.roomFromArea(wp);
+    });
     c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else self.setTool("select"); });
     c.addEventListener("wheel", function (e) { e.preventDefault(); var q = self.pt(e); self.zoomAt(Math.exp(-e.deltaY * 0.0015), q.x, q.y); }, { passive: false });
     c.addEventListener("pointerleave", function () { self.mouse = null; self.hover = null; self.render(); });
@@ -324,7 +331,7 @@
     this.tool = t; this.draft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
@@ -435,6 +442,22 @@
     return open ? null : region;
   };
 
+  // In-place text editor for a label's text or a room's name (double-click, or a freshly placed label).
+  P.inlineEdit = function (type, el) {
+    if (this.inline) this.inline.remove();
+    var self = this, isRoom = type === "room", at = isRoom ? this.toScreen(el.x + el.w / 2, el.y + el.h / 2) : this.toScreen(el.x, el.y);
+    var inp = document.createElement("input"); inp.className = "form-control form-control-sm fp-inline"; inp.value = isRoom ? (el.name || "") : (el.text || "");
+    inp.style.left = clamp(at.x - 90, 4, this.cw - 184) + "px"; inp.style.top = clamp(at.y - 16, 4, this.ch - 36) + "px";
+    this.wrap.appendChild(inp); this.inline = inp; inp.focus(); inp.select();
+    var done = function (save) {
+      if (self.inline !== inp) return;
+      var v = inp.value; self.inline = null; inp.remove();
+      if (save) self.commit(function () { if (isRoom) el.name = v; else el.text = v; }); else self.render();
+    };
+    inp.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") done(true); else if (e.key === "Escape") done(false); });
+    inp.addEventListener("blur", function () { done(true); });
+  };
+
   // Double-click inside an enclosed area (Select tool) turns it into a Room.
   P.roomFromArea = function (p) {
     var a = this.enclosedAt(p); if (!a) return false;
@@ -538,7 +561,7 @@
     if (this.tool === "label") {
       var sp2 = this.snapPoint(p), lid = uid();
       this.commit(function () { this.data.labels.push({ id: lid, text: "Label", x: sp2.x, y: sp2.y, size: 1 }); this.sel = { type: "label", id: lid }; });
-      this.focusProp("text");
+      this.inlineEdit("label", this.find("label", lid));
     }
   };
 
@@ -585,7 +608,7 @@
     var f = function (label, name, value, attrs) { return '<div class="fp-field"><label>' + label + '</label><input class="form-control form-control-sm" data-prop="' + name + '" value="' + esc(value) + '" ' + (attrs || "") + '></div>'; };
     if (!el) {
       html = '<h6>Plan</h6><div class="small text-muted mb-2">' + esc(this.opts.name || "") + ' · ' + ftIn(this.widthFt) + ' × ' + ftIn(this.depthFt) + ' drawing area</div>' +
-        '<div class="small">Nothing selected. Pick a tool above, or click an element to edit it here.</div>' +
+        '<div class="small">Nothing selected. Pick a tool above, or click an element to edit it here. Double-click a label or room to rename it in place.</div>' +
         (this.opts.settingsUrl ? '<div class="small mt-2"><a href="' + this.opts.settingsUrl + '">Change the lot / drawing size</a> (Settings).</div>' : "");
     } else if (this.sel.type === "wall") {
       var s = seg(el);
