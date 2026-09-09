@@ -6,12 +6,13 @@
 #   openings  [{id, type: "door"|"window", wall, pos, width, swing, hinge}]  (pos = ft from wall start)
 #   labels    [{id, text, x, y, size}]
 #   fixtures  [{id, kind, x, y, w, h, rot, label}]   (stairs, plumbing, appliances, furniture; see FIXTURES in the JS)
+#   guides    [{id, x1, y1, x2, y2, label}]   reference-only dashed lines (setbacks, distances); never rendered in 3D
 class Design::FloorPlan < ApplicationRecord
   belongs_to :concept, class_name: "Design::Concept"
   has_one_attached :thumbnail
 
-  DEFAULT_DATA = { "version" => 1, "grid" => 0.5, "walls" => [], "rooms" => [], "openings" => [], "labels" => [], "fixtures" => [] }.freeze
-  SECTIONS = %w[walls rooms openings labels fixtures].freeze
+  DEFAULT_DATA = { "version" => 1, "grid" => 0.5, "walls" => [], "rooms" => [], "openings" => [], "labels" => [], "fixtures" => [], "guides" => [] }.freeze
+  SECTIONS = %w[walls rooms openings labels fixtures guides].freeze
 
   validates :name, presence: true
   validates :width_ft, :depth_ft, numericality: { greater_than: 0, less_than_or_equal_to: 1000 }

@@ -21,7 +21,7 @@
   var C = {
     bg: "#ffffff", gridMinor: "#f0f2f5", gridMajor: "#dde2e8", boundary: "#9aa3ad",
     wall: "#2b2f36", sel: "#0d6efd", selFill: "rgba(13,110,253,.12)", room: "rgba(255,214,102,.22)",
-    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
+    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", guide: "#6b7280", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
   };
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -34,7 +34,7 @@
   function sqft(a) { return Math.round(a).toLocaleString() + " sq ft"; }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    return { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [] };
+    return { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [] };
   }
   function seg(w) {
     var dx = w.x2 - w.x1, dy = w.y2 - w.y1, len = Math.hypot(dx, dy) || 1e-9;
@@ -58,6 +58,7 @@
     '    <button class="btn btn-outline-secondary" data-tool="window" title="Click a wall to place a window (N)">Window</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="label" title="Click to place text (T)">Label</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="fixture" title="Place stairs, plumbing, appliances, furniture (X)">Fixture</button>' +
+    '    <button class="btn btn-outline-secondary" data-tool="line" title="Guide line (L): a thin dashed reference line that shows its length, e.g. a setback. Not shown in 3D.">Line</button>' +
     '  </div>' +
     '  <select class="form-select form-select-sm w-auto fp-kind d-none" title="Which fixture to place"></select>' +
     '  <div class="btn-group btn-group-sm" role="group">' +
@@ -86,7 +87,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space or middle-drag to pan · Shift = free angle</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space or middle-drag to pan · Shift = free angle</div>' +
     '  </aside>' +
     '</div>';
 
@@ -143,8 +144,8 @@
     c.addEventListener("pointerdown", function (e) { self.onDown(e); });
     c.addEventListener("pointermove", function (e) { self.onMove(e); });
     c.addEventListener("pointerup", function (e) { self.onUp(e); });
-    c.addEventListener("dblclick", function (e) { e.preventDefault(); if (self.tool === "wall") self.finishWall(); });
-    c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.tool === "wall" && self.draft) self.finishWall(); else self.setTool("select"); });
+    c.addEventListener("dblclick", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); });
+    c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else self.setTool("select"); });
     c.addEventListener("wheel", function (e) { e.preventDefault(); var q = self.pt(e); self.zoomAt(Math.exp(-e.deltaY * 0.0015), q.x, q.y); }, { passive: false });
     c.addEventListener("pointerleave", function () { self.mouse = null; self.hover = null; self.render(); });
 
@@ -187,7 +188,7 @@
   P.snapVal = function (v) { var g = this.data.grid; return Math.round(v / g) * g; };
   P.snapPoint = function (p, excludeWallId) {
     var tol = 10 / this.view.scale, best = null, bd = tol;
-    this.data.walls.forEach(function (w) {
+    this.data.walls.concat(this.data.guides).forEach(function (w) {
       if (w.id === excludeWallId) return;
       [{ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 }].forEach(function (e) { var d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; best = e; } });
     });
@@ -205,7 +206,7 @@
 
   // ---------------------------------------------------------------- lookup / hit testing
   P.find = function (type, id) { var list = this.listFor(type); for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; };
-  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : this.data.labels; };
+  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : type === "guide" ? this.data.guides : this.data.labels; };
   P.underlay = function () {
     if (!this.underlayId) return null;
     var sib = (this.opts.siblings || []).filter(function (p) { return String(p.id) === String(this.underlayId); }, this)[0];
@@ -236,6 +237,9 @@
       var l = this.data.labels[i], box = this.labelBox(l);
       if (p.x >= box.x && p.x <= box.x + box.w && p.y >= box.y && p.y <= box.y + box.h) return { type: "label", id: l.id };
     }
+    for (i = this.data.guides.length - 1; i >= 0; i--) {
+      if (project(p, this.data.guides[i]).d <= 6 / s) return { type: "guide", id: this.data.guides[i].id };
+    }
     var nw = this.nearestWall(p);
     if (nw) return { type: "wall", id: nw.wall.id };
     for (i = this.data.fixtures.length - 1; i >= 0; i--) {
@@ -252,7 +256,7 @@
   P.handles = function () {  // screen-space handles for the selection
     var el = this.selected(); if (!el) return [];
     var self = this;
-    if (this.sel.type === "wall") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
+    if (this.sel.type === "wall" || this.sel.type === "guide") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
     if (this.sel.type === "room" || this.sel.type === "fixture") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
     return [];
   };
@@ -303,7 +307,7 @@
     var el = this.selected(); if (!el) return;
     var type = this.sel.type;
     this.commit(function () {
-      if (type === "wall") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
+      if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
       else if (type === "opening") { var w = this.wallOf(el); if (w) { var s = seg(w); el.pos = clamp(el.pos + dx * s.ux + dy * s.uy, el.width / 2, s.len - el.width / 2); } }
       else { el.x += dx; el.y += dy; }
     });
@@ -314,7 +318,7 @@
     this.tool = t; this.draft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
     this.render();
   };
@@ -381,7 +385,7 @@
       if (d.kind === "move") return this.dragMove(d, p);
       if (d.kind === "handle") return this.dragHandle(d, p);
     }
-    if (this.tool === "wall" && this.draft) { var sp = this.snapPoint(p); this.draft.cur = this.ortho(this.draft.start, sp); this.draft.cur.snapped = sp.snapped; }
+    if ((this.tool === "wall" || this.tool === "line") && this.draft) { var sp = this.snapPoint(p); this.draft.cur = this.ortho(this.draft.start, sp); this.draft.cur.snapped = sp.snapped; }
     if (this.tool === "door" || this.tool === "window") { var nw = this.nearestWall(p, 12); this.hover = nw ? nw.wall.id : null; }
     this.render();
   };
@@ -390,7 +394,7 @@
     var raw = { x: p.x - d.start.x, y: p.y - d.start.y }, o = d.orig, el = d.el;
     if (Math.hypot(raw.x, raw.y) * this.view.scale < 3 && !d.moved) return;
     d.moved = true;
-    if (d.type === "wall") {
+    if (d.type === "wall" || d.type === "guide") {
       var a = this.snapPoint({ x: o.x1 + raw.x, y: o.y1 + raw.y }, el.id), dx = a.x - o.x1, dy = a.y - o.y1;
       el.x1 = o.x1 + dx; el.y1 = o.y1 + dy; el.x2 = o.x2 + dx; el.y2 = o.y2 + dy;
     } else if (d.type === "room" || d.type === "label" || d.type === "fixture") {
@@ -412,6 +416,9 @@
         if (Math.abs(w.x2 - oldPt.x) < 1e-6 && Math.abs(w.y2 - oldPt.y) < 1e-6) { w.x2 = np.x; w.y2 = np.y; }
       });
       if (k === "p1") { el.x1 = np.x; el.y1 = np.y; } else { el.x2 = np.x; el.y2 = np.y; }
+    } else if (this.sel.type === "guide") {
+      var gp = this.snapPoint(p, el.id), gfixed = k === "p1" ? { x: o.x2, y: o.y2 } : { x: o.x1, y: o.y1 }, gnp = this.shift ? gp : this.ortho(gfixed, gp);
+      if (k === "p1") { el.x1 = gnp.x; el.y1 = gnp.y; } else { el.x2 = gnp.x; el.y2 = gnp.y; }
     } else if (this.sel.type === "room" || this.sel.type === "fixture") {
       var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h, sx = this.snapVal(p.x), sy = this.snapVal(p.y);
       if (k.indexOf("w") >= 0) x1 = sx; if (k.indexOf("e") >= 0) x2 = sx; if (k.indexOf("n") >= 0) y1 = sy; if (k.indexOf("s") >= 0) y2 = sy;
@@ -442,13 +449,16 @@
     if (d && d.kind === "pan") return;
     if (!isClick || e.button !== 0) return;
 
-    if (this.tool === "wall") {
-      var sp = this.snapPoint(p);
+    if (this.tool === "wall" || this.tool === "line") {
+      var sp = this.snapPoint(p), isLine = this.tool === "line";
       if (!this.draft) { this.draft = { start: sp, cur: sp }; return this.render(); }
       var end = this.ortho(this.draft.start, sp), st = this.draft.start;
       if (Math.hypot(end.x - st.x, end.y - st.y) >= this.data.grid / 2) {
         var type = this.lastWallType || "exterior", wid = uid();
-        this.commit(function () { this.data.walls.push({ id: wid, x1: st.x, y1: st.y, x2: end.x, y2: end.y, type: type, thickness: WALL_TYPES[type] }); });
+        this.commit(function () {
+          if (isLine) this.data.guides.push({ id: wid, x1: st.x, y1: st.y, x2: end.x, y2: end.y, label: "" });
+          else this.data.walls.push({ id: wid, x1: st.x, y1: st.y, x2: end.x, y2: end.y, type: type, thickness: WALL_TYPES[type] });
+        });
         this.draft = { start: end, cur: end };
       }
       return this.render();
@@ -497,6 +507,7 @@
       case "n": case "N": this.setTool("window"); break;
       case "t": case "T": this.setTool("label"); break;
       case "x": case "X": this.setTool("fixture"); break;
+      case "l": case "L": this.setTool("line"); break;
       case "g": case "G": this.act("grid"); break;
       case "f": case "F": this.fit(); break;
       case "+": case "=": this.act("zoomIn"); break;
@@ -542,6 +553,11 @@
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
         f("Label", "label", el.label || "", 'placeholder="optional text, e.g. UP or DN"') +
         '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="rotate">Rotate 90°</button></div>';
+    } else if (this.sel.type === "guide") {
+      html = '<h6>Guide line</h6><div class="small text-muted mb-2">Reference only; not shown in 3D.</div>' +
+        f("Label", "label", el.label || "", 'placeholder="e.g. 5\' side yard setback"') +
+        f("Length", "length", ftIn(seg(el).len), "readonly") +
+        f("Start X, Y (ft)", "p1", el.x1 + ", " + el.y1) + f("End X, Y (ft)", "p2", el.x2 + ", " + el.y2);
     } else if (this.sel.type === "label") {
       html = '<h6>Label</h6>' + f("Text", "text", el.text) + f("Size (ft)", "size", el.size || 1, 'type="number" step="0.25" min="0.25"');
     }
@@ -590,7 +606,7 @@
   P.refreshPropValues = function (el) {
     if (!el) return;
     var set = function (name, v) { var i = this.props.querySelector('[data-prop="' + name + '"]'); if (i && document.activeElement !== i) i.value = v; }.bind(this);
-    if (this.sel.type === "wall") { set("length", ftIn(seg(el).len)); set("p1", el.x1 + ", " + el.y1); set("p2", el.x2 + ", " + el.y2); }
+    if (this.sel.type === "wall" || this.sel.type === "guide") { set("length", ftIn(seg(el).len)); set("p1", el.x1 + ", " + el.y1); set("p2", el.x2 + ", " + el.y2); }
     if (this.sel.type === "room") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); set("area", sqft(el.w * el.h)); }
     if (this.sel.type === "fixture") { set("w", el.w); set("h", el.h); }
     if (this.sel.type === "opening") set("pos", Math.round(el.pos * 100) / 100);
@@ -683,6 +699,17 @@
     });
     ctx.lineCap = "square";
 
+    // guide lines (reference only)
+    d.guides.forEach(function (gl) {
+      var a = S(gl.x1, gl.y1), b = S(gl.x2, gl.y2), selected = o.ui && self.sel && self.sel.id === gl.id;
+      ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = selected ? C.sel : C.guide; ctx.lineWidth = selected ? 1.5 : 1;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+      [a, b].forEach(function (e) { ctx.beginPath(); ctx.arc(e.x, e.y, 2, 0, Math.PI * 2); ctx.fillStyle = selected ? C.sel : C.guide; ctx.fill(); });
+      ctx.restore();
+      var text = ftIn(seg(gl).len); if (gl.label) text = gl.label + " · " + text;
+      self.dimText(ctx, a, b, text, 1, 4, selected ? C.sel : C.guide);
+    });
+
     // fixtures
     d.fixtures.forEach(function (fx) { self.drawFixture(ctx, fx, S, s, o.ui && self.sel && self.sel.id === fx.id); });
 
@@ -702,12 +729,13 @@
 
     if (o.ui) {
       // wall draft
-      if (this.tool === "wall" && this.draft) {
-        var st = S(this.draft.start.x, this.draft.start.y);
+      if ((this.tool === "wall" || this.tool === "line") && this.draft) {
+        var st = S(this.draft.start.x, this.draft.start.y), isLineDraft = this.tool === "line";
         ctx.fillStyle = C.draft; ctx.beginPath(); ctx.arc(st.x, st.y, 4, 0, Math.PI * 2); ctx.fill();
         if (this.draft.cur) {
-          var cu = S(this.draft.cur.x, this.draft.cur.y), thick = WALL_TYPES[this.lastWallType || "exterior"] * s;
-          ctx.strokeStyle = "rgba(224,116,42,.55)"; ctx.lineWidth = Math.max(thick, 1.5); ctx.beginPath(); ctx.moveTo(st.x, st.y); ctx.lineTo(cu.x, cu.y); ctx.stroke();
+          var cu = S(this.draft.cur.x, this.draft.cur.y), thick = isLineDraft ? 1.5 : WALL_TYPES[this.lastWallType || "exterior"] * s;
+          if (isLineDraft) ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = "rgba(224,116,42,.7)"; ctx.lineWidth = Math.max(thick, 1.5); ctx.beginPath(); ctx.moveTo(st.x, st.y); ctx.lineTo(cu.x, cu.y); ctx.stroke(); ctx.setLineDash([]);
           var L = Math.hypot(this.draft.cur.x - this.draft.start.x, this.draft.cur.y - this.draft.start.y);
           if (L > 0) this.dimText(ctx, st, cu, ftIn(L), -1, thick / 2 + 4, C.draft);
           if (this.draft.cur.snapped === "endpoint") { ctx.strokeStyle = C.draft; ctx.lineWidth = 1.5; ctx.strokeRect(cu.x - 6, cu.y - 6, 12, 12); }
@@ -721,7 +749,7 @@
         ctx.fillStyle = C.sel; ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(ftIn(rw) + " × " + ftIn(rh) + " · " + sqft(rw * rh), Math.min(a.x, bb.x) + 4, Math.min(a.y, bb.y) - 4);
       }
       // hover snap cursor for placement tools
-      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "room" || this.tool === "label")) {
+      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "label")) {
         var sp = this.snapPoint(this.mouse), sc = S(sp.x, sp.y);
         ctx.strokeStyle = C.draft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sc.x - 6, sc.y); ctx.lineTo(sc.x + 6, sc.y); ctx.moveTo(sc.x, sc.y - 6); ctx.lineTo(sc.x, sc.y + 6); ctx.stroke();
       }
