@@ -211,6 +211,7 @@
       var none = document.createElement("option"); none.value = ""; none.textContent = "none"; us.appendChild(none);
       sibs.forEach(function (p) { var o = document.createElement("option"); o.value = p.id; o.textContent = p.name + (p.level ? " · " + p.level : ""); us.appendChild(o); });
       try { this.underlayId = localStorage.getItem("fp-underlay-" + this.opts.id) || ""; } catch (_) { this.underlayId = ""; }
+      if (this.underlayId && !sibs.some(function (p) { return String(p.id) === String(self.underlayId); })) this.underlayId = "";   // remembered level was deleted
       if (this.opts.below && sibs.some(function (p) { return String(p.id) === String(self.opts.below); })) {   // just created via "Add level above"
         this.underlayId = String(this.opts.below); try { localStorage.setItem("fp-underlay-" + this.opts.id, this.underlayId); } catch (_) {}
       }
