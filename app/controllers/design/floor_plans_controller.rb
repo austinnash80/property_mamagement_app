@@ -1,6 +1,6 @@
 class Design::FloorPlansController < Design::BaseController
   before_action :set_concept, only: %i[new create]
-  before_action :set_plan,    only: %i[show edit update destroy view3d renderings]
+  before_action :set_plan,    only: %i[show edit update destroy view3d renderings add_level]
 
   def index
     @plans = Design::FloorPlan.includes(:concept).with_attached_thumbnail.order(updated_at: :desc)
@@ -10,6 +10,7 @@ class Design::FloorPlansController < Design::BaseController
   # The editor.
   def show
     @plan_json = @plan.data_with_defaults
+    @levels    = @concept.floor_plans.ordered
     # Other levels of the same concept, offered as a faint underlay in the editor.
     @siblings  = @concept.floor_plans.where.not(id: @plan.id).map { |p| { id: p.id, name: p.name, level: p.level, data: p.data_with_defaults } }
   end
@@ -17,6 +18,21 @@ class Design::FloorPlansController < Design::BaseController
   # Phase 3: 3D model of every level of the concept, built client-side from the plan JSON.
   def view3d
     @levels = @concept.floor_plans.ordered.map { |p| { id: p.id, name: p.name, level: p.level, position: p.position, data: p.data_with_defaults } }
+  end
+
+  # "Add level above": a new plan on top of the stack with the same drawing size
+  # and this plan's exterior walls copied as a starting outline. The editor opens
+  # with this plan showing faintly underneath (?below=).
+  def add_level
+    plans = @concept.floor_plans.ordered.to_a
+    n     = plans.size + 1
+    name  = { 2 => "Second floor", 3 => "Third floor" }[n] || "Level #{n}"
+    outline = @plan.walls.select { |w| w["type"] == "exterior" }.map { |w| w.merge("id" => SecureRandom.alphanumeric(8).downcase) }
+    data    = Design::FloorPlan::DEFAULT_DATA.merge("grid" => @plan.data_with_defaults["grid"], "walls" => outline)
+    new_plan = @concept.floor_plans.create!(name: name, level: "Level #{n}", width_ft: @plan.width_ft, depth_ft: @plan.depth_ft,
+                                            position: (plans.map(&:position).max || 0) + 1, data: data)
+    redirect_to design_floor_plan_path(new_plan, below: @plan.id),
+                notice: "#{name} added above #{@plan.name}. Its exterior outline was copied to start from; delete or move walls as needed."
   end
 
   # The 3D view posts a JPEG still; it becomes an image in the concept library.

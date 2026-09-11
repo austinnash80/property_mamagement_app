@@ -21,6 +21,7 @@ namespace :design, path: "design" do
       member do
         get  :view3d       # 3D model built from the plan geometry
         post :renderings   # save a still from the 3D view into the image library
+        post :add_level    # one-click second story: new plan above this one with the outline copied
       end
     end
   end

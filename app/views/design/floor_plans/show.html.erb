@@ -24,7 +24,13 @@
     <nav class="small"><%= link_to "Concepts", design_concepts_path %> › <%= link_to @concept.title, design_concept_path(@concept, anchor: "plans") %> › <%= @plan.name %></nav>
     <h2 class="h5 mb-0"><%= @plan.name %><% if @plan.level.present? %> <span class="dc-muted small">· <%= @plan.level %></span><% end %></h2>
   </div>
-  <div>
+  <div class="d-flex align-items-center gap-2">
+    <% if @levels.size > 1 %>
+      <select class="form-select form-select-sm w-auto" title="Switch level" onchange="if (this.value) location.href = this.value">
+        <% @levels.each do |l| %><option value="<%= design_floor_plan_path(l) %>" <%= "selected" if l == @plan %>><%= l.name %><%= " · #{l.level}" if l.level.present? %></option><% end %>
+      </select>
+    <% end %>
+    <%= button_to "Add level above", add_level_design_floor_plan_path(@plan), method: :post, class: "btn btn-outline-primary btn-sm", form_class: "d-inline", title: "Create the next floor with this outline copied and this level shown underneath" %>
     <%= link_to "3D view", view3d_design_floor_plan_path(@plan), class: "btn btn-outline-primary btn-sm" %>
     <%= link_to "Settings", edit_design_floor_plan_path(@plan), class: "btn btn-outline-secondary btn-sm" %>
     <%= link_to "Back to concept", design_concept_path(@concept, anchor: "plans"), class: "btn btn-outline-secondary btn-sm" %>
@@ -51,6 +57,7 @@
       siblings: JSON.parse(document.getElementById("fp-siblings").textContent),
       saveUrl: <%= design_floor_plan_path(@plan, format: :json).to_json.html_safe %>,
       settingsUrl: <%= edit_design_floor_plan_path(@plan).to_json.html_safe %>,
+      below: <%= params[:below].to_s.to_json.html_safe %>,
       csrf: document.querySelector('meta[name="csrf-token"]').content
     });
   })();

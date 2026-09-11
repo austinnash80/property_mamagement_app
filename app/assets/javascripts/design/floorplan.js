@@ -183,6 +183,9 @@
       var none = document.createElement("option"); none.value = ""; none.textContent = "none"; us.appendChild(none);
       sibs.forEach(function (p) { var o = document.createElement("option"); o.value = p.id; o.textContent = p.name + (p.level ? " · " + p.level : ""); us.appendChild(o); });
       try { this.underlayId = localStorage.getItem("fp-underlay-" + this.opts.id) || ""; } catch (_) { this.underlayId = ""; }
+      if (this.opts.below && sibs.some(function (p) { return String(p.id) === String(self.opts.below); })) {   // just created via "Add level above"
+        this.underlayId = String(this.opts.below); try { localStorage.setItem("fp-underlay-" + this.opts.id, this.underlayId); } catch (_) {}
+      }
       us.value = this.underlayId;
       this.root.querySelector(".fp-copy").classList.toggle("d-none", !this.underlayId);
       us.addEventListener("change", function () { self.underlayId = us.value; try { localStorage.setItem("fp-underlay-" + self.opts.id, us.value); } catch (_) {} self.root.querySelector(".fp-copy").classList.toggle("d-none", !us.value); self.render(); });
