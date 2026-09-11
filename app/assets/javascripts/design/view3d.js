@@ -13,11 +13,18 @@
   var ROOF_STYLES = [["hip6", "Hip 6:12"], ["hip4", "Hip 4:12"], ["hip8", "Hip 8:12"], ["gable6", "Gable 6:12"], ["gable4", "Gable 4:12"], ["gable8", "Gable 8:12"], ["flat", "Flat"], ["none", "No roof"]];
   var DEFAULTS = { roof: "hip6", exterior: "stucco", roofColor: "asphalt", floor: "wood", exteriorHex: "", roofHex: "" };
   var HEX = /^#[0-9a-f]{6}$/i;
+  // h = height, z0 = bottom elevation, top = countertop slab, cab = cabinet colour
+  var CAB = 0xd8cfc0, TOP = 0x8f8f89, APPL = 0xb8bcc2;
   var FIX = {
-    stairs: { h: WALL_H, c: 0xc8b18a }, toilet: { h: 1.4, c: 0xfafafa }, sink: { h: 3, c: 0xfafafa }, tub: { h: 1.8, c: 0xfafafa }, shower: { h: 0.3, c: 0xe8eef2 },
-    range: { h: 3, c: 0x8b9096 }, fridge: { h: 6, c: 0xb8bcc2 }, dishwasher: { h: 2.9, c: 0xb8bcc2 }, washer: { h: 3, c: 0xe9e9e9 }, water_heater: { h: 5, c: 0xcfcfcf },
-    counter: { h: 3, c: 0xd8cfc0 }, island: { h: 3, c: 0xd8cfc0 }, bed: { h: 2, c: 0x9fb4c7 }, bed_king: { h: 2, c: 0x9fb4c7 }, sofa: { h: 2.5, c: 0x8c8f9a },
-    table: { h: 2.5, c: 0xa77b4d }, desk: { h: 2.5, c: 0xa77b4d }, car: { h: 4.7, c: 0x6b7f99 }, box: { h: 3, c: 0xbfbfbf }
+    stairs: { h: WALL_H, c: 0xc8b18a }, toilet: { h: 1.4, c: 0xfafafa }, tub: { h: 1.8, c: 0xfafafa }, shower: { h: 0.3, c: 0xe8eef2 },
+    sink: { h: 3, c: CAB, top: true, basin: true }, dbl_sink: { h: 3, c: CAB, top: true, basin: true }, vanity: { h: 2.75, c: 0xe8e2d8, top: true, basin: true },
+    counter: { h: 3, c: CAB, top: true }, island: { h: 3, c: CAB, top: true }, island_seat: { h: 3, c: CAB, top: true, overhang: 1.2 },
+    upper: { h: 2.5, z0: 4.5, c: CAB }, hood: { h: 1, z0: 5.2, c: 0xa9adb3, metal: true }, microwave: { h: 1.25, z0: 4.5, c: 0x4a4d52, metal: true },
+    range: { h: 3, c: 0x8b9096, metal: true }, range36: { h: 3, c: 0x8b9096, metal: true }, cooktop: { h: 3.1, c: 0x2b2d31, metal: true, thin: true },
+    wall_oven: { h: 7, c: 0x5a5e64, metal: true }, fridge: { h: 6, c: APPL, metal: true }, dishwasher: { h: 2.9, c: APPL, metal: true }, pantry: { h: 7, c: CAB },
+    stool: { h: 2.5, c: 0x5a4632, shape: "stool" }, chair: { h: 3, c: 0x6b5a48, shape: "chair" }, table: { h: 2.5, c: 0xa77b4d }, round_table: { h: 2.5, c: 0xa77b4d, shape: "round" },
+    washer: { h: 3, c: 0xe9e9e9 }, water_heater: { h: 5, c: 0xcfcfcf },
+    bed: { h: 2, c: 0x9fb4c7 }, bed_king: { h: 2, c: 0x9fb4c7 }, sofa: { h: 2.5, c: 0x8c8f9a }, desk: { h: 2.5, c: 0xa77b4d }, car: { h: 4.7, c: 0x6b7f99 }, box: { h: 3, c: 0xbfbfbf }
   };
 
   function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -382,7 +389,29 @@
       }
       g.position.set(cx, base, cz); g.rotation.y = rot; this.model.add(g); return;
     }
-    var h = spec.h, mesh;
+    var h = spec.h, mesh, z0 = spec.z0 || 0, self = this;
+    var metal = spec.metal ? { roughness: 0.35, metalness: 0.5 } : {};
+    if (spec.top) {   // cabinets with a countertop slab (sink/vanity get a basin cut-out look)
+      var g2 = new THREE.Group(), cabH = h - 0.12;
+      var cab = new THREE.Mesh(new THREE.BoxGeometry(lw, cabH, lh), this.mat(spec.c)); cab.position.y = cabH / 2; cab.castShadow = cab.receiveShadow = true; g2.add(cab);
+      var ov = spec.overhang || 0, slab = new THREE.Mesh(new THREE.BoxGeometry(lw + 0.1, 0.12, lh + 0.1 + ov), this.mat(TOP, { roughness: 0.35 })); slab.position.set(0, cabH + 0.06, ov / 2); slab.castShadow = slab.receiveShadow = true; g2.add(slab);
+      if (spec.basin) { var bowls = f.kind === "dbl_sink" ? [-lw * 0.24, lw * 0.24] : [0]; bowls.forEach(function (bx) { var bowl = new THREE.Mesh(new THREE.BoxGeometry(f.kind === "dbl_sink" ? lw * 0.4 : lw * 0.7, 0.05, lh * 0.6), self.mat(0xe5e7ea, { roughness: 0.3, metalness: 0.4 })); bowl.position.set(bx, cabH + 0.13, 0); g2.add(bowl); }); }
+      g2.position.set(cx, base, cz); g2.rotation.y = rot; this.model.add(g2); return;
+    }
+    if (spec.shape === "stool" || spec.shape === "round") {
+      var g3 = new THREE.Group(), rTop = Math.min(lw, lh) / 2, seatH = spec.shape === "stool" ? 0.15 : 0.15;
+      var top = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rTop, seatH, 28), this.mat(spec.c)); top.position.y = h - seatH / 2; top.castShadow = top.receiveShadow = true; g3.add(top);
+      var post = new THREE.Mesh(new THREE.CylinderGeometry(spec.shape === "stool" ? 0.08 : 0.25, spec.shape === "stool" ? 0.08 : 0.35, h - seatH, 16), this.mat(0x4a4d52, { metalness: 0.4, roughness: 0.4 })); post.position.y = (h - seatH) / 2; post.castShadow = true; g3.add(post);
+      var foot = new THREE.Mesh(new THREE.CylinderGeometry(rTop * 0.7, rTop * 0.7, 0.05, 20), this.mat(0x4a4d52)); foot.position.y = 0.025; g3.add(foot);
+      g3.position.set(cx, base, cz); g3.rotation.y = rot; this.model.add(g3); return;
+    }
+    if (spec.shape === "chair") {
+      var g4 = new THREE.Group(), seat = new THREE.Mesh(new THREE.BoxGeometry(lw, 0.15, lh), this.mat(spec.c)); seat.position.y = 1.5; seat.castShadow = true; g4.add(seat);
+      var back = new THREE.Mesh(new THREE.BoxGeometry(lw, 1.5, 0.12), this.mat(spec.c)); back.position.set(0, 2.25, -lh / 2 + 0.06); back.castShadow = true; g4.add(back);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c2) { var leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.45, 0.1), self.mat(spec.c)); leg.position.set(c2[0] * (lw / 2 - 0.08), 0.72, c2[1] * (lh / 2 - 0.08)); g4.add(leg); });
+      g4.position.set(cx, base, cz); g4.rotation.y = rot; this.model.add(g4); return;
+    }
+    if (spec.thin) { mesh = new THREE.Mesh(new THREE.BoxGeometry(lw, 0.1, lh), this.mat(spec.c, metal)); mesh.position.set(cx, base + h - 0.05, cz); mesh.rotation.y = rot; mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh); return; }
     if (f.kind === "water_heater") mesh = new THREE.Mesh(new THREE.CylinderGeometry(Math.min(lw, lh) / 2, Math.min(lw, lh) / 2, h, 24), this.mat(spec.c));
     else if (f.kind === "toilet" || f.kind === "tub" || f.kind === "sofa" || f.kind === "bed" || f.kind === "bed_king" || f.kind === "car") {
       mesh = new THREE.Group();
@@ -391,8 +420,8 @@
       if (f.kind === "sofa" || f.kind === "bed" || f.kind === "bed_king") { var back = new THREE.Mesh(new THREE.BoxGeometry(lw, f.kind === "sofa" ? 1 : 1.5, lh * 0.15), this.mat(spec.c)); back.position.set(0, h / 2 + (f.kind === "sofa" ? 0.5 : 0.75), -lh * 0.425); back.castShadow = true; mesh.add(back); }
       if (f.kind === "car") { var cab = new THREE.Mesh(new THREE.BoxGeometry(lw * 0.85, 1.6, lh * 0.45), this.mat(0x2f3d55, { roughness: 0.3, metalness: 0.4 })); cab.position.set(0, h / 2 + 0.8, -lh * 0.05); cab.castShadow = true; mesh.add(cab); }
       mesh.position.set(cx, base + h / 2, cz); mesh.rotation.y = rot; this.model.add(mesh); return;
-    } else mesh = new THREE.Mesh(new THREE.BoxGeometry(lw, h, lh), this.mat(spec.c, f.kind === "fridge" || f.kind === "range" ? { roughness: 0.35, metalness: 0.5 } : {}));
-    mesh.position.set(cx, base + h / 2, cz); mesh.rotation.y = rot; mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
+    } else mesh = new THREE.Mesh(new THREE.BoxGeometry(lw, h, lh), this.mat(spec.c, metal));
+    mesh.position.set(cx, base + z0 + h / 2, cz); mesh.rotation.y = rot; mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
   };
 
   // ------------------------------------------------------------ camera / loop

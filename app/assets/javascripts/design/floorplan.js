@@ -18,14 +18,48 @@
   var ROOF_DEF = { style: "hip", pitch: 6, ridge: "auto", overhang: 1.5, eave: 9, high: "n" };
   function doorKind(o, w) { return o.kind || (w && w.type === "interior" ? "interior" : "exterior"); }
   // Fixture catalog: default footprint in ft (w across, h deep). Glyphs are drawn in drawFixture.
+  // g = group shown in the picker. "above" items sit above counter height and draw dashed in plan.
   var FIXTURES = {
-    stairs: { label: "Stairs", w: 3, h: 12 }, toilet: { label: "Toilet", w: 1.5, h: 2.5 }, sink: { label: "Sink", w: 2, h: 1.75 },
-    tub: { label: "Bathtub", w: 5, h: 2.5 }, shower: { label: "Shower", w: 3, h: 3 }, range: { label: "Range", w: 2.5, h: 2.17 },
-    fridge: { label: "Refrigerator", w: 3, h: 2.5 }, dishwasher: { label: "Dishwasher", w: 2, h: 2 }, washer: { label: "Washer / dryer", w: 2.25, h: 2.25 },
-    water_heater: { label: "Water heater", w: 2, h: 2 }, counter: { label: "Counter", w: 8, h: 2 }, island: { label: "Island", w: 6, h: 3 },
-    bed: { label: "Bed (queen)", w: 5, h: 6.67 }, bed_king: { label: "Bed (king)", w: 6.33, h: 6.67 }, sofa: { label: "Sofa", w: 7, h: 3 },
-    table: { label: "Dining table", w: 6, h: 3.5 }, desk: { label: "Desk", w: 5, h: 2.5 }, car: { label: "Car", w: 6.5, h: 16 }, box: { label: "Box", w: 3, h: 3 }
+    counter:     { g: "Kitchen", label: "Base cabinets & counter", w: 8, h: 2 },
+    upper:       { g: "Kitchen", label: "Upper cabinets", w: 8, h: 1, above: true },
+    island:      { g: "Kitchen", label: "Island", w: 6, h: 3 },
+    island_seat: { g: "Kitchen", label: "Island with seating overhang", w: 7, h: 3.5 },
+    sink:        { g: "Kitchen", label: "Kitchen sink", w: 2.5, h: 1.75 },
+    dbl_sink:    { g: "Kitchen", label: "Double sink", w: 3, h: 1.75 },
+    range:       { g: "Kitchen", label: "Range 30\"", w: 2.5, h: 2.17 },
+    range36:     { g: "Kitchen", label: "Range 36\"", w: 3, h: 2.17 },
+    cooktop:     { g: "Kitchen", label: "Cooktop (in counter)", w: 2.5, h: 1.75 },
+    wall_oven:   { g: "Kitchen", label: "Wall oven tower", w: 2.5, h: 2 },
+    hood:        { g: "Kitchen", label: "Range hood", w: 3, h: 1.5, above: true },
+    microwave:   { g: "Kitchen", label: "Microwave (built-in)", w: 2.5, h: 1.5, above: true },
+    fridge:      { g: "Kitchen", label: "Refrigerator", w: 3, h: 2.5 },
+    dishwasher:  { g: "Kitchen", label: "Dishwasher", w: 2, h: 2 },
+    pantry:      { g: "Kitchen", label: "Pantry cabinet", w: 3, h: 2 },
+    stool:       { g: "Kitchen", label: "Bar stool", w: 1.25, h: 1.25 },
+    table:       { g: "Kitchen", label: "Dining table", w: 6, h: 3.5 },
+    round_table: { g: "Kitchen", label: "Round table", w: 4, h: 4 },
+    chair:       { g: "Kitchen", label: "Chair", w: 1.5, h: 1.5 },
+    toilet:      { g: "Bath", label: "Toilet", w: 1.5, h: 2.5 },
+    vanity:      { g: "Bath", label: "Vanity", w: 3, h: 1.75 },
+    tub:         { g: "Bath", label: "Bathtub", w: 5, h: 2.5 },
+    shower:      { g: "Bath", label: "Shower", w: 3, h: 3 },
+    washer:      { g: "Laundry & utility", label: "Washer / dryer", w: 2.25, h: 2.25 },
+    water_heater:{ g: "Laundry & utility", label: "Water heater", w: 2, h: 2 },
+    bed:         { g: "Living & bedroom", label: "Bed (queen)", w: 5, h: 6.67 },
+    bed_king:    { g: "Living & bedroom", label: "Bed (king)", w: 6.33, h: 6.67 },
+    sofa:        { g: "Living & bedroom", label: "Sofa", w: 7, h: 3 },
+    desk:        { g: "Living & bedroom", label: "Desk", w: 5, h: 2.5 },
+    stairs:      { g: "Other", label: "Stairs", w: 3, h: 12 },
+    car:         { g: "Other", label: "Car", w: 6.5, h: 16 },
+    box:         { g: "Other", label: "Box (anything)", w: 3, h: 3 }
   };
+  var FIXTURE_GROUPS = ["Kitchen", "Bath", "Laundry & utility", "Living & bedroom", "Other"];
+  function fixtureOptions(selected) {
+    return FIXTURE_GROUPS.map(function (g) {
+      var items = Object.keys(FIXTURES).filter(function (k) { return FIXTURES[k].g === g; });
+      return '<optgroup label="' + g + '">' + items.map(function (k) { return '<option value="' + k + '"' + (selected === k ? " selected" : "") + '>' + FIXTURES[k].label + '</option>'; }).join("") + '</optgroup>';
+    }).join("");
+  }
   var HANDLE = 6;                                         // px
   var SNAPS = [[1 / 12, '1"'], [0.25, '3"'], [0.5, '6"'], [1, "1'"]];
   var C = {
@@ -211,7 +245,7 @@
     ang.addEventListener("change", function () { self.angleMode = ang.value; try { localStorage.setItem("fp-angle", ang.value); } catch (_) {} self.render(); });
     this.kindSel = this.root.querySelector(".fp-kind");
     this.doorKindSel = this.root.querySelector(".fp-doorkind");
-    Object.keys(FIXTURES).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = FIXTURES[k].label; self.kindSel.appendChild(o); });
+    this.kindSel.innerHTML = fixtureOptions("counter");
     var uw = this.root.querySelector(".fp-underlay-wrap"), us = this.root.querySelector(".fp-underlay"), sibs = this.opts.siblings || [];
     if (sibs.length) {
       uw.classList.remove("d-none");
@@ -880,7 +914,7 @@
         f("Position from wall start (ft)", "pos", Math.round(el.pos * 100) / 100, 'type="number" step="0.25"') +
         (isDoor ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">' + ({ garage: "Flip inside", sliding: "Flip sides" }[dkNow] || "Flip swing") + '</button>' + (dkNow !== "garage" ? '<button class="btn btn-outline-secondary btn-sm" data-btn="hinge">' + (dkNow === "sliding" ? "Swap panels" : "Flip hinge") + '</button>' : "") + '</div>' : "");
     } else if (this.sel.type === "fixture") {
-      var kinds = Object.keys(FIXTURES).map(function (k) { return '<option value="' + k + '"' + (el.kind === k ? " selected" : "") + '>' + FIXTURES[k].label + '</option>'; }).join("");
+      var kinds = fixtureOptions(el.kind);
       html = '<h6>Fixture</h6>' +
         '<div class="fp-field"><label>Kind</label><select class="form-select form-select-sm" data-prop="kind">' + kinds + '</select></div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
@@ -1205,8 +1239,9 @@
     var rr = function (x, y, ww, hh, r) { r = Math.min(r, ww / 2, hh / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + ww, y, x + ww, y + hh, r); ctx.arcTo(x + ww, y + hh, x, y + hh, r); ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + ww, y, r); ctx.closePath(); };
     var ell = function (cx, cy, rx, ry) { ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(rx, .5), Math.max(ry, .5), 0, 0, Math.PI * 2); ctx.stroke(); };
     var line = function (a, b, c, d) { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); };
-    var round = { tub: 6, car: 8, sofa: 4, sink: 3, water_heater: lw / 2, washer: 2 }[f.kind] || 0;
-    rr(x0, y0, lw, lh, round); ctx.fill(); ctx.stroke();
+    var spec2 = FIXTURES[f.kind] || {}, round = { tub: 6, car: 8, sofa: 4, sink: 3, dbl_sink: 3, vanity: 2, water_heater: lw / 2, washer: 2, stool: lw / 2, round_table: lw / 2 }[f.kind] || 0;
+    if (spec2.above) ctx.setLineDash([4, 3]);   // above counter height: dashed, like uppers on a real plan
+    rr(x0, y0, lw, lh, round); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
     switch (f.kind) {
       case "stairs": {
         var tread = 0.9167 * s, n = Math.floor(lh / tread), down = f.dir === "down";
@@ -1216,7 +1251,18 @@
         ctx.beginPath(); ctx.moveTo(0, tipY); ctx.lineTo(-4, backY); ctx.lineTo(4, backY); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
         break; }
       case "toilet": ctx.fillStyle = "#fff"; ctx.fillRect(x0, y0, lw, lh * .32); ctx.strokeRect(x0, y0, lw, lh * .32); ell(0, y0 + lh * .64, lw * .36, lh * .3); break;
-      case "sink": ell(0, 0, lw * .34, lh * .3); ctx.beginPath(); ctx.arc(0, y0 + 4, 1.5, 0, 7); ctx.fill(); break;
+      case "sink": case "vanity": ell(0, 0, lw * .34, lh * .3); ctx.beginPath(); ctx.arc(0, y0 + 4, 1.5, 0, 7); ctx.fill(); break;
+      case "dbl_sink": ell(-lw * .24, 0, lw * .2, lh * .3); ell(lw * .24, 0, lw * .2, lh * .3); ctx.beginPath(); ctx.arc(0, y0 + 4, 1.5, 0, 7); ctx.fill(); break;
+      case "range36": case "cooktop": [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]].forEach(function (b) { ell(b[0] * lw, b[1] * lh, Math.min(lw, lh) * .14, Math.min(lw, lh) * .14); }); break;
+      case "wall_oven": ctx.strokeRect(x0 + 3, y0 + 3, lw - 6, lh - 6); line(x0 + 3, 0, x0 + lw - 3, 0); break;
+      case "hood": line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); break;
+      case "microwave": ctx.strokeRect(x0 + 3, y0 + 3, lw * .7 - 3, lh - 6); break;
+      case "pantry": line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); break;
+      case "upper": break;
+      case "island_seat": ctx.setLineDash([3, 3]); line(x0, y0 + lh - 1.2 * s, x0 + lw, y0 + lh - 1.2 * s); ctx.setLineDash([]); break;
+      case "stool": ell(0, 0, lw * .28, lh * .28); break;
+      case "round_table": ell(0, 0, lw * .38, lh * .38); break;
+      case "chair": ctx.strokeRect(x0 + 2, y0 + 2, lw - 4, lh * .25); break;
       case "tub": rr(x0 + 5, y0 + 5, lw - 10, lh - 10, 8); ctx.stroke(); ctx.beginPath(); ctx.arc(x0 + lw * .15, 0, 2, 0, 7); ctx.stroke(); break;
       case "shower": ctx.globalAlpha = .5; line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, 7); ctx.stroke(); break;
       case "range": [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]].forEach(function (b) { ell(b[0] * lw, b[1] * lh, Math.min(lw, lh) * .14, Math.min(lw, lh) * .14); }); break;
@@ -1225,6 +1271,7 @@
       case "washer": ell(0, 0, Math.min(lw, lh) * .32, Math.min(lw, lh) * .32); break;
       case "water_heater": ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, 7); ctx.fill(); break;
       case "island": ctx.lineWidth = 1.8; ctx.strokeRect(x0, y0, lw, lh); break;
+      case "counter": break;
       case "bed": case "bed_king": ctx.strokeRect(x0 + 4, y0 + 4, lw / 2 - 6, lh * .16); ctx.strokeRect(x0 + lw / 2 + 2, y0 + 4, lw / 2 - 6, lh * .16); line(x0, y0 + lh * .28, x0 + lw, y0 + lh * .28); break;
       case "sofa": ctx.strokeRect(x0, y0, lw, lh * .3); ctx.strokeRect(x0, y0, lw * .1, lh); ctx.strokeRect(x0 + lw * .9, y0, lw * .1, lh); break;
       case "table": rr(x0 + 4, y0 + 4, lw - 8, lh - 8, 2); ctx.stroke(); break;
