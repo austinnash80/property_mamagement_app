@@ -56,7 +56,7 @@
     '<div class="fp-toolbar">' +
     '  <div class="btn-group btn-group-sm fp-tools" role="group">' +
     '    <button class="btn btn-outline-secondary" data-tool="select" title="Select / move (V)">Select</button>' +
-    '    <button class="btn btn-outline-secondary" data-tool="wall" title="Draw walls (W). Click to start, click for each corner, Esc/Enter to finish. Hold Shift for any angle.">Wall</button>' +
+    '    <button class="btn btn-outline-secondary" data-tool="wall" title="Draw walls (W). Click to start, click for each corner, Esc/Enter to finish. Diagonals: Angles dropdown or hold Shift.">Wall</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="room" title="Drag a room rectangle (R)">Room</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="door" title="Click a wall to place a door (D)">Door</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="window" title="Click a wall to place a window (N)">Window</button>' +
@@ -79,6 +79,7 @@
     '  </div>' +
     '  <label class="small text-nowrap ms-1 fp-underlay-wrap d-none">Show level below <select class="form-select form-select-sm d-inline-block w-auto fp-underlay"></select> <button class="btn btn-outline-secondary btn-sm d-none fp-copy" data-act="copyUnderlay" title="Copy the exterior walls of that level into this plan">Copy outline</button></label>' +
     '  <label class="small text-nowrap ms-1">Snap <select class="form-select form-select-sm d-inline-block w-auto fp-snap"></select></label>' +
+    '  <label class="small text-nowrap ms-1" title="How walls and lines are constrained while drawing or dragging an end. Hold Shift for any angle at any time.">Angles <select class="form-select form-select-sm d-inline-block w-auto fp-angle"><option value="ortho">90° only</option><option value="45">45° steps</option><option value="free">Any</option></select></label>' +
     '  <span class="small fp-zoom text-muted ms-1"></span>' +
     '  <div class="ms-auto d-flex align-items-center gap-2">' +
     '    <span class="small fp-status text-muted"></span>' +
@@ -92,7 +93,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space or middle-drag to pan · Shift = free angle</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space or middle-drag to pan · Angles dropdown or Shift = diagonals</div>' +
     '  </aside>' +
     '</div>';
 
@@ -125,6 +126,10 @@
     var snap = this.root.querySelector(".fp-snap"), self = this;
     SNAPS.forEach(function (s) { var o = document.createElement("option"); o.value = s[0]; o.textContent = s[1]; if (Math.abs(s[0] - self.data.grid) < 1e-6) o.selected = true; snap.appendChild(o); });
     snap.addEventListener("change", function () { self.data.grid = +snap.value; self.markDirty(); self.render(); });
+    var ang = this.root.querySelector(".fp-angle");
+    try { this.angleMode = localStorage.getItem("fp-angle") || "ortho"; } catch (_) { this.angleMode = "ortho"; }
+    ang.value = this.angleMode;
+    ang.addEventListener("change", function () { self.angleMode = ang.value; try { localStorage.setItem("fp-angle", ang.value); } catch (_) {} self.render(); });
     this.kindSel = this.root.querySelector(".fp-kind");
     this.doorKindSel = this.root.querySelector(".fp-doorkind");
     Object.keys(FIXTURES).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = FIXTURES[k].label; self.kindSel.appendChild(o); });
@@ -212,9 +217,16 @@
     if (best) return { x: best.x, y: best.y, snapped: "endpoint" };
     return { x: this.snapVal(p.x), y: this.snapVal(p.y), snapped: "grid" };
   };
-  P.ortho = function (from, to) {  // constrain to horizontal / vertical unless Shift
-    if (this.shift) return to;
-    return Math.abs(to.x - from.x) >= Math.abs(to.y - from.y) ? { x: to.x, y: from.y } : { x: from.x, y: to.y };
+  // Constrain a segment end according to the Angles setting: 90° only, 45° steps, or any.
+  // Shift always allows any angle. 45° diagonals keep both ends on the grid.
+  P.ortho = function (from, to) {
+    if (this.shift || this.angleMode === "free") return to;
+    var dx = to.x - from.x, dy = to.y - from.y;
+    if (this.angleMode === "45") {
+      var k = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+      if (k % 2 !== 0) { var L = this.snapVal((Math.abs(dx) + Math.abs(dy)) / 2); return { x: from.x + Math.sign(dx) * L, y: from.y + Math.sign(dy) * L }; }
+    }
+    return Math.abs(dx) >= Math.abs(dy) ? { x: to.x, y: from.y } : { x: from.x, y: to.y };
   };
 
   // ---------------------------------------------------------------- lookup / hit testing
@@ -331,7 +343,7 @@
     this.tool = t; this.draft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Shift for any angle.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
