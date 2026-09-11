@@ -22,7 +22,6 @@ namespace :design, path: "design" do
         get  :view3d       # 3D model built from the plan geometry
         post :renderings   # save a still from the 3D view into the image library
         post :add_level    # one-click second story: new plan above this one with the outline copied
-        post :style_from_image   # Claude picks roof / exterior / colors from a concept image
       end
     end
   end

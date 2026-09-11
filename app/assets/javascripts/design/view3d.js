@@ -172,11 +172,6 @@
       if (sel) sel.addEventListener("change", function () { self.settings[hexKey] = ""; sync(); self.rebuild(); });
     };
     swatch(ui.exteriorHex, "exteriorHex", "exterior", EXTERIORS); swatch(ui.roofHex, "roofHex", "roofColor", ROOF_COLORS);
-    // match style from a concept photo
-    if (ui.matchBtn && ui.photos) {
-      ui.matchBtn.addEventListener("click", function () { ui.photos.classList.toggle("d-none"); });
-      ui.photos.querySelectorAll("[data-image-id]").forEach(function (el) { el.addEventListener("click", function () { self.matchStyle(el.dataset.imageId, el); }); });
-    }
   };
 
   P.applySettings = function (incoming) {
@@ -185,22 +180,6 @@
     ["exteriorHex", "roofHex"].forEach(function (k) { if (incoming[k] != null) self.settings[k] = HEX.test(incoming[k]) ? incoming[k] : ""; });
     if (this.sync_exteriorHex) this.sync_exteriorHex(); if (this.sync_roofHex) this.sync_roofHex();
     this.rebuild();
-  };
-
-  P.matchStyle = function (imageId, el) {
-    var self = this, ui = this.opts.ui; if (!this.opts.styleUrl || this.matching) return;
-    this.matching = true; this.status.textContent = "Reading the photo…";
-    ui.photos.querySelectorAll("[data-image-id]").forEach(function (x) { x.classList.toggle("v3-photo-active", x === el); });
-    fetch(this.opts.styleUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.opts.csrf }, body: JSON.stringify({ image_id: imageId }) })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
-      .then(function (res) {
-        self.matching = false;
-        if (!res.ok) { self.status.textContent = (res.j && res.j.error) || "Could not read the photo."; return; }
-        self.applySettings(res.j.settings); self.saveSettings();
-        var st = res.j.settings, label = function (t, k) { return t[k] ? t[k].label : k; };
-        self.status.textContent = "Matched: " + [ROOF_STYLES.filter(function (r) { return r[0] === st.roof; }).map(function (r) { return r[1]; })[0] || st.roof, label(EXTERIORS, st.exterior), label(ROOF_COLORS, st.roofColor)].filter(Boolean).join(", ") + (res.j.notes ? " — " + res.j.notes : "");
-      })
-      .catch(function () { self.matching = false; self.status.textContent = "Could not reach the server."; });
   };
 
   P.saveSettings = function () {
