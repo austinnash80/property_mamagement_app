@@ -137,7 +137,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space or middle-drag to pan · Angles dropdown or Shift = diagonals</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · Space+drag (or middle / Alt drag) to pan<br>Drag a box to select many · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
     '  </aside>' +
     '</div>';
 
@@ -145,7 +145,7 @@
     this.root = root; this.opts = opts;
     this.data = normalize(opts.data);
     this.widthFt = +opts.widthFt || 60; this.depthFt = +opts.depthFt || 40;
-    this.tool = "select"; this.sel = null; this.hover = null; this.draft = null; this.drag = null;
+    this.tool = "select"; this.sel = null; this.selSet = []; this.space = false; this.hover = null; this.draft = null; this.drag = null;
     this.view = { scale: 12, x: 0, y: 0 };
     this.history = []; this.future = []; this.dirty = false; this.saving = false;
     this.showGrid = true; this.dimStrings = false; this.shift = false;
@@ -155,6 +155,34 @@
   }
 
   var P = Editor.prototype;
+
+  // Selection: `sel` is the primary item (drives the side panel); `selSet` holds every selected
+  // item (marquee, Shift+click, double-click a wall for its connected run).
+  P.setSel = function (v) { this.sel = v || null; this.selSet = v ? [v] : []; };
+  P.isSelected = function (type, id) { return this.selSet.some(function (x) { return x.type === type && x.id === id; }); };
+  P.multi = function () { return this.selSet.length > 1; };
+  P.toggleSel = function (hit) {
+    if (this.isSelected(hit.type, hit.id)) { this.selSet = this.selSet.filter(function (x) { return !(x.type === hit.type && x.id === hit.id); }); }
+    else this.selSet = this.selSet.concat([hit]);
+    this.sel = this.selSet.length ? this.selSet[this.selSet.length - 1] : null;
+  };
+  // Walls joined end-to-end (shared corners) starting from one wall.
+  P.connectedWalls = function (id) {
+    var walls = this.data.walls, out = {}, stack = [id], same = function (a, b) { return Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6; };
+    while (stack.length) {
+      var cur = stack.pop(); if (out[cur]) continue; out[cur] = true;
+      var w = this.find("wall", cur); if (!w) continue;
+      var ends = [[w.x1, w.y1], [w.x2, w.y2]];
+      walls.forEach(function (o) { if (out[o.id]) return; if (ends.some(function (e) { return same(e, [o.x1, o.y1]) || same(e, [o.x2, o.y2]); })) stack.push(o.id); });
+    }
+    return Object.keys(out).map(function (k) { return { type: "wall", id: k }; });
+  };
+  P.translateEl = function (type, el, dx, dy) {
+    if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
+    else if (type === "room") translateRoom(el, dx, dy);
+    else if (type === "label" || type === "fixture") { el.x += dx; el.y += dy; }
+  };
+  P.anchorOf = function (type, el) { return type === "wall" || type === "guide" ? { x: el.x1, y: el.y1 } : { x: el.x, y: el.y }; };
 
   // ---------------------------------------------------------------- setup
   P.build = function () {
@@ -208,7 +236,8 @@
       if (self.draft) return self.finishWall();
       if (self.tool !== "select") return;
       var q = self.pt(e), wp = self.toWorld(q.x, q.y), hit = self.hitTest(wp);
-      if (hit && (hit.type === "label" || hit.type === "room")) { self.sel = hit; self.updatePanel(); self.inlineEdit(hit.type, self.find(hit.type, hit.id)); }
+      if (hit && hit.type === "wall") { self.selSet = self.connectedWalls(hit.id); self.sel = hit; self.render(); self.updatePanel(); return; }
+      if (hit && (hit.type === "label" || hit.type === "room")) { self.setSel(hit); self.updatePanel(); self.inlineEdit(hit.type, self.find(hit.type, hit.id)); }
       else if (!self.roomAt(wp)) self.roomFromArea(wp);
     });
     c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else self.setTool("select"); });
@@ -216,7 +245,7 @@
     c.addEventListener("pointerleave", function () { self.mouse = null; self.hover = null; self.render(); });
 
     document.addEventListener("keydown", function (e) { self.onKey(e); });
-    document.addEventListener("keyup", function (e) { if (e.key === "Shift") { self.shift = false; self.render(); } });
+    document.addEventListener("keyup", function (e) { if (e.key === "Shift") { self.shift = false; self.render(); } if (e.key === " ") { self.space = false; self.canvas.style.cursor = self.tool === "select" ? "default" : "crosshair"; } });
     window.addEventListener("beforeunload", function (e) { if (self.dirty) { e.preventDefault(); e.returnValue = ""; } });
     if (window.ResizeObserver) new ResizeObserver(function () { self.resize(); }).observe(this.wrap);
     else window.addEventListener("resize", function () { self.resize(); });
@@ -327,7 +356,7 @@
   };
 
   P.handles = function () {  // screen-space handles for the selection
-    var el = this.selected(); if (!el) return [];
+    var el = this.selected(); if (!el || this.multi()) return [];
     var self = this;
     if (this.sel.type === "wall" || this.sel.type === "guide") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
     if (this.sel.type === "room" && !roomIsRect(el)) return roomPts(el).map(function (p, i) { return { k: "v" + i, w: { x: p[0], y: p[1] }, s: self.toScreen(p[0], p[1]) }; });
@@ -352,15 +381,16 @@
   P.labelPx = function (l) { return clamp((l.size || 1) * this.view.scale, 9, 72); };
 
   // ---------------------------------------------------------------- history / mutation
-  P.commit = function (fn) {
-    var before = JSON.stringify(this.data);
+  P.commit = function (fn, keepMulti) {
+    var before = JSON.stringify(this.data), keep = keepMulti ? this.selSet.slice() : null;
     fn.call(this);
+    if (keep) { this.selSet = keep; this.sel = keep[0] || null; }
     var after = JSON.stringify(this.data);
     if (after !== before) { this.history.push(before); if (this.history.length > 100) this.history.shift(); this.future = []; this.markDirty(); }
     this.render(); this.updatePanel();
   };
-  P.undo = function () { if (!this.history.length) return; this.future.push(JSON.stringify(this.data)); this.data = normalize(JSON.parse(this.history.pop())); this.sel = null; this.markDirty(); this.render(); this.updatePanel(); };
-  P.redo = function () { if (!this.future.length) return; this.history.push(JSON.stringify(this.data)); this.data = normalize(JSON.parse(this.future.pop())); this.sel = null; this.markDirty(); this.render(); this.updatePanel(); };
+  P.undo = function () { if (!this.history.length) return; this.future.push(JSON.stringify(this.data)); this.data = normalize(JSON.parse(this.history.pop())); this.setSel(null); this.markDirty(); this.render(); this.updatePanel(); };
+  P.redo = function () { if (!this.future.length) return; this.history.push(JSON.stringify(this.data)); this.data = normalize(JSON.parse(this.future.pop())); this.setSel(null); this.markDirty(); this.render(); this.updatePanel(); };
   P.markDirty = function () {
     this.dirty = true; this.setStatus("Unsaved changes");
     var self = this; clearTimeout(this.autosave); this.autosave = setTimeout(function () { if (self.dirty) self.save(true); }, 8000);
@@ -369,16 +399,19 @@
   P.hint = function (t) { this.hintEl.textContent = t || ""; };
 
   P.deleteSelected = function () {
-    var sel = this.sel; if (!sel) return;
+    var items = this.selSet.slice(); if (!items.length) return;
     this.commit(function () {
       var self = this;
-      if (sel.type === "wall") { this.data.walls = this.data.walls.filter(function (w) { return w.id !== sel.id; }); this.data.openings = this.data.openings.filter(function (o) { return o.wall !== sel.id; }); }
-      else { var list = this.listFor(sel.type), i = list.findIndex(function (e) { return e.id === sel.id; }); if (i >= 0) list.splice(i, 1); }
-      self.sel = null;
+      items.forEach(function (sel) {
+        if (sel.type === "wall") { self.data.walls = self.data.walls.filter(function (w) { return w.id !== sel.id; }); self.data.openings = self.data.openings.filter(function (o) { return o.wall !== sel.id; }); }
+        else { var list = self.listFor(sel.type), i = list.findIndex(function (e) { return e.id === sel.id; }); if (i >= 0) list.splice(i, 1); }
+      });
+      self.setSel(null);
     });
   };
   P.nudge = function (dx, dy) {
     var el = this.selected(); if (!el) return;
+    if (this.multi()) { var items = this.selSet, self = this; return this.commit(function () { items.forEach(function (x) { var e = self.find(x.type, x.id); if (e && x.type !== "opening") self.translateEl(x.type, e, dx, dy); }); }, true); }
     var type = this.sel.type;
     this.commit(function () {
       if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
@@ -420,7 +453,7 @@
     var pts = this.roomDraft && this.roomDraft.pts; this.roomDraft = null; this.setTool("room");
     if (!pts || pts.length < 3) return this.render();
     var id = uid(), n = this.data.rooms.length + 1;
-    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.sel = { type: "room", id: id }; });
+    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.setSel({ type: "room", id: id }); });
     this.focusProp("name");
   };
 
@@ -429,7 +462,7 @@
   P.capture = function (e) { try { this.canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic events have no active pointer */ } };
   P.onDown = function (e) {
     var m = this.pt(e);
-    if (e.button === 1 || (e.button === 0 && e.altKey)) { this.drag = { kind: "pan", sx: m.x, sy: m.y, vx: this.view.x, vy: this.view.y }; this.capture(e); return; }
+    if (e.button === 1 || (e.button === 0 && (e.altKey || this.space))) { this.drag = { kind: "pan", sx: m.x, sy: m.y, vx: this.view.x, vy: this.view.y }; this.capture(e); return; }
     if (e.button !== 0) return;
     this.capture(e);
     var p = this.toWorld(m.x, m.y), self = this;
@@ -439,12 +472,18 @@
       var h = this.hitHandle(m.x, m.y);
       if (h) { this.drag = { kind: "handle", h: h, el: this.selected(), before: JSON.stringify(this.data), orig: JSON.parse(JSON.stringify(this.selected())) }; return; }
       var hit = this.hitTest(p);
-      this.sel = hit;
+      if (hit && e.shiftKey) { this.toggleSel(hit); this.render(); this.updatePanel(); return; }
+      if (hit && this.multi() && this.isSelected(hit.type, hit.id)) {
+        var self2 = this, items = this.selSet.map(function (x) { var el2 = self2.find(x.type, x.id); return el2 ? { type: x.type, el: el2, orig: JSON.parse(JSON.stringify(el2)) } : null; }).filter(Boolean);
+        this.drag = { kind: "moveMulti", items: items, start: p, before: JSON.stringify(this.data), moved: false };
+        return;
+      }
+      this.setSel(hit);
       if (hit) {
         var el = this.selected();
         this.drag = { kind: "move", el: el, type: hit.type, start: p, orig: JSON.parse(JSON.stringify(el)), before: JSON.stringify(this.data), moved: false };
       } else {
-        this.drag = { kind: "pan", sx: m.x, sy: m.y, vx: this.view.x, vy: this.view.y };
+        this.drag = { kind: "marquee", start: p, cur: p, add: e.shiftKey, keep: e.shiftKey ? this.selSet.slice() : [] };
       }
       this.render(); this.updatePanel();
       return;
@@ -465,6 +504,8 @@
     var d = this.drag;
     if (d) {
       if (d.kind === "pan") { this.view.x = d.vx + m.x - d.sx; this.view.y = d.vy + m.y - d.sy; return this.render(); }
+      if (d.kind === "marquee") { d.cur = p; return this.render(); }
+      if (d.kind === "moveMulti") return this.dragMulti(d, p);
       if (d.kind === "room") { d.cur = this.snapPoint(p); return this.render(); }
       if (d.kind === "move") return this.dragMove(d, p);
       if (d.kind === "handle") return this.dragHandle(d, p);
@@ -534,7 +575,7 @@
   P.roomFromArea = function (p) {
     var a = this.enclosedAt(p); if (!a) return false;
     var pts = this.regionPolygon(a), id = uid(), n = this.data.rooms.length + 1;
-    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.sel = { type: "room", id: id }; });
+    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.setSel({ type: "room", id: id }); });
     this.hoverArea = null; this.focusProp("name");
     return true;
   };
@@ -584,6 +625,18 @@
     this.render(); this.updatePanel(true);
   };
 
+  P.dragMulti = function (d, p) {
+    var raw = { x: p.x - d.start.x, y: p.y - d.start.y };
+    if (Math.hypot(raw.x, raw.y) * this.view.scale < 3 && !d.moved) return;
+    d.moved = true;
+    var a = this.anchorOf(d.items[0].type, d.items[0].orig), dx = this.snapVal(a.x + raw.x) - a.x, dy = this.snapVal(a.y + raw.y) - a.y, self = this;
+    d.items.forEach(function (it) {
+      Object.keys(it.orig).forEach(function (k) { it.el[k] = JSON.parse(JSON.stringify(it.orig[k])); });   // reset, then translate
+      self.translateEl(it.type, it.el, dx, dy);
+    });
+    this.render(); this.updatePanel(true);
+  };
+
   P.dragHandle = function (d, p) {
     var el = d.el, o = d.orig, k = d.h.k;
     if (this.sel.type === "wall") {
@@ -614,7 +667,21 @@
     var p = this.toWorld(m.x, m.y), d = this.drag, self = this;
     var isClick = this.downAt && Math.hypot(m.x - this.downAt.x, m.y - this.downAt.y) < 4;
     this.drag = null;
-    if (d && (d.kind === "move" || d.kind === "handle")) {
+    if (d && d.kind === "marquee") {
+      var mx0 = Math.min(d.start.x, d.cur.x), mx1 = Math.max(d.start.x, d.cur.x), my0 = Math.min(d.start.y, d.cur.y), my1 = Math.max(d.start.y, d.cur.y), inside = function (x, y) { return x >= mx0 && x <= mx1 && y >= my0 && y <= my1; };
+      if (!isClick) {
+        var picked = [];
+        this.data.walls.forEach(function (w) { if (inside(w.x1, w.y1) && inside(w.x2, w.y2)) picked.push({ type: "wall", id: w.id }); });
+        this.data.guides.forEach(function (g) { if (inside(g.x1, g.y1) && inside(g.x2, g.y2)) picked.push({ type: "guide", id: g.id }); });
+        this.data.rooms.forEach(function (r) { if (inside(r.x, r.y) && inside(r.x + r.w, r.y + r.h)) picked.push({ type: "room", id: r.id }); });
+        this.data.fixtures.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "fixture", id: f.id }); });
+        this.data.labels.forEach(function (l) { if (inside(l.x, l.y)) picked.push({ type: "label", id: l.id }); });
+        var set = d.keep.slice(); picked.forEach(function (x) { if (!set.some(function (y) { return y.type === x.type && y.id === x.id; })) set.push(x); });
+        this.selSet = set; this.sel = set.length ? set[0] : null;
+      }
+      this.render(); this.updatePanel(); return;
+    }
+    if (d && (d.kind === "move" || d.kind === "handle" || d.kind === "moveMulti")) {
       var after = JSON.stringify(this.data);
       if (after !== d.before) { this.history.push(d.before); this.future = []; this.markDirty(); }
       this.render(); this.updatePanel(); return;
@@ -629,7 +696,7 @@
       var a = d.start, b = d.cur, x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y);
       if (w >= this.data.grid && h >= this.data.grid) {
         var id = uid(), n = this.data.rooms.length + 1;
-        this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: rectPts({ x: x, y: y, w: w, h: h }) })); this.sel = { type: "room", id: id }; });
+        this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: rectPts({ x: x, y: y, w: w, h: h }) })); this.setSel({ type: "room", id: id }); });
         this.focusProp("name");
         return;
       }
@@ -665,17 +732,17 @@
       if (otype === "door") { var dk = this.doorKindSel.value === "auto" ? doorKind({}, nw.wall) : this.doorKindSel.value; op.kind = dk; op.width = DOOR_KINDS[dk].w; op.height = DOOR_KINDS[dk].h; }
       else { op.width = WINDOW_DEF.w; op.sill = WINDOW_DEF.sill; op.height = WINDOW_DEF.h; }
       op.pos = this.snapVal(clamp(nw.pr.pos, op.width / 2, Math.max(op.width / 2, nw.pr.len - op.width / 2)));
-      this.commit(function () { this.data.openings.push(op); this.sel = { type: "opening", id: oid }; });
+      this.commit(function () { this.data.openings.push(op); this.setSel({ type: "opening", id: oid }); });
       return;
     }
     if (this.tool === "fixture") {
       var kind = this.kindSel.value || "box", spec = FIXTURES[kind], fp = this.snapPoint(p), fid = uid();
-      this.commit(function () { this.data.fixtures.push({ id: fid, kind: kind, x: fp.x, y: fp.y, w: spec.w, h: spec.h, rot: 0, dir: kind === "stairs" ? "up" : undefined, label: kind === "stairs" ? "UP" : "" }); this.sel = { type: "fixture", id: fid }; });
+      this.commit(function () { this.data.fixtures.push({ id: fid, kind: kind, x: fp.x, y: fp.y, w: spec.w, h: spec.h, rot: 0, dir: kind === "stairs" ? "up" : undefined, label: kind === "stairs" ? "UP" : "" }); this.setSel({ type: "fixture", id: fid }); });
       return;
     }
     if (this.tool === "label") {
       var sp2 = this.snapPoint(p), lid = uid();
-      this.commit(function () { this.data.labels.push({ id: lid, text: "Label", x: sp2.x, y: sp2.y, size: 1 }); this.sel = { type: "label", id: lid }; });
+      this.commit(function () { this.data.labels.push({ id: lid, text: "Label", x: sp2.x, y: sp2.y, size: 1 }); this.setSel({ type: "label", id: lid }); });
       this.inlineEdit("label", this.find("label", lid));
     }
   };
@@ -688,10 +755,12 @@
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? this.redo() : this.undo(); }
     if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); return this.redo(); }
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); return this.save(false); }
+    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); var all = []; ["wall", "guide", "room", "fixture", "label"].forEach(function (t) { this.listFor(t).forEach(function (x) { all.push({ type: t, id: x.id }); }); }, this); this.selSet = all; this.sel = all[0] || null; this.setTool("select"); this.updatePanel(); return; }
     if (mod) return;
     var g = this.data.grid;
     switch (e.key) {
-      case "Escape": if (this.draft || this.roomDraft) this.finishWall(); else if (this.tool !== "select") this.setTool("select"); else { this.sel = null; this.render(); this.updatePanel(); } break;
+      case "Escape": if (this.draft || this.roomDraft) this.finishWall(); else if (this.tool !== "select") this.setTool("select"); else { this.setSel(null); this.render(); this.updatePanel(); } break;
+      case " ": e.preventDefault(); this.space = true; this.canvas.style.cursor = "grab"; break;
       case "Enter": if (this.roomDraft) this.closeRoomDraft(); else if (this.draft) this.finishWall(); break;
       case "Delete": case "Backspace": e.preventDefault(); this.deleteSelected(); break;
       case "ArrowLeft": e.preventDefault(); this.nudge(-g, 0); break;
@@ -718,6 +787,18 @@
 
   P.updatePanel = function (light) {
     var el = this.selected(), self = this, html = "";
+    if (this.multi()) {
+      var counts = {}; this.selSet.forEach(function (x) { counts[x.type] = (counts[x.type] || 0) + 1; });
+      var parts = Object.keys(counts).map(function (t) { return counts[t] + " " + (t === "guide" ? "line" : t) + (counts[t] === 1 ? "" : "s"); });
+      html = '<h6>' + this.selSet.length + ' items selected</h6><div class="small text-muted mb-2">' + parts.join(", ") + '. Drag any of them to move all; arrow keys nudge; Delete removes all.</div>' +
+        (counts.wall ? '<div class="fp-field"><label>Set wall type</label><select class="form-select form-select-sm" data-multi="walltype"><option value="">— keep as is —</option><option value="exterior">Exterior (6")</option><option value="interior">Interior (4½")</option></select></div>' : "") +
+        '<button class="btn btn-outline-danger btn-sm mt-1" data-btn="deleteAll">Delete all</button>';
+      this.props.innerHTML = html; this.propsFor = "multi";
+      var wt = this.props.querySelector('[data-multi="walltype"]');
+      if (wt) wt.addEventListener("change", function () { var v = wt.value; if (!v) return; self.commit(function () { self.selSet.forEach(function (x) { var w = x.type === "wall" && self.find("wall", x.id); if (w) { w.type = v; w.thickness = WALL_TYPES[v]; } }); }, true); });
+      this.props.querySelector('[data-btn="deleteAll"]').addEventListener("click", function () { self.deleteSelected(); });
+      this.renderSummary(); return;
+    }
     if (light && this.propsFor === (el && el.id)) { this.refreshPropValues(el); this.renderSummary(); return; }
     this.propsFor = el && el.id;
     var f = function (label, name, value, attrs) { return '<div class="fp-field"><label>' + label + '</label><input class="form-control form-control-sm" data-prop="' + name + '" value="' + esc(value) + '" ' + (attrs || "") + '></div>'; };
@@ -841,7 +922,7 @@
     this.summary.innerHTML = '<h6 class="mt-3">Summary</h6>' +
       '<div class="small text-muted mb-1">' + d.walls.length + ' walls (' + ftIn(extLen) + ' exterior) · ' + doors + ' doors · ' + wins + ' windows · ' + d.fixtures.length + ' fixtures</div>' +
       (d.rooms.length ? '<table class="table table-sm small mb-1"><tbody>' + rows + '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + Math.round(total).toLocaleString() + ' sq ft</th></tr></tfoot></table>' : '<div class="small text-muted">No rooms yet.</div>');
-    this.summary.querySelectorAll("[data-room]").forEach(function (tr) { tr.style.cursor = "pointer"; tr.addEventListener("click", function () { self.sel = { type: "room", id: tr.dataset.room }; self.render(); self.updatePanel(); }); });
+    this.summary.querySelectorAll("[data-room]").forEach(function (tr) { tr.style.cursor = "pointer"; tr.addEventListener("click", function () { self.setSel({ type: "room", id: tr.dataset.room }); self.render(); self.updatePanel(); }); });
   };
 
   // ---------------------------------------------------------------- rendering
@@ -872,7 +953,7 @@
 
     // rooms
     d.rooms.forEach(function (r) {
-      var pts = roomPts(r), p = S(r.x, r.y), w = r.w * s, h = r.h * s, selected = o.ui && self.sel && self.sel.id === r.id, rect = roomIsRect(r);
+      var pts = roomPts(r), p = S(r.x, r.y), w = r.w * s, h = r.h * s, selected = o.ui && self.isSelected("room", r.id), rect = roomIsRect(r);
       ctx.beginPath(); pts.forEach(function (q, i) { var sq = S(q[0], q[1]); if (i) ctx.lineTo(sq.x, sq.y); else ctx.moveTo(sq.x, sq.y); }); ctx.closePath();
       ctx.fillStyle = selected ? C.selFill : C.room; ctx.fill();
       if (selected) { ctx.strokeStyle = C.sel; ctx.lineWidth = 1.5; ctx.stroke(); }
@@ -889,7 +970,7 @@
     ctx.lineCap = "square"; ctx.lineJoin = "miter";
     d.walls.forEach(function (w) {
       var a = S(w.x1, w.y1), b = S(w.x2, w.y2), t = (w.thickness || WALL_TYPES[w.type] || 0.5) * s;
-      var selected = o.ui && self.sel && self.sel.id === w.id, hovered = o.ui && self.hover === w.id;
+      var selected = o.ui && self.isSelected("wall", w.id), hovered = o.ui && self.hover === w.id;
       ctx.strokeStyle = selected ? C.sel : hovered ? C.draft : C.wall; ctx.lineWidth = Math.max(t, 1.5);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     });
@@ -940,7 +1021,7 @@
 
     // guide lines (reference only)
     d.guides.forEach(function (gl) {
-      var a = S(gl.x1, gl.y1), b = S(gl.x2, gl.y2), selected = o.ui && self.sel && self.sel.id === gl.id;
+      var a = S(gl.x1, gl.y1), b = S(gl.x2, gl.y2), selected = o.ui && self.isSelected("guide", gl.id);
       ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = selected ? C.sel : C.guide; ctx.lineWidth = selected ? 1.5 : 1;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
       [a, b].forEach(function (e) { ctx.beginPath(); ctx.arc(e.x, e.y, 2, 0, Math.PI * 2); ctx.fillStyle = selected ? C.sel : C.guide; ctx.fill(); });
@@ -950,7 +1031,7 @@
     });
 
     // fixtures
-    d.fixtures.forEach(function (fx) { self.drawFixture(ctx, fx, S, s, o.ui && self.sel && self.sel.id === fx.id); });
+    d.fixtures.forEach(function (fx) { self.drawFixture(ctx, fx, S, s, o.ui && self.isSelected("fixture", fx.id)); });
 
     // selected wall length + exterior dimension strings
     d.walls.forEach(function (w) {
@@ -960,7 +1041,7 @@
 
     // labels
     d.labels.forEach(function (l) {
-      var p = S(l.x, l.y), px = clamp((l.size || 1) * s, 9, 72), selected = o.ui && self.sel && self.sel.id === l.id;
+      var p = S(l.x, l.y), px = clamp((l.size || 1) * s, 9, 72), selected = o.ui && self.isSelected("label", l.id);
       ctx.font = px + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       if (selected) { var bw = ctx.measureText(l.text || " ").width; ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.strokeRect(p.x - bw / 2 - 4, p.y - px / 2 - 3, bw + 8, px + 6); }
       ctx.fillStyle = C.label; ctx.fillText(l.text || "", p.x, p.y);
@@ -989,6 +1070,12 @@
         ctx.closePath(); ctx.fill(); ctx.stroke();
         rd.forEach(function (q) { var sq = S(q[0], q[1]); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(sq.x, sq.y, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
         if (rd.length >= 3) { ctx.strokeStyle = C.draft; ctx.beginPath(); ctx.arc(rc0.x, rc0.y, 7, 0, Math.PI * 2); ctx.stroke(); }
+      }
+      // marquee
+      if (this.drag && this.drag.kind === "marquee") {
+        var ma = S(this.drag.start.x, this.drag.start.y), mb = S(this.drag.cur.x, this.drag.cur.y);
+        ctx.fillStyle = "rgba(13,110,253,.08)"; ctx.fillRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y);
+        ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y); ctx.setLineDash([]);
       }
       // room draft
       if (this.drag && this.drag.kind === "room") {
@@ -1173,9 +1260,9 @@
     var w = Math.ceil(this.widthFt * pxPerFt + pad * 2), h = Math.ceil(this.depthFt * pxPerFt + pad * 2);
     var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
     var ctx = cv.getContext("2d"), savedSel = this.sel, savedCtx = this.ctx;
-    this.sel = null; this.ctx = ctx;
+    this.setSel(null); this.ctx = ctx;
     this.draw(ctx, w, h, { scale: pxPerFt, x: pad, y: pad }, { grid: false, ui: false, strings: !!xo.strings });
-    this.sel = savedSel; this.ctx = savedCtx;
+    this.setSel(savedSel); this.ctx = savedCtx;
     return xo.jpeg ? cv.toDataURL("image/jpeg", 0.85) : cv.toDataURL("image/png");
   };
   P.exportPNG = function () {
@@ -1188,7 +1275,7 @@
       try { var parsed = JSON.parse(rd.result); if (!parsed || typeof parsed !== "object") throw new Error("not an object"); }
       catch (e) { alert("That file is not a floor plan JSON export."); return; }
       if (!confirm("Replace the current drawing with the imported plan? (Undo is available.)")) return;
-      self.commit(function () { self.data = normalize(parsed); self.sel = null; });
+      self.commit(function () { self.data = normalize(parsed); self.setSel(null); });
     };
     rd.readAsText(file);
   };
