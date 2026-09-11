@@ -11,7 +11,8 @@
   var ROOF_COLORS = { asphalt: { label: "Asphalt shingle", kind: "shingle", color: "#5a5b5e" }, brown: { label: "Brown shingle", kind: "shingle", color: "#6b5040" }, tile: { label: "Terracotta tile", kind: "tile", color: "#b5623f" }, metal: { label: "Standing-seam metal", kind: "metal", color: "#6d7a86" } };
   var FLOORS = { wood: { label: "Wood", kind: "wood", color: "#c9a878" }, tile: { label: "Tile", kind: "tilefloor", color: "#cfcac0" }, concrete: { label: "Concrete", kind: "concrete", color: "#b4b1aa" } };
   var ROOF_STYLES = [["hip6", "Hip 6:12"], ["hip4", "Hip 4:12"], ["hip8", "Hip 8:12"], ["gable6", "Gable 6:12"], ["gable4", "Gable 4:12"], ["gable8", "Gable 8:12"], ["flat", "Flat"], ["none", "No roof"]];
-  var DEFAULTS = { roof: "hip6", exterior: "stucco", roofColor: "asphalt", floor: "wood" };
+  var DEFAULTS = { roof: "hip6", exterior: "stucco", roofColor: "asphalt", floor: "wood", exteriorHex: "", roofHex: "" };
+  var HEX = /^#[0-9a-f]{6}$/i;
   var FIX = {
     stairs: { h: WALL_H, c: 0xc8b18a }, toilet: { h: 1.4, c: 0xfafafa }, sink: { h: 3, c: 0xfafafa }, tub: { h: 1.8, c: 0xfafafa }, shower: { h: 0.3, c: 0xe8eef2 },
     range: { h: 3, c: 0x8b9096 }, fridge: { h: 6, c: 0xb8bcc2 }, dishwasher: { h: 2.9, c: 0xb8bcc2 }, washer: { h: 3, c: 0xe9e9e9 }, water_heater: { h: 5, c: 0xcfcfcf },
@@ -57,6 +58,8 @@
     if (!EXTERIORS[this.settings.exterior]) this.settings.exterior = DEFAULTS.exterior;
     if (!ROOF_COLORS[this.settings.roofColor]) this.settings.roofColor = DEFAULTS.roofColor;
     if (!FLOORS[this.settings.floor]) this.settings.floor = DEFAULTS.floor;
+    if (!HEX.test(this.settings.exteriorHex || "")) this.settings.exteriorHex = "";
+    if (!HEX.test(this.settings.roofHex || "")) this.settings.roofHex = "";
     this.visible = {}; this.levels.forEach(function (l) { this.visible[l.id] = true; }, this);
     this.materials = {};
     this.setupScene(); this.buildUI(); this.rebuild(); this.resetView(); this.animate();
@@ -65,12 +68,12 @@
 
   P.mat = function (color, extra) {
     var key = "c" + color + JSON.stringify(extra || {});
-    if (!this.materials[key]) this.materials[key] = new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.85, metalness: 0.02 }, extra || {}));
+    if (!this.materials[key]) this.materials[key] = new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.85, metalness: 0.02, envMapIntensity: 0.35 }, extra || {}));
     return this.materials[key];
   };
   P.texMat = function (spec, extra) {
     var key = "t" + spec.kind + spec.color;
-    if (!this.materials[key]) this.materials[key] = new THREE.MeshStandardMaterial(Object.assign({ map: makeTexture(spec.kind, spec.color), roughness: 0.9, metalness: 0.02 }, extra || {}));
+    if (!this.materials[key]) this.materials[key] = new THREE.MeshStandardMaterial(Object.assign({ map: makeTexture(spec.kind, spec.color), roughness: 0.9, metalness: 0.02, envMapIntensity: 0.35 }, extra || {}));
     return this.materials[key];
   };
 
@@ -80,31 +83,63 @@
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(w, h); this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 0.95;
     this.root.appendChild(this.renderer.domElement);
 
-    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0xdfe7ee);
-    this.scene.fog = new THREE.Fog(0xdfe7ee, 400, 900);
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0xe3e9ee);
+    this.scene.fog = new THREE.Fog(0xe3e9ee, 500, 1200);
+    // sky: gradient dome (deep blue overhead fading to a hazy horizon)
+    var sky = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { top: { value: new THREE.Color(0x5f97d1) }, mid: { value: new THREE.Color(0xbcd5ec) }, bottom: { value: new THREE.Color(0xe9eef2) } },
+      vertexShader: "varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: "uniform vec3 top; uniform vec3 mid; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y, 0.0, 1.0); vec3 c = h < 0.15 ? mix(bottom, mid, h / 0.15) : mix(mid, top, (h - 0.15) / 0.85); gl_FragColor = vec4(c, 1.0); }"
+    }));
+    this.scene.add(sky);
+    // soft image-based ambient light so materials pick up reflections and shading
+    if (THREE.RoomEnvironment && THREE.PMREMGenerator) {
+      try { var pmrem = new THREE.PMREMGenerator(this.renderer); this.scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture; pmrem.dispose(); } catch (_) {}
+    }
     this.camera = new THREE.PerspectiveCamera(45, w / h, 0.5, 2000);
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true; this.controls.dampingFactor = 0.08; this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.55));
-    var sun = new THREE.DirectionalLight(0xfff2dd, 1.15); sun.position.set(80, 120, 60); sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.near = 10; sun.shadow.camera.far = 400;
-    sun.shadow.camera.left = sun.shadow.camera.bottom = -120; sun.shadow.camera.right = sun.shadow.camera.top = 120; sun.shadow.bias = -0.0005;
+    this.scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x8a9a7a, this.scene.environment ? 0.3 : 0.55));
+    var sun = new THREE.DirectionalLight(0xfff1dc, this.scene.environment ? 1.2 : 1.15); sun.position.set(80, 120, 60); sun.castShadow = true;
+    sun.shadow.mapSize.set(4096, 4096); sun.shadow.camera.near = 10; sun.shadow.camera.far = 400; sun.shadow.radius = 4;
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -120; sun.shadow.camera.right = sun.shadow.camera.top = 120; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.sun = sun;
 
-    var ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), this.mat(C.ground, { roughness: 1 }));
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), this.mat(C.ground, { roughness: 1, envMapIntensity: 0.2 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -FLOOR_T - 0.01; ground.receiveShadow = true; this.scene.add(ground);
 
     this.model = new THREE.Group(); this.scene.add(this.model);
+    this.setupPost(w, h);
     var self = this;
     if (window.ResizeObserver) new ResizeObserver(function () { self.resize(); }).observe(this.root); else window.addEventListener("resize", function () { self.resize(); });
   };
 
+  // Ambient occlusion (contact shading in corners and under eaves) via a post-processing chain.
+  // Falls back to a plain render when the optional Three.js example scripts are unavailable.
+  P.setupPost = function (w, h) {
+    this.composer = null;
+    if (!(THREE.EffectComposer && THREE.RenderPass && THREE.SSAOPass && THREE.ShaderPass && THREE.GammaCorrectionShader)) return;
+    try {
+      var composer = new THREE.EffectComposer(this.renderer);
+      composer.addPass(new THREE.RenderPass(this.scene, this.camera));
+      var ssao = new THREE.SSAOPass(this.scene, this.camera, w, h);
+      ssao.kernelRadius = 1.6; ssao.minDistance = 0.0008; ssao.maxDistance = 0.03;
+      composer.addPass(ssao);
+      composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));   // the composer bypasses the renderer's sRGB output
+      this.composer = composer; this.ssao = ssao;
+    } catch (e) { this.composer = null; }
+  };
+  P.draw = function () { if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera); };
+
   P.resize = function () {
     var w = this.root.clientWidth, h = this.root.clientHeight; if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h);
+    if (this.composer) { this.composer.setSize(w, h); this.ssao.setSize(w, h); }
   };
 
   P.buildUI = function () {
@@ -126,6 +161,46 @@
     };
     var pairs = function (obj) { return Object.keys(obj).map(function (k) { return [k, obj[k].label]; }); };
     fill(ui.roof, "roof", ROOF_STYLES); fill(ui.exterior, "exterior", pairs(EXTERIORS)); fill(ui.roofColor, "roofColor", pairs(ROOF_COLORS)); fill(ui.floor, "floor", pairs(FLOORS));
+    // colour swatches: a custom colour rides on top of the chosen preset; picking a new preset clears it
+    var swatch = function (input, hexKey, presetKey, table) {
+      if (!input) return;
+      var sync = function () { input.value = self.settings[hexKey] || table[self.settings[presetKey]].color; };
+      sync(); self["sync_" + hexKey] = sync;
+      var t; input.addEventListener("input", function () { self.settings[hexKey] = input.value; clearTimeout(t); t = setTimeout(function () { self.rebuild(); }, 80); });
+      input.addEventListener("change", function () { self.settings[hexKey] = input.value; self.rebuild(); self.saveSettings(); });
+      var sel = presetKey === "exterior" ? ui.exterior : ui.roofColor;
+      if (sel) sel.addEventListener("change", function () { self.settings[hexKey] = ""; sync(); self.rebuild(); });
+    };
+    swatch(ui.exteriorHex, "exteriorHex", "exterior", EXTERIORS); swatch(ui.roofHex, "roofHex", "roofColor", ROOF_COLORS);
+    // match style from a concept photo
+    if (ui.matchBtn && ui.photos) {
+      ui.matchBtn.addEventListener("click", function () { ui.photos.classList.toggle("d-none"); });
+      ui.photos.querySelectorAll("[data-image-id]").forEach(function (el) { el.addEventListener("click", function () { self.matchStyle(el.dataset.imageId, el); }); });
+    }
+  };
+
+  P.applySettings = function (incoming) {
+    var self = this, ui = this.opts.ui;
+    ["roof", "exterior", "roofColor", "floor"].forEach(function (k) { if (incoming[k] != null) { self.settings[k] = incoming[k]; if (ui[k]) ui[k].value = incoming[k]; } });
+    ["exteriorHex", "roofHex"].forEach(function (k) { if (incoming[k] != null) self.settings[k] = HEX.test(incoming[k]) ? incoming[k] : ""; });
+    if (this.sync_exteriorHex) this.sync_exteriorHex(); if (this.sync_roofHex) this.sync_roofHex();
+    this.rebuild();
+  };
+
+  P.matchStyle = function (imageId, el) {
+    var self = this, ui = this.opts.ui; if (!this.opts.styleUrl || this.matching) return;
+    this.matching = true; this.status.textContent = "Reading the photo…";
+    ui.photos.querySelectorAll("[data-image-id]").forEach(function (x) { x.classList.toggle("v3-photo-active", x === el); });
+    fetch(this.opts.styleUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.opts.csrf }, body: JSON.stringify({ image_id: imageId }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
+      .then(function (res) {
+        self.matching = false;
+        if (!res.ok) { self.status.textContent = (res.j && res.j.error) || "Could not read the photo."; return; }
+        self.applySettings(res.j.settings); self.saveSettings();
+        var st = res.j.settings, label = function (t, k) { return t[k] ? t[k].label : k; };
+        self.status.textContent = "Matched: " + [ROOF_STYLES.filter(function (r) { return r[0] === st.roof; }).map(function (r) { return r[1]; })[0] || st.roof, label(EXTERIORS, st.exterior), label(ROOF_COLORS, st.roofColor)].filter(Boolean).join(", ") + (res.j.notes ? " — " + res.j.notes : "");
+      })
+      .catch(function () { self.matching = false; self.status.textContent = "Could not reach the server."; });
   };
 
   P.saveSettings = function () {
@@ -139,9 +214,12 @@
   P.rebuild = function () {
     while (this.model.children.length) this.model.remove(this.model.children[0]);
     var self = this, any = false, bbox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-    this.extMat = this.texMat(EXTERIORS[this.settings.exterior]);
+    var extSpec = Object.assign({}, EXTERIORS[this.settings.exterior]), roofSpec = Object.assign({}, ROOF_COLORS[this.settings.roofColor]);
+    if (HEX.test(this.settings.exteriorHex || "")) extSpec.color = this.settings.exteriorHex;
+    if (HEX.test(this.settings.roofHex || "")) roofSpec.color = this.settings.roofHex;
+    this.extMat = this.texMat(extSpec);
     this.floorMat = this.texMat(FLOORS[this.settings.floor], { roughness: 0.7 });
-    this.roofMat = this.texMat(ROOF_COLORS[this.settings.roofColor], { side: THREE.DoubleSide });
+    this.roofMat = this.texMat(roofSpec, { side: THREE.DoubleSide });
     var footprints = [];
 
     this.levels.forEach(function (l, i) {
@@ -322,7 +400,7 @@
   };
   P.animate = function () {
     var self = this;
-    (function loop() { requestAnimationFrame(loop); self.controls.update(); self.renderer.render(self.scene, self.camera); })();
+    (function loop() { requestAnimationFrame(loop); self.controls.update(); self.draw(); })();
   };
 
   // ------------------------------------------------------------ rendering still
@@ -330,9 +408,12 @@
     var self = this, r = this.renderer, w = this.root.clientWidth, h = this.root.clientHeight, prevRatio = r.getPixelRatio();
     this.status.textContent = "Rendering…";
     var scale = Math.min(3, Math.floor(3000 / Math.max(w, h)) || 1);
-    r.setPixelRatio(scale); r.render(this.scene, this.camera);
+    r.setPixelRatio(scale); r.setSize(w, h);
+    if (this.composer) { this.composer.setPixelRatio(scale); this.composer.setSize(w, h); this.ssao.setSize(w * scale, h * scale); }
+    this.draw();
     var url = r.domElement.toDataURL("image/jpeg", 0.92);
     r.setPixelRatio(prevRatio); r.setSize(w, h);
+    if (this.composer) { this.composer.setPixelRatio(prevRatio); this.composer.setSize(w, h); this.ssao.setSize(w, h); }
     fetch(this.opts.renderUrl, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.opts.csrf }, body: JSON.stringify({ image: url }) })
       .then(function (res) { return res.json(); })
       .then(function (j) {

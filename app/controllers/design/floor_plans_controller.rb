@@ -1,6 +1,6 @@
 class Design::FloorPlansController < Design::BaseController
   before_action :set_concept, only: %i[new create]
-  before_action :set_plan,    only: %i[show edit update destroy view3d renderings add_level]
+  before_action :set_plan,    only: %i[show edit update destroy view3d renderings add_level style_from_image]
 
   def index
     @plans = Design::FloorPlan.includes(:concept).with_attached_thumbnail.order(updated_at: :desc)
@@ -18,6 +18,24 @@ class Design::FloorPlansController < Design::BaseController
   # Phase 3: 3D model of every level of the concept, built client-side from the plan JSON.
   def view3d
     @levels = @concept.floor_plans.ordered.map { |p| { id: p.id, name: p.name, level: p.level, position: p.position, data: p.data_with_defaults } }
+    # every concept image except stills the 3D view saved itself
+    @photos = @concept.images.with_attached_file.where.not(source: "Design Center 3D view").or(@concept.images.with_attached_file.where(source: nil)).order(:created_at)
+  end
+
+  # "Match style from photo": Claude reads a concept image and picks the closest
+  # roof / exterior / roof-color presets plus hex colors; the client applies and saves them.
+  def style_from_image
+    image  = @concept.images.find(params[:image_id])
+    result = Design::StyleMatcher.call(image)
+    render json: { ok: true, settings: result.settings, notes: result.notes, image_id: image.id }
+  rescue Design::StyleMatcher::MissingKey => e
+    render json: { ok: false, error: "#{e.message} Add it with: heroku config:set ANTHROPIC_API_KEY=sk-ant-..." }, status: :unprocessable_entity
+  rescue Design::StyleMatcher::Failed, Design::StyleMatcher::Unauthorized => e
+    render json: { ok: false, error: e.message }, status: :unprocessable_entity
+  rescue Design::StyleMatcher::RateLimited => e
+    render json: { ok: false, error: e.message }, status: :too_many_requests
+  rescue Design::StyleMatcher::ApiError => e
+    render json: { ok: false, error: "Anthropic API error: #{e.message.to_s.truncate(120)}" }, status: :bad_gateway
   end
 
   # "Add level above": a new plan on top of the stack with the same drawing size

@@ -30,7 +30,7 @@ class Design::ConceptsController < Design::BaseController
   def update
     attrs = concept_params.to_h
     if (rs = params.dig(:design_concept, :render_settings)).is_a?(ActionController::Parameters)
-      attrs["render_settings"] = (@concept.render_settings || {}).merge(rs.permit(:roof, :exterior, :roofColor, :floor).to_h)
+      attrs["render_settings"] = (@concept.render_settings || {}).merge(rs.permit(:roof, :exterior, :roofColor, :floor, :exteriorHex, :roofHex).to_h)
     end
     if @concept.update(attrs)
       respond_to do |f|

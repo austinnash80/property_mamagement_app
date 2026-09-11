@@ -7,9 +7,23 @@
     .v3-bar + .v3-wrap { border-radius: 0 0 .4rem .4rem; }
     .v3-hint { position: absolute; left: 10px; bottom: 8px; font-size: .75rem; color: #4b5563; background: rgba(255,255,255,.8); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
     .v3-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #4b5563; font-size: .95rem; }
+    .v3-swatch { width: 28px; height: 31px; padding: 2px; border: 1px solid #ced4da; border-radius: .25rem; vertical-align: middle; background: #fff; }
+    .v3-photos { display: flex; flex-wrap: wrap; gap: .5rem; padding: .5rem .75rem; background: #f8f9fa; border: 1px solid #e3e5e8; border-top: 0; }
+    .v3-photo { width: 96px; height: 72px; object-fit: cover; border-radius: .3rem; border: 2px solid transparent; cursor: pointer; }
+    .v3-photo:hover { border-color: #9aa3ad; } .v3-photo-active { border-color: #0d6efd !important; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+  <%# optional realism extras: ambient occlusion + image-based lighting (the view degrades gracefully without them) %>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/SSAOShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/math/SimplexNoise.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/SSAOPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
   <%= javascript_include_tag "design/view3d" %>
 <% end %>
 
@@ -29,14 +43,23 @@
   <button class="btn btn-outline-secondary btn-sm" id="v3-reset">Reset view</button>
   <span class="vr d-none d-md-inline"></span>
   <label class="small text-nowrap">Roof <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roof"></select></label>
-  <label class="small text-nowrap">Exterior <select class="form-select form-select-sm d-inline-block w-auto" id="v3-exterior"></select></label>
-  <label class="small text-nowrap">Roof color <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roofColor"></select></label>
+  <label class="small text-nowrap">Exterior <select class="form-select form-select-sm d-inline-block w-auto" id="v3-exterior"></select> <input type="color" class="v3-swatch" id="v3-exteriorHex" title="Exact wall color"></label>
+  <label class="small text-nowrap">Roof color <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roofColor"></select> <input type="color" class="v3-swatch" id="v3-roofHex" title="Exact roof color"></label>
   <label class="small text-nowrap">Floors <select class="form-select form-select-sm d-inline-block w-auto" id="v3-floor"></select></label>
+  <% if @photos.any? %><button class="btn btn-outline-secondary btn-sm" id="v3-match" title="Pick one of this concept's images and Claude sets the roof, exterior and colors to match">Match style from photo</button><% end %>
   <div class="ms-auto d-flex align-items-center gap-2">
     <span class="small text-muted" id="v3-status"></span>
     <button class="btn btn-primary btn-sm" id="v3-render" title="Save a high-resolution still of this view into the concept's images">Save rendering</button>
   </div>
 </div>
+<% if @photos.any? %>
+  <div class="v3-photos d-none" id="v3-photos">
+    <span class="small text-muted w-100">Click a photo. Claude picks the closest roof, exterior and colors and saves them to this concept.</span>
+    <% @photos.each do |img| %>
+      <%= dc_image_tag(img, :thumb, class: "v3-photo", alt: img.display_title, title: img.display_title, data: { image_id: img.id }) %>
+    <% end %>
+  </div>
+<% end %>
 <div class="v3-wrap" id="v3-wrap"><div class="v3-hint">Drag to orbit · right-drag to pan · wheel to zoom</div></div>
 
 <script type="application/json" id="v3-levels-data"><%= raw @levels.to_json.gsub("</", "<\\/") %></script>
@@ -48,10 +71,13 @@
       currentId: <%= @plan.id %>,
       renderUrl: <%= renderings_design_floor_plan_path(@plan).to_json.html_safe %>,
       settingsUrl: <%= design_concept_path(@concept, format: :json).to_json.html_safe %>,
+      styleUrl: <%= style_from_image_design_floor_plan_path(@plan).to_json.html_safe %>,
       settings: <%= raw (@concept.render_settings || {}).to_json %>,
       csrf: document.querySelector('meta[name="csrf-token"]').content,
       ui: { levels: document.getElementById("v3-levels"), reset: document.getElementById("v3-reset"), render: document.getElementById("v3-render"), status: document.getElementById("v3-status"),
-            roof: document.getElementById("v3-roof"), exterior: document.getElementById("v3-exterior"), roofColor: document.getElementById("v3-roofColor"), floor: document.getElementById("v3-floor") }
+            roof: document.getElementById("v3-roof"), exterior: document.getElementById("v3-exterior"), roofColor: document.getElementById("v3-roofColor"), floor: document.getElementById("v3-floor"),
+            exteriorHex: document.getElementById("v3-exteriorHex"), roofHex: document.getElementById("v3-roofHex"),
+            matchBtn: document.getElementById("v3-match"), photos: document.getElementById("v3-photos") }
     });
   })();
 </script>
