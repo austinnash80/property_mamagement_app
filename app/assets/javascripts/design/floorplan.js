@@ -137,7 +137,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · Space+drag (or middle / Alt drag) to pan<br>Drag a box to select many · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space to pan<br>Right-drag, two-finger drag or Shift+drag to box-select · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
     '  </aside>' +
     '</div>';
 
@@ -145,7 +145,7 @@
     this.root = root; this.opts = opts;
     this.data = normalize(opts.data);
     this.widthFt = +opts.widthFt || 60; this.depthFt = +opts.depthFt || 40;
-    this.tool = "select"; this.sel = null; this.selSet = []; this.space = false; this.hover = null; this.draft = null; this.drag = null;
+    this.tool = "select"; this.sel = null; this.selSet = []; this.space = false; this.touches = {}; this.hover = null; this.draft = null; this.drag = null;
     this.view = { scale: 12, x: 0, y: 0 };
     this.history = []; this.future = []; this.dirty = false; this.saving = false;
     this.showGrid = true; this.dimStrings = false; this.shift = false;
@@ -241,7 +241,8 @@
       if (hit && (hit.type === "label" || hit.type === "room")) { self.setSel(hit); self.updatePanel(); self.inlineEdit(hit.type, self.find(hit.type, hit.id)); }
       else if (!self.roomAt(wp)) self.roomFromArea(wp);
     });
-    c.addEventListener("contextmenu", function (e) { e.preventDefault(); if (self.draft) self.finishWall(); else self.setTool("select"); });
+    c.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    c.addEventListener("pointercancel", function (e) { delete self.touches[e.pointerId]; if (self.drag && self.drag.touch) self.drag = null; self.render(); });
     c.addEventListener("wheel", function (e) { e.preventDefault(); var q = self.pt(e); self.zoomAt(Math.exp(-e.deltaY * 0.0015), q.x, q.y); }, { passive: false });
     c.addEventListener("pointerleave", function () { self.mouse = null; self.hover = null; self.render(); });
 
@@ -463,10 +464,22 @@
   P.capture = function (e) { try { this.canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic events have no active pointer */ } };
   P.onDown = function (e) {
     var m = this.pt(e);
+    var p = this.toWorld(m.x, m.y), self = this;
+    if (e.pointerType === "touch") {
+      this.touches[e.pointerId] = p;
+      var ids = Object.keys(this.touches);
+      if (ids.length === 2) {   // two-finger hold + drag = box select (from the midpoint)
+        var t1 = this.touches[ids[0]], t2 = this.touches[ids[1]], mid = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+        this.drag = { kind: "marquee", start: mid, cur: mid, add: false, keep: [], touch: true, moved: false }; this.capture(e); this.render(); return;
+      }
+    }
+    if (e.button === 2) {       // right-button drag = box select; a plain right-click still finishes drawing / returns to Select
+      this.capture(e); this.downAt = { x: m.x, y: m.y };
+      this.drag = { kind: "marquee", start: p, cur: p, add: e.shiftKey, keep: e.shiftKey ? this.selSet.slice() : [], right: true }; return;
+    }
     if (e.button === 1 || (e.button === 0 && (e.altKey || this.space))) { this.drag = { kind: "pan", sx: m.x, sy: m.y, vx: this.view.x, vy: this.view.y }; this.capture(e); return; }
     if (e.button !== 0) return;
     this.capture(e);
-    var p = this.toWorld(m.x, m.y), self = this;
     this.downAt = { x: m.x, y: m.y };
 
     if (this.tool === "select") {
@@ -483,8 +496,10 @@
       if (hit) {
         var el = this.selected();
         this.drag = { kind: "move", el: el, type: hit.type, start: p, orig: JSON.parse(JSON.stringify(el)), before: JSON.stringify(this.data), moved: false };
+      } else if (e.shiftKey) {
+        this.drag = { kind: "marquee", start: p, cur: p, add: true, keep: this.selSet.slice() };
       } else {
-        this.drag = { kind: "marquee", start: p, cur: p, add: e.shiftKey, keep: e.shiftKey ? this.selSet.slice() : [] };
+        this.drag = { kind: "pan", sx: m.x, sy: m.y, vx: this.view.x, vy: this.view.y };   // drag empty space to move around
       }
       this.render(); this.updatePanel();
       return;
@@ -505,7 +520,12 @@
     var d = this.drag;
     if (d) {
       if (d.kind === "pan") { this.view.x = d.vx + m.x - d.sx; this.view.y = d.vy + m.y - d.sy; return this.render(); }
-      if (d.kind === "marquee") { d.cur = p; return this.render(); }
+      if (d.kind === "marquee") {
+        if (d.touch) { this.touches[e.pointerId] = p; var tk = Object.keys(this.touches); if (tk.length >= 2) { var a1 = this.touches[tk[0]], a2 = this.touches[tk[1]]; d.cur = { x: (a1.x + a2.x) / 2, y: (a1.y + a2.y) / 2 }; } }
+        else d.cur = p;
+        if (Math.hypot(d.cur.x - d.start.x, d.cur.y - d.start.y) * this.view.scale > 4) d.moved = true;
+        return this.render();
+      }
       if (d.kind === "moveMulti") return this.dragMulti(d, p);
       if (d.kind === "room") { d.cur = this.snapPoint(p); return this.render(); }
       if (d.kind === "move") return this.dragMove(d, p);
@@ -668,9 +688,15 @@
     var p = this.toWorld(m.x, m.y), d = this.drag, self = this;
     var isClick = this.downAt && Math.hypot(m.x - this.downAt.x, m.y - this.downAt.y) < 4;
     this.drag = null;
+    if (e.pointerType === "touch") {
+      delete this.touches[e.pointerId];
+      if (d && d.kind === "marquee" && d.touch) { if (Object.keys(this.touches).length >= 1) { this.drag = d; return; } }   // wait for both fingers to lift
+    }
     if (d && d.kind === "marquee") {
       var mx0 = Math.min(d.start.x, d.cur.x), mx1 = Math.max(d.start.x, d.cur.x), my0 = Math.min(d.start.y, d.cur.y), my1 = Math.max(d.start.y, d.cur.y), inside = function (x, y) { return x >= mx0 && x <= mx1 && y >= my0 && y <= my1; };
-      if (!isClick) {
+      var moved = d.touch ? d.moved : !isClick;
+      if (!moved && d.right) { if (this.draft || this.roomDraft) this.finishWall(); else this.setTool("select"); return; }   // plain right-click
+      if (moved) {
         var picked = [];
         this.data.walls.forEach(function (w) { if (inside(w.x1, w.y1) && inside(w.x2, w.y2)) picked.push({ type: "wall", id: w.id }); });
         this.data.guides.forEach(function (g) { if (inside(g.x1, g.y1) && inside(g.x2, g.y2)) picked.push({ type: "guide", id: g.id }); });
