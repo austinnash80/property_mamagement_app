@@ -667,7 +667,7 @@
     }
     if (this.tool === "fixture") {
       var kind = this.kindSel.value || "box", spec = FIXTURES[kind], fp = this.snapPoint(p), fid = uid();
-      this.commit(function () { this.data.fixtures.push({ id: fid, kind: kind, x: fp.x, y: fp.y, w: spec.w, h: spec.h, rot: 0, label: kind === "stairs" ? "UP" : "" }); this.sel = { type: "fixture", id: fid }; });
+      this.commit(function () { this.data.fixtures.push({ id: fid, kind: kind, x: fp.x, y: fp.y, w: spec.w, h: spec.h, rot: 0, dir: kind === "stairs" ? "up" : undefined, label: kind === "stairs" ? "UP" : "" }); this.sel = { type: "fixture", id: fid }; });
       return;
     }
     if (this.tool === "label") {
@@ -751,6 +751,7 @@
       html = '<h6>Fixture</h6>' +
         '<div class="fp-field"><label>Kind</label><select class="form-select form-select-sm" data-prop="kind">' + kinds + '</select></div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
+        (el.kind === "stairs" ? '<div class="fp-field"><label>Direction</label><select class="form-select form-select-sm" data-prop="dir"><option value="up"' + (el.dir !== "down" ? " selected" : "") + '>Up (arrow points to the top step)</option><option value="down"' + (el.dir === "down" ? " selected" : "") + '>Down</option></select></div>' : "") +
         f("Label", "label", el.label || "", 'placeholder="optional text, e.g. UP or DN"') +
         '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="rotate">Rotate 90°</button></div>';
     } else if (this.sel.type === "guide") {
@@ -783,8 +784,10 @@
           else if (name === "kind") {
             cur.kind = v;
             if (self.sel.type === "opening" && DOOR_KINDS[v]) { cur.width = DOOR_KINDS[v].w; cur.height = DOOR_KINDS[v].h; }
+            if (self.sel.type === "fixture") { if (v === "stairs") { cur.dir = cur.dir || "up"; if (!cur.label) cur.label = "UP"; } else if (/^(UP|DN)$/.test(cur.label || "")) cur.label = ""; }
           }
           else if (name === "label") cur.label = v;
+          else if (name === "dir") { cur.dir = v; if (!cur.label || /^(UP|DN|DOWN)$/i.test(cur.label)) cur.label = v === "down" ? "DN" : "UP"; }
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
           else if (["w", "h", "x", "y", "width", "size", "height", "sill"].indexOf(name) >= 0) {
@@ -1044,10 +1047,11 @@
     rr(x0, y0, lw, lh, round); ctx.fill(); ctx.stroke();
     switch (f.kind) {
       case "stairs": {
-        var tread = 0.9167 * s, n = Math.floor(lh / tread);
+        var tread = 0.9167 * s, n = Math.floor(lh / tread), down = f.dir === "down";
         for (var i = 1; i < n; i++) line(x0, y0 + i * tread, x0 + lw, y0 + i * tread);
-        ctx.lineWidth = 1.4; line(0, y0 + 6, 0, y0 + lh - 8);
-        ctx.beginPath(); ctx.moveTo(0, y0 + lh - 4); ctx.lineTo(-4, y0 + lh - 11); ctx.lineTo(4, y0 + lh - 11); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+        ctx.lineWidth = 1.4; line(0, y0 + 6, 0, y0 + lh - 6);
+        var tipY = down ? y0 + 4 : y0 + lh - 4, backY = down ? y0 + 11 : y0 + lh - 11;
+        ctx.beginPath(); ctx.moveTo(0, tipY); ctx.lineTo(-4, backY); ctx.lineTo(4, backY); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
         break; }
       case "toilet": ctx.fillStyle = "#fff"; ctx.fillRect(x0, y0, lw, lh * .32); ctx.strokeRect(x0, y0, lw, lh * .32); ell(0, y0 + lh * .64, lw * .36, lh * .3); break;
       case "sink": ell(0, 0, lw * .34, lh * .3); ctx.beginPath(); ctx.arc(0, y0 + 4, 1.5, 0, 7); ctx.fill(); break;
@@ -1068,7 +1072,7 @@
     if (f.label) {
       var fs = clamp(Math.min(lw, lh) * .35, 8, 13);
       ctx.fillStyle = selected ? C.sel : C.fix; ctx.font = "600 " + fs + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(this.fitText(ctx, f.label, lw - 4), 0, f.kind === "stairs" ? y0 + lh - 16 : 0);
+      ctx.fillText(this.fitText(ctx, f.label, lw - 4), 0, f.kind === "stairs" ? (f.dir === "down" ? y0 + 16 : y0 + lh - 16) : 0);
     }
     ctx.restore();
   };

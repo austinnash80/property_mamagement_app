@@ -293,6 +293,7 @@
       var tread = 0.9167, n = Math.max(2, Math.floor(lh / tread)), rise = WALL_H / n, g = new THREE.Group();
       for (var i = 0; i < n; i++) {
         var m = new THREE.Mesh(new THREE.BoxGeometry(lw, rise * (i + 1), tread), this.mat(spec.c));
+        // the flight always rises toward the fixture's far end; UP/DN only changes the plan arrow's meaning
         m.position.set(0, rise * (i + 1) / 2, -lh / 2 + tread * (i + 0.5)); m.castShadow = m.receiveShadow = true; g.add(m);
       }
       g.position.set(cx, base, cz); g.rotation.y = rot; this.model.add(g); return;
