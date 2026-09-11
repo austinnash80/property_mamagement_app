@@ -156,7 +156,7 @@
       footprints.push({ x0: fx0, x1: fx1, z0: fy0, z1: fy1, base: base });
 
       self.box(fx1 - fx0 + 0.5, FLOOR_T, fy1 - fy0 + 0.5, (fx0 + fx1) / 2, base - FLOOR_T / 2, (fy0 + fy1) / 2, self.mat(C.slab), false, true);
-      rooms.forEach(function (r) { self.box(r.w, 0.06, r.h, r.x + r.w / 2, base + 0.03, r.y + r.h / 2, self.floorMat, false, true, 0, r.x, r.y); });
+      rooms.forEach(function (r) { self.floor(r, base); });
       walls.forEach(function (w) { self.wall(w, openings.filter(function (o) { return o.wall === w.id; }), base); });
       fixtures.forEach(function (f) { self.fixture(f, base); });
     });
@@ -185,6 +185,15 @@
     if (iz0 - a.z0 >= 1) out.push({ x0: ix0, x1: ix1, z0: a.z0, z1: iz0 });
     if (a.z1 - iz1 >= 1) out.push({ x0: ix0, x1: ix1, z0: iz1, z1: a.z1 });
     return out;
+  };
+
+  // Room floor: polygon (r.pts) or rectangle, as a flat shape just above the slab. UVs are in feet.
+  P.floor = function (r, base) {
+    var pts = r.pts && r.pts.length >= 3 ? r.pts : [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]];
+    var shape = new THREE.Shape(pts.map(function (p) { return new THREE.Vector2(p[0], -p[1]); }));
+    var geo = new THREE.ShapeGeometry(shape), uv = geo.attributes.uv, pos = geo.attributes.position;
+    for (var i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i), pos.getY(i));
+    var m = new THREE.Mesh(geo, this.floorMat); m.rotation.x = -Math.PI / 2; m.position.y = base + 0.06; m.receiveShadow = true; this.model.add(m);
   };
 
   P.box = function (w, h, d, x, y, z, material, castShadow, receiveShadow, rotY, uOff, vOff) {

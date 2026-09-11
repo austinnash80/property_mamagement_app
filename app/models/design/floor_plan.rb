@@ -2,7 +2,7 @@
 # All geometry is stored in :data in feet:
 #   grid      snap size in ft (0.5 = 6")
 #   walls     [{id, x1, y1, x2, y2, type: "exterior"|"interior", thickness}]
-#   rooms     [{id, name, x, y, w, h}]
+#   rooms     [{id, name, pts: [[x,y],...], x, y, w, h}]   (pts = polygon; x/y/w/h = bounding box)
 #   openings  [{id, type: "door"|"window", wall, pos, width, swing, hinge, height, kind (door: exterior|interior|garage), sill (window)}]  (pos = ft from wall start)
 #   labels    [{id, text, x, y, size}]
 #   fixtures  [{id, kind, x, y, w, h, rot, label}]   (stairs, plumbing, appliances, furniture; see FIXTURES in the JS)
@@ -29,8 +29,15 @@ class Design::FloorPlan < ApplicationRecord
   def openings = Array(data["openings"])
   def fixtures = Array(data["fixtures"])
 
+  # Rooms are polygons (pts) since 2026-09-10; older rooms are rectangles (x, y, w, h).
   def total_area_sqft
-    rooms.sum { |r| r["w"].to_f * r["h"].to_f }
+    rooms.sum { |r| self.class.room_area(r) }
+  end
+
+  def self.room_area(r)
+    pts = Array(r["pts"])
+    return r["w"].to_f * r["h"].to_f if pts.size < 3
+    pts.each_index.sum { |i| a = pts[i]; b = pts[(i + 1) % pts.size]; a[0].to_f * b[1].to_f - b[0].to_f * a[1].to_f }.abs / 2
   end
 
   def doors_count   = openings.count { |o| o["type"] == "door" }

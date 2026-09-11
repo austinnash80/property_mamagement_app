@@ -38,7 +38,9 @@
   function sqft(a) { return Math.round(a).toLocaleString() + " sq ft"; }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    return { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [] };
+    var n = { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [] };
+    n.rooms.forEach(roomSync);
+    return n;
   }
   function seg(w) {
     var dx = w.x2 - w.x1, dy = w.y2 - w.y1, len = Math.hypot(dx, dy) || 1e-9;
@@ -49,6 +51,48 @@
     var x = w.x1 + s.ux * pos, y = w.y1 + s.uy * pos;
     return { pos: pos, d: Math.hypot(p.x - x, p.y - y), x: x, y: y, len: s.len };
   }
+  // Rooms are polygons: r.pts = [[x,y],...] in ft; x/y/w/h is kept in sync as the bounding box.
+  function roomPts(r) { if (!r.pts || r.pts.length < 3) r.pts = [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; return r.pts; }
+  function roomSync(r) {
+    var pts = roomPts(r), x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    pts.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+    r.x = x0; r.y = y0; r.w = x1 - x0; r.h = y1 - y0; return r;
+  }
+  function rectPts(r) { return [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]]; }
+  function roomArea(r) { var p = roomPts(r), a = 0; for (var i = 0, n = p.length; i < n; i++) { var j = (i + 1) % n; a += p[i][0] * p[j][1] - p[j][0] * p[i][1]; } return Math.abs(a) / 2; }
+  function roomIsRect(r) {
+    var p = roomPts(r); if (p.length !== 4) return false;
+    for (var i = 0; i < 4; i++) { var a = p[i], b = p[(i + 1) % 4]; if (Math.abs(a[0] - b[0]) > 1e-6 && Math.abs(a[1] - b[1]) > 1e-6) return false; }
+    return true;
+  }
+  function roomCentroid(r) {
+    var p = roomPts(r), a = 0, cx = 0, cy = 0;
+    for (var i = 0, n = p.length; i < n; i++) { var j = (i + 1) % n, f = p[i][0] * p[j][1] - p[j][0] * p[i][1]; a += f; cx += (p[i][0] + p[j][0]) * f; cy += (p[i][1] + p[j][1]) * f; }
+    if (Math.abs(a) < 1e-9) return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+    return { x: cx / (3 * a), y: cy / (3 * a) };
+  }
+  function pointInPoly(pt, pts) {
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+      if ((yi > pt.y) !== (yj > pt.y) && pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function translateRoom(r, dx, dy) { r.pts = roomPts(r).map(function (p) { return [p[0] + dx, p[1] + dy]; }); roomSync(r); }
+  // Douglas–Peucker simplification (tolerance in ft) for polygons traced from the wall raster.
+  function simplify(pts, tol) {
+    if (pts.length < 4) return pts;
+    var keep = new Array(pts.length).fill(false), dist = function (p, a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-9, t = clamp(((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2, 0, 1); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+    var rec = function (i, j) { var maxD = 0, k = -1; for (var m = i + 1; m < j; m++) { var d = dist(pts[m], pts[i], pts[j]); if (d > maxD) { maxD = d; k = m; } } if (maxD > tol) { keep[k] = true; rec(i, k); rec(k, j); } };
+    // anchor on the two farthest-apart vertices so the closed ring simplifies cleanly
+    var far = 0, fi = 0; for (var i = 1; i < pts.length; i++) { var d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]); if (d > far) { far = d; fi = i; } }
+    keep[0] = keep[fi] = true; rec(0, fi); rec(fi, pts.length - 1); keep[pts.length - 1] = true;
+    var out = pts.filter(function (_, i) { return keep[i]; });
+    if (out.length > 1 && out[0][0] === out[out.length - 1][0] && out[0][1] === out[out.length - 1][1]) out.pop();
+    return out;
+  }
+
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function download(name, href) { var a = document.createElement("a"); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
 
@@ -157,6 +201,7 @@
     c.addEventListener("pointerup", function (e) { self.onUp(e); });
     c.addEventListener("dblclick", function (e) {
       e.preventDefault();
+      if (self.roomDraft) return self.closeRoomDraft();
       if (self.draft) return self.finishWall();
       if (self.tool !== "select") return;
       var q = self.pt(e), wp = self.toWorld(q.x, q.y), hit = self.hitTest(wp);
@@ -273,7 +318,7 @@
     }
     for (i = this.data.rooms.length - 1; i >= 0; i--) {
       r = this.data.rooms[i];
-      if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "room", id: r.id };
+      if (pointInPoly(p, roomPts(r))) return { type: "room", id: r.id };
     }
     return null;
   };
@@ -282,6 +327,7 @@
     var el = this.selected(); if (!el) return [];
     var self = this;
     if (this.sel.type === "wall" || this.sel.type === "guide") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
+    if (this.sel.type === "room" && !roomIsRect(el)) return roomPts(el).map(function (p, i) { return { k: "v" + i, w: { x: p[0], y: p[1] }, s: self.toScreen(p[0], p[1]) }; });
     if (this.sel.type === "room" || this.sel.type === "fixture") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
     return [];
   };
@@ -334,16 +380,17 @@
     this.commit(function () {
       if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
       else if (type === "opening") { var w = this.wallOf(el); if (w) { var s = seg(w); el.pos = clamp(el.pos + dx * s.ux + dy * s.uy, el.width / 2, s.len - el.width / 2); } }
+      else if (type === "room") translateRoom(el, dx, dy);
       else { el.x += dx; el.y += dy; }
     });
   };
 
   // ---------------------------------------------------------------- tools
   P.setTool = function (t) {
-    this.tool = t; this.draft = null; this.hover = null;
+    this.tool = t; this.draft = null; this.roomDraft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag to draw a room. Rooms are for labels and areas; draw walls separately.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
@@ -365,7 +412,14 @@
     }
   };
 
-  P.finishWall = function () { this.draft = null; this.render(); };
+  P.finishWall = function () { this.draft = null; if (this.roomDraft) { this.roomDraft = null; this.setTool(this.tool); } this.render(); };
+  P.closeRoomDraft = function () {
+    var pts = this.roomDraft && this.roomDraft.pts; this.roomDraft = null; this.setTool("room");
+    if (!pts || pts.length < 3) return this.render();
+    var id = uid(), n = this.data.rooms.length + 1;
+    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.sel = { type: "room", id: id }; });
+    this.focusProp("name");
+  };
 
   // canvas-relative pointer position (clientX-based; offsetX is unreliable for synthetic events)
   P.pt = function (e) { var r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -393,6 +447,7 @@
       return;
     }
     if (this.tool === "room") {
+      if (this.roomDraft) return;           // clicking out a polygon; handled on pointerup
       var sp = this.snapPoint(p);
       this.drag = { kind: "room", start: sp, cur: sp };
       return;
@@ -411,6 +466,7 @@
       if (d.kind === "move") return this.dragMove(d, p);
       if (d.kind === "handle") return this.dragHandle(d, p);
     }
+    if (this.tool === "room" && this.roomDraft) { var rl = this.roomDraft.pts[this.roomDraft.pts.length - 1]; this.roomDraft.cur = this.ortho({ x: rl[0], y: rl[1] }, this.snapPoint(p)); }
     if ((this.tool === "wall" || this.tool === "line") && this.draft) { var sp = this.snapPoint(p); this.draft.cur = this.ortho(this.draft.start, sp); this.draft.cur.snapped = sp.snapped; }
     if (this.tool === "door" || this.tool === "window") { var nw = this.nearestWall(p, 12); this.hover = nw ? nw.wall.id : null; }
     this.hoverRoom = this.draft ? null : this.roomAt(p);
@@ -449,7 +505,8 @@
       count++; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
       if (x > 0) stack.push(i - 1); if (x < nx - 1) stack.push(i + 1); if (y > 0) stack.push(i - nx); if (y < ny - 1) stack.push(i + nx);
     }
-    var region = { seen: seen, open: open, area: count * cell * cell, x: ox + minx * cell, y: oy + miny * cell, w: (maxx - minx + 1) * cell, h: (maxy - miny + 1) * cell };
+    var fill = new Uint8Array(nx * ny); for (var q = 0; q < seen.length; q++) if (seen[q] && !ras2[q]) fill[q] = 1;
+    var region = { seen: seen, fill: fill, nx: nx, ny: ny, cell: cell, ox: ox, oy: oy, open: open, area: count * cell * cell, x: ox + minx * cell, y: oy + miny * cell, w: (maxx - minx + 1) * cell, h: (maxy - miny + 1) * cell };
     this._region = region;
     return open ? null : region;
   };
@@ -457,7 +514,7 @@
   // In-place text editor for a label's text or a room's name (double-click, or a freshly placed label).
   P.inlineEdit = function (type, el) {
     if (this.inline) this.inline.remove();
-    var self = this, isRoom = type === "room", at = isRoom ? this.toScreen(el.x + el.w / 2, el.y + el.h / 2) : this.toScreen(el.x, el.y);
+    var self = this, isRoom = type === "room", rcn = isRoom ? roomCentroid(el) : null, at = isRoom ? this.toScreen(rcn.x, rcn.y) : this.toScreen(el.x, el.y);
     var inp = document.createElement("input"); inp.className = "form-control form-control-sm fp-inline"; inp.value = isRoom ? (el.name || "") : (el.text || "");
     inp.style.left = clamp(at.x - 90, 4, this.cw - 184) + "px"; inp.style.top = clamp(at.y - 16, 4, this.ch - 36) + "px";
     this.wrap.appendChild(inp); this.inline = inp; inp.focus(); inp.select();
@@ -473,13 +530,37 @@
   // Double-click inside an enclosed area (Select tool) turns it into a Room.
   P.roomFromArea = function (p) {
     var a = this.enclosedAt(p); if (!a) return false;
-    var id = uid(), n = this.data.rooms.length + 1, r4 = function (v) { return Math.round(v * 4) / 4; };
-    this.commit(function () { this.data.rooms.push({ id: id, name: "Room " + n, x: r4(a.x), y: r4(a.y), w: r4(a.w), h: r4(a.h) }); this.sel = { type: "room", id: id }; });
+    var pts = this.regionPolygon(a), id = uid(), n = this.data.rooms.length + 1;
+    this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: pts })); this.sel = { type: "room", id: id }; });
     this.hoverArea = null; this.focusProp("name");
     return true;
   };
+  // Outer boundary of a filled raster region → simplified polygon in ft (diagonal walls become diagonal edges).
+  P.regionPolygon = function (a) {
+    var nx = a.nx, ny = a.ny, f = a.fill, edges = {}, key = function (x, y) { return x + "," + y; }, isF = function (x, y) { return x >= 0 && y >= 0 && x < nx && y < ny && f[y * nx + x]; };
+    for (var y = 0; y < ny; y++) for (var x = 0; x < nx; x++) {
+      if (!f[y * nx + x]) continue;
+      if (!isF(x, y - 1)) edges[key(x, y)] = [x + 1, y];
+      if (!isF(x + 1, y)) edges[key(x + 1, y)] = [x + 1, y + 1];
+      if (!isF(x, y + 1)) edges[key(x + 1, y + 1)] = [x, y + 1];
+      if (!isF(x - 1, y)) edges[key(x, y + 1)] = [x, y];
+    }
+    var best = null, bestArea = 0, used = {};
+    Object.keys(edges).forEach(function (start) {
+      if (used[start]) return;
+      var loop = [], cur = start, guard = 0;
+      while (cur && !used[cur] && guard++ < 200000) { used[cur] = true; var pt = cur.split(",").map(Number); loop.push(pt); var nxt = edges[cur]; cur = nxt ? key(nxt[0], nxt[1]) : null; }
+      var ar = 0; for (var i = 0; i < loop.length; i++) { var j = (i + 1) % loop.length; ar += loop[i][0] * loop[j][1] - loop[j][0] * loop[i][1]; }
+      if (Math.abs(ar) > bestArea) { bestArea = Math.abs(ar); best = loop; }
+    });
+    if (!best) return rectPts(a);
+    // drop collinear points, then straighten the 3" staircase along diagonal walls
+    var pts = best.filter(function (p, i) { var q = best[(i + best.length - 1) % best.length], r = best[(i + 1) % best.length]; return !((q[0] === p[0] && p[0] === r[0]) || (q[1] === p[1] && p[1] === r[1])); });
+    pts = simplify(pts.map(function (p) { return [a.ox + p[0] * a.cell, a.oy + p[1] * a.cell]; }), a.cell * 1.2);   // to feet first; tolerance is in feet
+    return pts.length >= 3 ? pts : rectPts(a);
+  };
   P.roomAt = function (p) {
-    for (var i = this.data.rooms.length - 1; i >= 0; i--) { var r = this.data.rooms[i]; if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r.id; }
+    for (var i = this.data.rooms.length - 1; i >= 0; i--) { var r = this.data.rooms[i]; if (pointInPoly(p, roomPts(r))) return r.id; }
     return null;
   };
 
@@ -490,7 +571,9 @@
     if (d.type === "wall" || d.type === "guide") {
       var a = this.snapPoint({ x: o.x1 + raw.x, y: o.y1 + raw.y }, el.id), dx = a.x - o.x1, dy = a.y - o.y1;
       el.x1 = o.x1 + dx; el.y1 = o.y1 + dy; el.x2 = o.x2 + dx; el.y2 = o.y2 + dy;
-    } else if (d.type === "room" || d.type === "label" || d.type === "fixture") {
+    } else if (d.type === "room") {
+      var nxr = this.snapVal(o.x + raw.x), nyr = this.snapVal(o.y + raw.y); el.pts = o.pts; translateRoom(el, nxr - o.x, nyr - o.y);
+    } else if (d.type === "label" || d.type === "fixture") {
       el.x = this.snapVal(o.x + raw.x); el.y = this.snapVal(o.y + raw.y);
     } else if (d.type === "opening") {
       var w = this.wallOf(el); if (w) { var pr = project(p, w); el.pos = this.snapVal(clamp(pr.pos, el.width / 2, pr.len - el.width / 2)); }
@@ -512,10 +595,13 @@
     } else if (this.sel.type === "guide") {
       var gp = this.snapPoint(p, el.id), gfixed = k === "p1" ? { x: o.x2, y: o.y2 } : { x: o.x1, y: o.y1 }, gnp = this.shift ? gp : this.ortho(gfixed, gp);
       if (k === "p1") { el.x1 = gnp.x; el.y1 = gnp.y; } else { el.x2 = gnp.x; el.y2 = gnp.y; }
+    } else if (this.sel.type === "room" && k.charAt(0) === "v") {
+      var vi = +k.slice(1), vp = this.snapPoint(p); el.pts = roomPts(el).slice(); el.pts[vi] = [vp.x, vp.y]; roomSync(el);
     } else if (this.sel.type === "room" || this.sel.type === "fixture") {
       var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h, sx = this.snapVal(p.x), sy = this.snapVal(p.y);
       if (k.indexOf("w") >= 0) x1 = sx; if (k.indexOf("e") >= 0) x2 = sx; if (k.indexOf("n") >= 0) y1 = sy; if (k.indexOf("s") >= 0) y2 = sy;
       el.x = Math.min(x1, x2); el.y = Math.min(y1, y2); el.w = Math.max(this.data.grid, Math.abs(x2 - x1)); el.h = Math.max(this.data.grid, Math.abs(y2 - y1));
+      if (this.sel.type === "room") el.pts = rectPts(el);
     }
     this.render(); this.updatePanel(true);
   };
@@ -530,14 +616,28 @@
       if (after !== d.before) { this.history.push(d.before); this.future = []; this.markDirty(); }
       this.render(); this.updatePanel(); return;
     }
+    if (this.tool === "room" && this.roomDraft && isClick && e.button === 0) {
+      var rp0 = this.snapPoint(p), first0 = this.roomDraft.pts[0], last0 = this.roomDraft.pts[this.roomDraft.pts.length - 1], np0 = this.ortho({ x: last0[0], y: last0[1] }, rp0);
+      if (this.roomDraft.pts.length >= 3 && Math.hypot(np0.x - first0[0], np0.y - first0[1]) * this.view.scale < 10) return this.closeRoomDraft();
+      if (Math.hypot(np0.x - last0[0], np0.y - last0[1]) >= this.data.grid / 2) this.roomDraft.pts.push([np0.x, np0.y]);
+      return this.render();
+    }
     if (d && d.kind === "room") {
       var a = d.start, b = d.cur, x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y);
       if (w >= this.data.grid && h >= this.data.grid) {
         var id = uid(), n = this.data.rooms.length + 1;
-        this.commit(function () { this.data.rooms.push({ id: id, name: "Room " + n, x: x, y: y, w: w, h: h }); this.sel = { type: "room", id: id }; });
+        this.commit(function () { this.data.rooms.push(roomSync({ id: id, name: "Room " + n, pts: rectPts({ x: x, y: y, w: w, h: h }) })); this.sel = { type: "room", id: id }; });
         this.focusProp("name");
-      } else this.render();
-      return;
+        return;
+      }
+      if (!isClick) return this.render();
+      // a plain click starts (or extends) a polygon room
+      var rp = this.snapPoint(p);
+      if (!this.roomDraft) { this.roomDraft = { pts: [[rp.x, rp.y]], cur: rp }; this.hint("Click each corner of the room. Click the first point again, press Enter, or double-click to close. Esc cancels."); return this.render(); }
+      var first = this.roomDraft.pts[0], last = this.roomDraft.pts[this.roomDraft.pts.length - 1], np = this.ortho({ x: last[0], y: last[1] }, rp);
+      if (this.roomDraft.pts.length >= 3 && Math.hypot(np.x - first[0], np.y - first[1]) * this.view.scale < 10) return this.closeRoomDraft();
+      if (Math.hypot(np.x - last[0], np.y - last[1]) >= this.data.grid / 2) this.roomDraft.pts.push([np.x, np.y]);
+      return this.render();
     }
     if (d && d.kind === "pan") return;
     if (!isClick || e.button !== 0) return;
@@ -588,8 +688,8 @@
     if (mod) return;
     var g = this.data.grid;
     switch (e.key) {
-      case "Escape": if (this.draft) this.finishWall(); else if (this.tool !== "select") this.setTool("select"); else { this.sel = null; this.render(); this.updatePanel(); } break;
-      case "Enter": if (this.draft) this.finishWall(); break;
+      case "Escape": if (this.draft || this.roomDraft) this.finishWall(); else if (this.tool !== "select") this.setTool("select"); else { this.sel = null; this.render(); this.updatePanel(); } break;
+      case "Enter": if (this.roomDraft) this.closeRoomDraft(); else if (this.draft) this.finishWall(); break;
       case "Delete": case "Backspace": e.preventDefault(); this.deleteSelected(); break;
       case "ArrowLeft": e.preventDefault(); this.nudge(-g, 0); break;
       case "ArrowRight": e.preventDefault(); this.nudge(g, 0); break;
@@ -631,10 +731,12 @@
         f("Start X, Y (ft)", "p1", el.x1 + ", " + el.y1, 'title="x, y in feet"') +
         f("End X, Y (ft)", "p2", el.x2 + ", " + el.y2, 'title="x, y in feet"');
     } else if (this.sel.type === "room") {
+      var isRect = roomIsRect(el);
       html = '<h6>Room</h6>' + f("Name", "name", el.name) +
-        '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.5" min="0.5"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.5" min="0.5"') + '</div>' +
+        (isRect ? '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.5" min="0.5"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.5" min="0.5"') + '</div>'
+                : f("Shape", "shape", roomPts(el).length + " corners · " + ftIn(el.w) + " × " + ftIn(el.h) + " overall", "readonly") + '<div class="small text-muted mb-2">Drag a corner handle to reshape.</div>') +
         '<div class="fp-row">' + f("X (ft)", "x", el.x, 'type="number" step="0.5"') + f("Y (ft)", "y", el.y, 'type="number" step="0.5"') + '</div>' +
-        f("Area", "area", sqft(el.w * el.h), "readonly");
+        f("Area", "area", sqft(roomArea(el)), "readonly");
     } else if (this.sel.type === "opening") {
       var isDoor = el.type === "door", dkNow = isDoor ? doorKind(el, this.wallOf(el)) : null;
       html = '<h6>' + (isDoor ? "Door" : "Window") + '</h6>' +
@@ -685,7 +787,11 @@
           else if (name === "label") cur.label = v;
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
-          else if (["w", "h", "x", "y", "width", "size", "height", "sill"].indexOf(name) >= 0) { var n = +v; if (isFinite(n) && (name === "x" || name === "y" || name === "sill" || n > 0)) cur[name] = n; }
+          else if (["w", "h", "x", "y", "width", "size", "height", "sill"].indexOf(name) >= 0) {
+            var n = +v; if (!isFinite(n) || !(name === "x" || name === "y" || name === "sill" || n > 0)) return;
+            if (self.sel.type === "room") { if (name === "x" || name === "y") translateRoom(cur, name === "x" ? n - cur.x : 0, name === "y" ? n - cur.y : 0); else { cur[name] = n; cur.pts = rectPts(cur); roomSync(cur); } }
+            else cur[name] = n;
+          }
         };
         if (live) { run(); self.render(); } else self.commit(run);
       };
@@ -714,15 +820,15 @@
     if (!el) return;
     var set = function (name, v) { var i = this.props.querySelector('[data-prop="' + name + '"]'); if (i && document.activeElement !== i) i.value = v; }.bind(this);
     if (this.sel.type === "wall" || this.sel.type === "guide") { set("length", ftIn(seg(el).len)); set("p1", el.x1 + ", " + el.y1); set("p2", el.x2 + ", " + el.y2); }
-    if (this.sel.type === "room") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); set("area", sqft(el.w * el.h)); }
+    if (this.sel.type === "room") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); set("area", sqft(roomArea(el))); set("shape", roomPts(el).length + " corners · " + ftIn(el.w) + " × " + ftIn(el.h) + " overall"); }
     if (this.sel.type === "fixture") { set("w", el.w); set("h", el.h); }
     if (this.sel.type === "opening") set("pos", Math.round(el.pos * 100) / 100);
   };
 
   P.renderSummary = function () {
     var d = this.data, self = this, total = 0, rows = d.rooms.map(function (r) {
-      var a = r.w * r.h; total += a;
-      return '<tr data-room="' + r.id + '" class="' + (self.sel && self.sel.id === r.id ? "table-active" : "") + '"><td>' + esc(r.name) + '</td><td class="text-muted text-nowrap">' + ftIn(r.w) + " × " + ftIn(r.h) + '</td><td class="text-end text-nowrap">' + Math.round(a).toLocaleString() + '</td></tr>';
+      var a = roomArea(r); total += a;
+      return '<tr data-room="' + r.id + '" class="' + (self.sel && self.sel.id === r.id ? "table-active" : "") + '"><td>' + esc(r.name) + '</td><td class="text-muted text-nowrap">' + (roomIsRect(r) ? ftIn(r.w) + " × " + ftIn(r.h) : roomPts(r).length + "-sided") + '</td><td class="text-end text-nowrap">' + Math.round(a).toLocaleString() + '</td></tr>';
     }).join("");
     var doors = d.openings.filter(function (o) { return o.type === "door"; }).length, wins = d.openings.length - doors;
     var extLen = 0; d.walls.forEach(function (w) { if (w.type === "exterior") extLen += seg(w).len; });
@@ -760,16 +866,17 @@
 
     // rooms
     d.rooms.forEach(function (r) {
-      var p = S(r.x, r.y), w = r.w * s, h = r.h * s, selected = o.ui && self.sel && self.sel.id === r.id;
-      ctx.fillStyle = selected ? C.selFill : C.room; ctx.fillRect(p.x, p.y, w, h);
-      if (selected) { ctx.strokeStyle = C.sel; ctx.lineWidth = 1.5; ctx.strokeRect(p.x, p.y, w, h); }
+      var pts = roomPts(r), p = S(r.x, r.y), w = r.w * s, h = r.h * s, selected = o.ui && self.sel && self.sel.id === r.id, rect = roomIsRect(r);
+      ctx.beginPath(); pts.forEach(function (q, i) { var sq = S(q[0], q[1]); if (i) ctx.lineTo(sq.x, sq.y); else ctx.moveTo(sq.x, sq.y); }); ctx.closePath();
+      ctx.fillStyle = selected ? C.selFill : C.room; ctx.fill();
+      if (selected) { ctx.strokeStyle = C.sel; ctx.lineWidth = 1.5; ctx.stroke(); }
       ctx.fillStyle = C.roomText; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      var fs = clamp(s * 0.9, 9, 15);
+      var fs = clamp(s * 0.9, 9, 15), c = S(roomCentroid(r).x, roomCentroid(r).y);
       if (w > 30 && h > 16) {
-        ctx.font = "600 " + fs + "px system-ui, sans-serif"; ctx.fillText(self.fitText(ctx, r.name, w - 8), p.x + w / 2, p.y + h / 2 - (h > 40 ? fs * 0.7 : 0));
-        if (h > 40) { ctx.font = (fs - 2) + "px system-ui, sans-serif"; ctx.fillText(ftIn(r.w) + " × " + ftIn(r.h), p.x + w / 2, p.y + h / 2 + fs * 0.5); ctx.fillText(sqft(r.w * r.h), p.x + w / 2, p.y + h / 2 + fs * 1.6); }
+        ctx.font = "600 " + fs + "px system-ui, sans-serif"; ctx.fillText(self.fitText(ctx, r.name, w - 8), c.x, c.y - (h > 40 ? fs * 0.7 : 0));
+        if (h > 40) { ctx.font = (fs - 2) + "px system-ui, sans-serif"; if (rect) ctx.fillText(ftIn(r.w) + " × " + ftIn(r.h), c.x, c.y + fs * 0.5); ctx.fillText(sqft(roomArea(r)), c.x, c.y + fs * (rect ? 1.6 : 0.5)); }
       }
-      if (selected && o.ui) { self.dimText(ctx, S(r.x, r.y), S(r.x + r.w, r.y), ftIn(r.w), -1); self.dimText(ctx, S(r.x, r.y), S(r.x, r.y + r.h), ftIn(r.h), 1); }
+      if (selected && o.ui && rect) { self.dimText(ctx, S(r.x, r.y), S(r.x + r.w, r.y), ftIn(r.w), -1); self.dimText(ctx, S(r.x, r.y), S(r.x, r.y + r.h), ftIn(r.h), 1); }
     });
 
     // walls
@@ -867,6 +974,16 @@
           if (this.draft.cur.snapped === "endpoint") { ctx.strokeStyle = C.draft; ctx.lineWidth = 1.5; ctx.strokeRect(cu.x - 6, cu.y - 6, 12, 12); }
         }
       }
+      // polygon room draft
+      if (this.roomDraft) {
+        var rd = this.roomDraft.pts, rc0 = S(rd[0][0], rd[0][1]);
+        ctx.strokeStyle = C.sel; ctx.fillStyle = C.selFill; ctx.lineWidth = 1.5; ctx.beginPath();
+        rd.forEach(function (q, i) { var sq = S(q[0], q[1]); if (i) ctx.lineTo(sq.x, sq.y); else ctx.moveTo(sq.x, sq.y); });
+        if (this.roomDraft.cur) { var rcu = S(this.roomDraft.cur.x, this.roomDraft.cur.y); ctx.lineTo(rcu.x, rcu.y); }
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        rd.forEach(function (q) { var sq = S(q[0], q[1]); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(sq.x, sq.y, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
+        if (rd.length >= 3) { ctx.strokeStyle = C.draft; ctx.beginPath(); ctx.arc(rc0.x, rc0.y, 7, 0, Math.PI * 2); ctx.stroke(); }
+      }
       // room draft
       if (this.drag && this.drag.kind === "room") {
         var a = S(this.drag.start.x, this.drag.start.y), bb = S(this.drag.cur.x, this.drag.cur.y);
@@ -883,8 +1000,11 @@
       var hr = this.hoverRoom && this.mouse ? this.find("room", this.hoverRoom) : null, ha = !hr && this.hoverArea && this.mouse ? this.hoverArea : null;
       if ((hr || ha) && !this.drag) {
         var box = hr || ha, hp = S(box.x, box.y);
-        ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(hp.x, hp.y, box.w * s, box.h * s); ctx.setLineDash([]);
-        var lines = hr ? [hr.name || "Room", ftIn(hr.w) + " × " + ftIn(hr.h) + "  ·  " + sqft(hr.w * hr.h)]
+        ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        if (hr) { ctx.beginPath(); roomPts(hr).forEach(function (q, i) { var sq = S(q[0], q[1]); if (i) ctx.lineTo(sq.x, sq.y); else ctx.moveTo(sq.x, sq.y); }); ctx.closePath(); ctx.stroke(); }
+        else ctx.strokeRect(hp.x, hp.y, box.w * s, box.h * s);
+        ctx.setLineDash([]);
+        var lines = hr ? [hr.name || "Room", (roomIsRect(hr) ? ftIn(hr.w) + " × " + ftIn(hr.h) + "  ·  " : "") + sqft(roomArea(hr))]
                        : ["Enclosed area", ftIn(ha.w) + " × " + ftIn(ha.h) + " inside walls  ·  " + sqft(ha.area), "Double-click to make it a room"];
         this.tooltip(ctx, S(this.mouse.x, this.mouse.y), lines, cw);
       }
