@@ -200,11 +200,12 @@
     var dx = w.x2 - w.x1, dz = w.y2 - w.y1, len = Math.hypot(dx, dz); if (len < 0.01) return;
     var t = w.thickness || (w.type === "interior" ? 0.375 : 0.5), ang = -Math.atan2(dz, dx), ux = dx / len, uz = dz / len;
     var material = w.type === "interior" ? this.mat(C.interior) : this.extMat, self = this, frame = this.mat(C.frame, { roughness: 0.5 });
-    var piece = function (a, b, y0, y1, mat, thick, extendEnds) {
+    var nx = -uz, nz = ux;   // wall normal (for offsetting sliding-door panes off the centre line)
+    var piece = function (a, b, y0, y1, mat, thick, extendEnds, off) {
       if (b - a <= 0.001 || y1 - y0 <= 0.001) return;
       var ea = extendEnds && a <= 0.001 ? t / 2 : 0, eb = extendEnds && b >= len - 0.001 ? t / 2 : 0;
-      var L = (b - a) + ea + eb, mid = (a + b) / 2 + (eb - ea) / 2;
-      self.box(L, y1 - y0, thick || t, w.x1 + ux * mid, base + (y0 + y1) / 2, w.y1 + uz * mid, mat || material, true, true, ang, a - ea, y0);
+      var L = (b - a) + ea + eb, mid = (a + b) / 2 + (eb - ea) / 2, o = off || 0;
+      self.box(L, y1 - y0, thick || t, w.x1 + ux * mid + nx * o, base + (y0 + y1) / 2, w.y1 + uz * mid + nz * o, mat || material, true, true, ang, a - ea, y0);
     };
     ops = ops.slice().sort(function (a, b) { return a.pos - b.pos; });
     var cursor = 0;
@@ -217,6 +218,11 @@
         if (kind === "garage") {
           piece(a + 0.05, b - 0.05, 0, dh - 0.02, self.mat(C.garage, { roughness: 0.7 }), 0.2, false);
           var panels = Math.max(3, Math.round(dh / 1.75)); for (var pi = 1; pi < panels; pi++) piece(a + 0.05, b - 0.05, dh * pi / panels - 0.02, dh * pi / panels + 0.02, self.mat("#b9b4a9"), 0.24, false);
+        } else if (kind === "sliding") {
+          var glass = self.mat(C.glass, { transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.3 }), mid2 = (a + b) / 2, sd = (o.swing || 1) * t / 4;
+          piece(a, mid2 + 0.05, 0.1, dh - 0.1, glass, 0.08, false, sd); piece(mid2 - 0.05, b, 0.1, dh - 0.1, glass, 0.08, false, -sd);
+          [a, mid2, b].forEach(function (x) { piece(x - 0.08, x + 0.08, 0, dh, frame, t + 0.1, false); });   // stiles
+          piece(a, b, 0, 0.1, frame, t + 0.1, false);   // track
         } else {
           piece(a + 0.05, b - 0.05, 0, dh - 0.02, self.mat(C.door, { roughness: 0.6 }), 0.15, false);
         }

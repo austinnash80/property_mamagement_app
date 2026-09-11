@@ -8,7 +8,7 @@
   var WALL_TYPES = { exterior: 0.5, interior: 0.375 };  // thickness in ft (6", 4.5")
   var OPENING_WIDTH = { door: 3, window: 4 };
   // Door kinds (default width / height in ft) and window defaults. Heights matter in the 3D view.
-  var DOOR_KINDS = { exterior: { label: "Exterior door", w: 3, h: 6.67 }, interior: { label: "Interior door", w: 2.667, h: 6.67 }, garage: { label: "Garage door", w: 9, h: 7 } };
+  var DOOR_KINDS = { exterior: { label: "Exterior door", w: 3, h: 6.67 }, interior: { label: "Interior door", w: 2.667, h: 6.67 }, garage: { label: "Garage door", w: 9, h: 7 }, sliding: { label: "Sliding door", w: 6, h: 6.67 } };
   var WINDOW_DEF = { w: 4, sill: 3, h: 3.67 };
   function doorKind(o, w) { return o.kind || (w && w.type === "interior" ? "interior" : "exterior"); }
   // Fixture catalog: default footprint in ft (w across, h deep). Glyphs are drawn in drawFixture.
@@ -65,7 +65,7 @@
     '    <button class="btn btn-outline-secondary" data-tool="line" title="Guide line (L): a thin dashed reference line that shows its length, e.g. a setback. Not shown in 3D.">Line</button>' +
     '  </div>' +
     '  <select class="form-select form-select-sm w-auto fp-kind d-none" title="Which fixture to place"></select>' +
-    '  <select class="form-select form-select-sm w-auto fp-doorkind d-none" title="Which kind of door to place"><option value="auto">Door: match wall</option><option value="exterior">Exterior door</option><option value="interior">Interior door</option><option value="garage">Garage door</option></select>' +
+    '  <select class="form-select form-select-sm w-auto fp-doorkind d-none" title="Which kind of door to place"><option value="auto">Door: match wall</option><option value="exterior">Exterior door</option><option value="interior">Interior door</option><option value="garage">Garage door</option><option value="sliding">Sliding door</option></select>' +
     '  <div class="btn-group btn-group-sm" role="group">' +
     '    <button class="btn btn-outline-secondary" data-act="undo" title="Undo (Ctrl+Z)">Undo</button>' +
     '    <button class="btn btn-outline-secondary" data-act="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>' +
@@ -643,7 +643,7 @@
         '<div class="fp-row">' + f("Width (ft)", "width", el.width, 'type="number" step="0.25" min="1"') + f("Height (ft)", "height", el.height != null ? el.height : (isDoor ? DOOR_KINDS[dkNow].h : WINDOW_DEF.h), 'type="number" step="0.25" min="0.5"') + '</div>' +
         (!isDoor ? f("Sill height (ft)", "sill", el.sill != null ? el.sill : WINDOW_DEF.sill, 'type="number" step="0.25" min="0"') : "") +
         f("Position from wall start (ft)", "pos", Math.round(el.pos * 100) / 100, 'type="number" step="0.25"') +
-        (isDoor ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">' + (dkNow === "garage" ? "Flip inside" : "Flip swing") + '</button>' + (dkNow !== "garage" ? '<button class="btn btn-outline-secondary btn-sm" data-btn="hinge">Flip hinge</button>' : "") + '</div>' : "");
+        (isDoor ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">' + ({ garage: "Flip inside", sliding: "Flip sides" }[dkNow] || "Flip swing") + '</button>' + (dkNow !== "garage" ? '<button class="btn btn-outline-secondary btn-sm" data-btn="hinge">' + (dkNow === "sliding" ? "Swap panels" : "Flip hinge") + '</button>' : "") + '</div>' : "");
     } else if (this.sel.type === "fixture") {
       var kinds = Object.keys(FIXTURES).map(function (k) { return '<option value="' + k + '"' + (el.kind === k ? " selected" : "") + '>' + FIXTURES[k].label + '</option>'; }).join("");
       html = '<h6>Fixture</h6>' +
@@ -793,6 +793,18 @@
         ctx.strokeStyle = selected ? C.sel : C.door; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
         ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
         ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(A.x + sg.nx * gdir * depth, A.y + sg.ny * gdir * depth); ctx.lineTo(B.x + sg.nx * gdir * depth, B.y + sg.ny * gdir * depth); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = C.wall; [A, B].forEach(function (j) { ctx.beginPath(); ctx.moveTo(j.x - sg.nx * t / 2, j.y - sg.ny * t / 2); ctx.lineTo(j.x + sg.nx * t / 2, j.y + sg.ny * t / 2); ctx.stroke(); });
+      } else if (op.type === "door" && doorKind(op, w) === "sliding") {
+        // two overlapping panels: fixed on one side of the wall centre line, sliding on the other (arrow shows travel)
+        var M = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, sd = op.swing || 1, ox = sg.nx * sd * t / 4, oy = sg.ny * sd * t / 4;
+        var fixedA = op.hinge ? M : A, fixedB = op.hinge ? B : M, slideA = op.hinge ? A : M, slideB = op.hinge ? M : B;
+        ctx.strokeStyle = selected ? C.sel : C.win; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(fixedA.x + ox, fixedA.y + oy); ctx.lineTo(fixedB.x + ox, fixedB.y + oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(slideA.x - ox, slideA.y - oy); ctx.lineTo(slideB.x - ox, slideB.y - oy); ctx.stroke();
+        var ah = 5, ax = (slideA.x + slideB.x) / 2 - ox, ay = (slideA.y + slideB.y) / 2 - oy, tdir = op.hinge ? -1 : 1, off2 = sd * -1;
+        ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax - sg.ux * tdir * 14 + sg.nx * off2 * 0, ay - sg.uy * tdir * 14); ctx.stroke();
+        var tipx = ax - sg.ux * tdir * 14, tipy = ay - sg.uy * tdir * 14;
+        ctx.beginPath(); ctx.moveTo(tipx, tipy); ctx.lineTo(tipx + sg.ux * tdir * ah - sg.nx * ah / 2, tipy + sg.uy * tdir * ah - sg.ny * ah / 2); ctx.lineTo(tipx + sg.ux * tdir * ah + sg.nx * ah / 2, tipy + sg.uy * tdir * ah + sg.ny * ah / 2); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
         ctx.strokeStyle = C.wall; [A, B].forEach(function (j) { ctx.beginPath(); ctx.moveTo(j.x - sg.nx * t / 2, j.y - sg.ny * t / 2); ctx.lineTo(j.x + sg.nx * t / 2, j.y + sg.ny * t / 2); ctx.stroke(); });
       } else if (op.type === "door") {
         var hinge = op.hinge ? B : A, other = op.hinge ? A : B, dir = (op.swing || 1) * (op.hinge ? -1 : 1);
