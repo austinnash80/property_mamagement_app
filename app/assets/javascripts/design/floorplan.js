@@ -10,6 +10,12 @@
   // Door kinds (default width / height in ft) and window defaults. Heights matter in the 3D view.
   var DOOR_KINDS = { exterior: { label: "Exterior door", w: 3, h: 6.67 }, interior: { label: "Interior door", w: 2.667, h: 6.67 }, garage: { label: "Garage door", w: 9, h: 7 }, sliding: { label: "Sliding door", w: 6, h: 6.67 } };
   var WINDOW_DEF = { w: 4, sill: 3, h: 3.67 };
+  // Roof sections: axis-aligned rectangles with their own style; the 3D view builds these instead of the automatic roof.
+  var ROOF_KINDS = [["hip", "Hip"], ["gable", "Gable"], ["shed", "Shed (single slope)"], ["flat", "Flat"]];
+  var PITCHES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+  var RIDGES = [["auto", "Auto (along the long side)"], ["x", "Left ↔ right"], ["y", "Front ↔ back"]];
+  var HIGH_SIDES = [["n", "Back (top of plan)"], ["s", "Front (bottom)"], ["w", "Left"], ["e", "Right"]];
+  var ROOF_DEF = { style: "hip", pitch: 6, ridge: "auto", overhang: 1.5, eave: 9, high: "n" };
   function doorKind(o, w) { return o.kind || (w && w.type === "interior" ? "interior" : "exterior"); }
   // Fixture catalog: default footprint in ft (w across, h deep). Glyphs are drawn in drawFixture.
   var FIXTURES = {
@@ -25,7 +31,7 @@
   var C = {
     bg: "#ffffff", gridMinor: "#f0f2f5", gridMajor: "#dde2e8", boundary: "#9aa3ad",
     wall: "#2b2f36", sel: "#0d6efd", selFill: "rgba(13,110,253,.12)", room: "rgba(255,214,102,.22)",
-    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", guide: "#6b7280", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
+    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", guide: "#6b7280", roof: "#8b5e3c", roofFill: "rgba(139,94,60,.10)", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
   };
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -38,7 +44,7 @@
   function sqft(a) { return Math.round(a).toLocaleString() + " sq ft"; }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    var n = { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [] };
+    var n = { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [], roofs: d.roofs || [] };
     n.rooms.forEach(roomSync);
     return n;
   }
@@ -107,6 +113,7 @@
     '    <button class="btn btn-outline-secondary" data-tool="label" title="Click to place text (T)">Label</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="fixture" title="Place stairs, plumbing, appliances, furniture (X)">Fixture</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="line" title="Guide line (L): a thin dashed reference line that shows its length, e.g. a setback. Not shown in 3D.">Line</button>' +
+    '    <button class="btn btn-outline-secondary" data-tool="roof" title="Roof section (O): drag a rectangle over the area a roof covers, then set hip/gable/shed, pitch and overhang. Replaces the automatic roof in 3D.">Roof</button>' +
     '  </div>' +
     '  <select class="form-select form-select-sm w-auto fp-kind d-none" title="Which fixture to place"></select>' +
     '  <select class="form-select form-select-sm w-auto fp-doorkind d-none" title="Which kind of door to place"><option value="auto">Door: match wall</option><option value="exterior">Exterior door</option><option value="interior">Interior door</option><option value="garage">Garage door</option><option value="sliding">Sliding door</option></select>' +
@@ -137,7 +144,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space to pan<br>Right-drag, two-finger drag or Shift+drag to box-select · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L O tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space to pan<br>Right-drag, two-finger drag or Shift+drag to box-select · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
     '  </aside>' +
     '</div>';
 
@@ -180,7 +187,7 @@
   P.translateEl = function (type, el, dx, dy) {
     if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
     else if (type === "room") translateRoom(el, dx, dy);
-    else if (type === "label" || type === "fixture") { el.x += dx; el.y += dy; }
+    else if (type === "label" || type === "fixture" || type === "roof") { el.x += dx; el.y += dy; }
   };
   P.anchorOf = function (type, el) { return type === "wall" || type === "guide" ? { x: el.x1, y: el.y1 } : { x: el.x, y: el.y }; };
 
@@ -310,7 +317,7 @@
 
   // ---------------------------------------------------------------- lookup / hit testing
   P.find = function (type, id) { var list = this.listFor(type); for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; };
-  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : type === "guide" ? this.data.guides : this.data.labels; };
+  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : type === "guide" ? this.data.guides : type === "roof" ? this.data.roofs : this.data.labels; };
   P.underlay = function () {
     if (!this.underlayId) return null;
     var sib = (this.opts.siblings || []).filter(function (p) { return String(p.id) === String(this.underlayId); }, this)[0];
@@ -354,6 +361,10 @@
       r = this.data.rooms[i];
       if (pointInPoly(p, roomPts(r))) return { type: "room", id: r.id };
     }
+    for (i = this.data.roofs.length - 1; i >= 0; i--) {
+      r = this.data.roofs[i];
+      if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "roof", id: r.id };
+    }
     return null;
   };
 
@@ -362,7 +373,7 @@
     var self = this;
     if (this.sel.type === "wall" || this.sel.type === "guide") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
     if (this.sel.type === "room" && !roomIsRect(el)) return roomPts(el).map(function (p, i) { return { k: "v" + i, w: { x: p[0], y: p[1] }, s: self.toScreen(p[0], p[1]) }; });
-    if (this.sel.type === "room" || this.sel.type === "fixture") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
+    if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
     return [];
   };
   P.hitHandle = function (sx, sy) {
@@ -428,7 +439,7 @@
     this.tool = t; this.draft = null; this.roomDraft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building.", roof: "Drag a rectangle over the area one roof section covers (it can extend past the walls). Use several for L-shapes or porches. Style, pitch and overhang are in the side panel." }[t]);
     this.kindSel.classList.toggle("d-none", t !== "fixture");
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
@@ -510,6 +521,7 @@
       this.drag = { kind: "room", start: sp, cur: sp };
       return;
     }
+    if (this.tool === "roof") { var rsp = this.snapPoint(p); this.drag = { kind: "roof", start: rsp, cur: rsp }; return; }
     // wall / door / window / label act on click (pointerup)
   };
 
@@ -527,7 +539,7 @@
         return this.render();
       }
       if (d.kind === "moveMulti") return this.dragMulti(d, p);
-      if (d.kind === "room") { d.cur = this.snapPoint(p); return this.render(); }
+      if (d.kind === "room" || d.kind === "roof") { d.cur = this.snapPoint(p); return this.render(); }
       if (d.kind === "move") return this.dragMove(d, p);
       if (d.kind === "handle") return this.dragHandle(d, p);
     }
@@ -638,7 +650,7 @@
       el.x1 = o.x1 + dx; el.y1 = o.y1 + dy; el.x2 = o.x2 + dx; el.y2 = o.y2 + dy;
     } else if (d.type === "room") {
       var nxr = this.snapVal(o.x + raw.x), nyr = this.snapVal(o.y + raw.y); el.pts = o.pts; translateRoom(el, nxr - o.x, nyr - o.y);
-    } else if (d.type === "label" || d.type === "fixture") {
+    } else if (d.type === "label" || d.type === "fixture" || d.type === "roof") {
       el.x = this.snapVal(o.x + raw.x); el.y = this.snapVal(o.y + raw.y);
     } else if (d.type === "opening") {
       var w = this.wallOf(el); if (w) { var pr = project(p, w); el.pos = this.snapVal(clamp(pr.pos, el.width / 2, pr.len - el.width / 2)); }
@@ -674,7 +686,7 @@
       if (k === "p1") { el.x1 = gnp.x; el.y1 = gnp.y; } else { el.x2 = gnp.x; el.y2 = gnp.y; }
     } else if (this.sel.type === "room" && k.charAt(0) === "v") {
       var vi = +k.slice(1), vp = this.snapPoint(p); el.pts = roomPts(el).slice(); el.pts[vi] = [vp.x, vp.y]; roomSync(el);
-    } else if (this.sel.type === "room" || this.sel.type === "fixture") {
+    } else if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof") {
       var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h, sx = this.snapVal(p.x), sy = this.snapVal(p.y);
       if (k.indexOf("w") >= 0) x1 = sx; if (k.indexOf("e") >= 0) x2 = sx; if (k.indexOf("n") >= 0) y1 = sy; if (k.indexOf("s") >= 0) y2 = sy;
       el.x = Math.min(x1, x2); el.y = Math.min(y1, y2); el.w = Math.max(this.data.grid, Math.abs(x2 - x1)); el.h = Math.max(this.data.grid, Math.abs(y2 - y1));
@@ -702,6 +714,7 @@
         this.data.guides.forEach(function (g) { if (inside(g.x1, g.y1) && inside(g.x2, g.y2)) picked.push({ type: "guide", id: g.id }); });
         this.data.rooms.forEach(function (r) { if (inside(r.x, r.y) && inside(r.x + r.w, r.y + r.h)) picked.push({ type: "room", id: r.id }); });
         this.data.fixtures.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "fixture", id: f.id }); });
+        this.data.roofs.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "roof", id: f.id }); });
         this.data.labels.forEach(function (l) { if (inside(l.x, l.y)) picked.push({ type: "label", id: l.id }); });
         var set = d.keep.slice(); picked.forEach(function (x) { if (!set.some(function (y) { return y.type === x.type && y.id === x.id; })) set.push(x); });
         this.selSet = set; this.sel = set.length ? set[0] : null;
@@ -712,6 +725,14 @@
       var after = JSON.stringify(this.data);
       if (after !== d.before) { this.history.push(d.before); this.future = []; this.markDirty(); }
       this.render(); this.updatePanel(); return;
+    }
+    if (d && d.kind === "roof") {
+      var ra = d.start, rb = d.cur, rx = Math.min(ra.x, rb.x), ry = Math.min(ra.y, rb.y), rw = Math.abs(rb.x - ra.x), rh = Math.abs(rb.y - ra.y);
+      if (rw >= 2 && rh >= 2) {
+        var rid = uid(), def = Object.assign({}, ROOF_DEF, this.lastRoof || {});
+        this.commit(function () { this.data.roofs.push(Object.assign({ id: rid, x: rx, y: ry, w: rw, h: rh }, def)); this.setSel({ type: "roof", id: rid }); });
+      } else this.render();
+      return;
     }
     if (this.tool === "room" && this.roomDraft && isClick && e.button === 0) {
       var rp0 = this.snapPoint(p), first0 = this.roomDraft.pts[0], last0 = this.roomDraft.pts[this.roomDraft.pts.length - 1], np0 = this.ortho({ x: last0[0], y: last0[1] }, rp0);
@@ -782,7 +803,7 @@
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? this.redo() : this.undo(); }
     if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); return this.redo(); }
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); return this.save(false); }
-    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); var all = []; ["wall", "guide", "room", "fixture", "label"].forEach(function (t) { this.listFor(t).forEach(function (x) { all.push({ type: t, id: x.id }); }); }, this); this.selSet = all; this.sel = all[0] || null; this.setTool("select"); this.updatePanel(); return; }
+    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); var all = []; ["wall", "guide", "room", "fixture", "roof", "label"].forEach(function (t) { this.listFor(t).forEach(function (x) { all.push({ type: t, id: x.id }); }); }, this); this.selSet = all; this.sel = all[0] || null; this.setTool("select"); this.updatePanel(); return; }
     if (mod) return;
     var g = this.data.grid;
     switch (e.key) {
@@ -802,6 +823,7 @@
       case "t": case "T": this.setTool("label"); break;
       case "x": case "X": this.setTool("fixture"); break;
       case "l": case "L": this.setTool("line"); break;
+      case "o": case "O": this.setTool("roof"); break;
       case "g": case "G": this.act("grid"); break;
       case "f": case "F": this.fit(); break;
       case "+": case "=": this.act("zoomIn"); break;
@@ -865,6 +887,16 @@
         (el.kind === "stairs" ? '<div class="fp-field"><label>Direction</label><select class="form-select form-select-sm" data-prop="dir"><option value="up"' + (el.dir !== "down" ? " selected" : "") + '>Up (arrow points to the top step)</option><option value="down"' + (el.dir === "down" ? " selected" : "") + '>Down</option></select></div>' : "") +
         f("Label", "label", el.label || "", 'placeholder="optional text, e.g. UP or DN"') +
         '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="rotate">Rotate 90°</button></div>';
+    } else if (this.sel.type === "roof") {
+      var opt = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (String(cur) === String(o[0]) ? " selected" : "") + '>' + o[1] + '</option>'; }).join(""); };
+      html = '<h6>Roof section</h6><div class="small text-muted mb-2">Built in 3D in place of the automatic roof for this level.</div>' +
+        '<div class="fp-field"><label>Style</label><select class="form-select form-select-sm" data-prop="style">' + opt(ROOF_KINDS, el.style) + '</select></div>' +
+        (el.style !== "flat" ? '<div class="fp-field"><label>Pitch (rise per 12")</label><select class="form-select form-select-sm" data-prop="pitch">' + opt(PITCHES.map(function (p) { return [p, p + ":12"]; }), el.pitch) + '</select></div>' : "") +
+        (el.style === "hip" || el.style === "gable" ? '<div class="fp-field"><label>Ridge runs</label><select class="form-select form-select-sm" data-prop="ridge">' + opt(RIDGES, el.ridge || "auto") + '</select></div>' : "") +
+        (el.style === "shed" ? '<div class="fp-field"><label>High side</label><select class="form-select form-select-sm" data-prop="high">' + opt(HIGH_SIDES, el.high || "n") + '</select></div>' : "") +
+        '<div class="fp-row">' + f("Overhang (ft)", "overhang", el.overhang != null ? el.overhang : 1.5, 'type="number" step="0.25" min="0"') + f("Eave height (ft)", "eave", el.eave || 9, 'type="number" step="0.5" min="1"') + '</div>' +
+        '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.5" min="2"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.5" min="2"') + '</div>' +
+        '<div class="fp-row">' + f("X (ft)", "x", el.x, 'type="number" step="0.5"') + f("Y (ft)", "y", el.y, 'type="number" step="0.5"') + '</div>';
     } else if (this.sel.type === "guide") {
       html = '<h6>Guide line</h6><div class="small text-muted mb-2">Reference only; not shown in 3D.</div>' +
         f("Label", "label", el.label || "", 'placeholder="e.g. 5\' side yard setback"') +
@@ -898,6 +930,9 @@
             if (self.sel.type === "fixture") { if (v === "stairs") { cur.dir = cur.dir || "up"; if (!cur.label) cur.label = "UP"; } else if (/^(UP|DN)$/.test(cur.label || "")) cur.label = ""; }
           }
           else if (name === "label") cur.label = v;
+          else if (name === "style" || name === "ridge" || name === "high") { cur[name] = v; self.lastRoof = Object.assign({}, self.lastRoof || {}, { style: cur.style, pitch: cur.pitch, ridge: cur.ridge, overhang: cur.overhang, eave: cur.eave, high: cur.high }); }
+          else if (name === "pitch") { cur.pitch = +v || 6; self.lastRoof = Object.assign({}, self.lastRoof || {}, { pitch: cur.pitch }); }
+          else if (name === "overhang" || name === "eave") { var ov = +v; if (isFinite(ov) && ov >= 0) { cur[name] = ov; self.lastRoof = Object.assign({}, self.lastRoof || {}); self.lastRoof[name] = ov; } }
           else if (name === "dir") { cur.dir = v; if (!cur.label || /^(UP|DN|DOWN)$/i.test(cur.label)) cur.label = v === "down" ? "DN" : "UP"; }
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
@@ -935,7 +970,7 @@
     var set = function (name, v) { var i = this.props.querySelector('[data-prop="' + name + '"]'); if (i && document.activeElement !== i) i.value = v; }.bind(this);
     if (this.sel.type === "wall" || this.sel.type === "guide") { set("length", ftIn(seg(el).len)); set("p1", el.x1 + ", " + el.y1); set("p2", el.x2 + ", " + el.y2); }
     if (this.sel.type === "room") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); set("area", sqft(roomArea(el))); set("shape", roomPts(el).length + " corners · " + ftIn(el.w) + " × " + ftIn(el.h) + " overall"); }
-    if (this.sel.type === "fixture") { set("w", el.w); set("h", el.h); }
+    if (this.sel.type === "fixture" || this.sel.type === "roof") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); }
     if (this.sel.type === "opening") set("pos", Math.round(el.pos * 100) / 100);
   };
 
@@ -947,7 +982,7 @@
     var doors = d.openings.filter(function (o) { return o.type === "door"; }).length, wins = d.openings.length - doors;
     var extLen = 0; d.walls.forEach(function (w) { if (w.type === "exterior") extLen += seg(w).len; });
     this.summary.innerHTML = '<h6 class="mt-3">Summary</h6>' +
-      '<div class="small text-muted mb-1">' + d.walls.length + ' walls (' + ftIn(extLen) + ' exterior) · ' + doors + ' doors · ' + wins + ' windows · ' + d.fixtures.length + ' fixtures</div>' +
+      '<div class="small text-muted mb-1">' + d.walls.length + ' walls (' + ftIn(extLen) + ' exterior) · ' + doors + ' doors · ' + wins + ' windows · ' + d.fixtures.length + ' fixtures' + (d.roofs.length ? ' · ' + d.roofs.length + ' roof section' + (d.roofs.length === 1 ? '' : 's') : '') + '</div>' +
       (d.rooms.length ? '<table class="table table-sm small mb-1"><tbody>' + rows + '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + Math.round(total).toLocaleString() + ' sq ft</th></tr></tfoot></table>' : '<div class="small text-muted">No rooms yet.</div>');
     this.summary.querySelectorAll("[data-room]").forEach(function (tr) { tr.style.cursor = "pointer"; tr.addEventListener("click", function () { self.setSel({ type: "room", id: tr.dataset.room }); self.render(); self.updatePanel(); }); });
   };
@@ -1046,6 +1081,9 @@
     });
     ctx.lineCap = "square";
 
+    // roof sections: translucent outline with ridge / hip lines (drawn over the plan, under labels)
+    d.roofs.forEach(function (rf) { self.drawRoofPlan(ctx, rf, S, s, o.ui && self.isSelected("roof", rf.id)); });
+
     // guide lines (reference only)
     d.guides.forEach(function (gl) {
       var a = S(gl.x1, gl.y1), b = S(gl.x2, gl.y2), selected = o.ui && self.isSelected("guide", gl.id);
@@ -1104,6 +1142,13 @@
         ctx.fillStyle = "rgba(13,110,253,.08)"; ctx.fillRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y);
         ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y); ctx.setLineDash([]);
       }
+      // roof draft
+      if (this.drag && this.drag.kind === "roof") {
+        var ra2 = S(this.drag.start.x, this.drag.start.y), rb2 = S(this.drag.cur.x, this.drag.cur.y);
+        ctx.fillStyle = C.roofFill; ctx.fillRect(ra2.x, ra2.y, rb2.x - ra2.x, rb2.y - ra2.y); ctx.strokeStyle = C.roof; ctx.lineWidth = 1.2; ctx.strokeRect(ra2.x, ra2.y, rb2.x - ra2.x, rb2.y - ra2.y);
+        var rw2 = Math.abs(this.drag.cur.x - this.drag.start.x), rh2 = Math.abs(this.drag.cur.y - this.drag.start.y);
+        ctx.fillStyle = C.roof; ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("Roof " + ftIn(rw2) + " × " + ftIn(rh2), Math.min(ra2.x, rb2.x) + 4, Math.min(ra2.y, rb2.y) - 4);
+      }
       // room draft
       if (this.drag && this.drag.kind === "room") {
         var a = S(this.drag.start.x, this.drag.start.y), bb = S(this.drag.cur.x, this.drag.cur.y);
@@ -1112,7 +1157,7 @@
         ctx.fillStyle = C.sel; ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(ftIn(rw) + " × " + ftIn(rh) + " · " + sqft(rw * rh), Math.min(a.x, bb.x) + 4, Math.min(a.y, bb.y) - 4);
       }
       // hover snap cursor for placement tools
-      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "label")) {
+      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "roof" || this.tool === "label")) {
         var sp = this.snapPoint(this.mouse), sc = S(sp.x, sp.y);
         ctx.strokeStyle = C.draft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sc.x - 6, sc.y); ctx.lineTo(sc.x + 6, sc.y); ctx.moveTo(sc.x, sc.y - 6); ctx.lineTo(sc.x, sc.y + 6); ctx.stroke();
       }
@@ -1263,6 +1308,35 @@
     ctx.fillStyle = "rgba(31,42,55,.92)"; ctx.beginPath(); ctx.rect(tx, ty, tw, th); ctx.fill();
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
     lines.forEach(function (l, i) { ctx.fillStyle = i === 2 ? "#c9d1dc" : "#fff"; ctx.font = fonts[Math.min(i, 2)]; ctx.fillText(l, tx + 8, ty + 12 + i * 15); });
+  };
+
+  P.drawRoofPlan = function (ctx, rf, S, s, selected) {
+    var o = rf.overhang != null ? rf.overhang : 1.5, x0 = rf.x - o, x1 = rf.x + rf.w + o, y0 = rf.y - o, y1 = rf.y + rf.h + o;
+    var A = S(x0, y0), B = S(x1, y1), W = B.x - A.x, H = B.y - A.y, col = selected ? C.sel : C.roof;
+    ctx.save();
+    ctx.fillStyle = selected ? C.selFill : C.roofFill; ctx.fillRect(A.x, A.y, W, H);
+    ctx.strokeStyle = col; ctx.lineWidth = selected ? 1.6 : 1.1; ctx.strokeRect(A.x, A.y, W, H);
+    ctx.setLineDash([3, 3]); ctx.lineWidth = 1; var I = S(rf.x, rf.y), J = S(rf.x + rf.w, rf.y + rf.h); ctx.strokeRect(I.x, I.y, J.x - I.x, J.y - I.y); ctx.setLineDash([]);   // the covered area (without overhang)
+    ctx.lineWidth = 1.2;
+    var alongX = rf.ridge === "x" || (rf.ridge !== "y" && W >= H), cx = (A.x + B.x) / 2, cy = (A.y + B.y) / 2;
+    var line = function (a, b, c, d2) { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d2); ctx.stroke(); };
+    if (rf.style === "hip") {
+      var half = Math.min(W, H) / 2;
+      if (alongX) { line(A.x + half, cy, B.x - half, cy); line(A.x, A.y, A.x + half, cy); line(A.x, B.y, A.x + half, cy); line(B.x, A.y, B.x - half, cy); line(B.x, B.y, B.x - half, cy); }
+      else { line(cx, A.y + half, cx, B.y - half); line(A.x, A.y, cx, A.y + half); line(B.x, A.y, cx, A.y + half); line(A.x, B.y, cx, B.y - half); line(B.x, B.y, cx, B.y - half); }
+    } else if (rf.style === "gable") {
+      if (alongX) line(A.x, cy, B.x, cy); else line(cx, A.y, cx, B.y);
+    } else if (rf.style === "shed") {
+      var hs = rf.high || "n", from = { n: [cx, A.y + 8], s: [cx, B.y - 8], w: [A.x + 8, cy], e: [B.x - 8, cy] }[hs], to = { n: [cx, B.y - 8], s: [cx, A.y + 8], w: [B.x - 8, cy], e: [A.x + 8, cy] }[hs];
+      line(from[0], from[1], to[0], to[1]);
+      var ang = Math.atan2(to[1] - from[1], to[0] - from[0]); ctx.beginPath(); ctx.moveTo(to[0], to[1]); ctx.lineTo(to[0] - 7 * Math.cos(ang - 0.4), to[1] - 7 * Math.sin(ang - 0.4)); ctx.lineTo(to[0] - 7 * Math.cos(ang + 0.4), to[1] - 7 * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+    }
+    if (W > 60 && H > 24) {
+      var tag = (ROOF_KINDS.filter(function (k) { return k[0] === rf.style; })[0] || [rf.style, rf.style])[1].replace(/ \(.*\)/, "") + (rf.style !== "flat" ? " " + (rf.pitch || 6) + ":12" : "");
+      ctx.font = "10px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top"; var tw = ctx.measureText(tag).width;
+      ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.fillRect(A.x + 4, A.y + 4, tw + 6, 14); ctx.fillStyle = col; ctx.fillText(tag, A.x + 7, A.y + 6);
+    }
+    ctx.restore();
   };
 
   P.fitText = function (ctx, text, maxW) {

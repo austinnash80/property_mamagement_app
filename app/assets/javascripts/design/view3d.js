@@ -210,7 +210,7 @@
       src.concat(rooms.map(function (r) { return { x1: r.x, y1: r.y, x2: r.x + r.w, y2: r.y + r.h }; })).forEach(function (w) { fx0 = Math.min(fx0, w.x1, w.x2); fx1 = Math.max(fx1, w.x1, w.x2); fy0 = Math.min(fy0, w.y1, w.y2); fy1 = Math.max(fy1, w.y1, w.y2); });
       if (!isFinite(fx0)) { footprints.push(null); return; }
       any = true; bbox.minX = Math.min(bbox.minX, fx0); bbox.maxX = Math.max(bbox.maxX, fx1); bbox.minY = Math.min(bbox.minY, fy0); bbox.maxY = Math.max(bbox.maxY, fy1);
-      footprints.push({ x0: fx0, x1: fx1, z0: fy0, z1: fy1, base: base });
+      footprints.push({ x0: fx0, x1: fx1, z0: fy0, z1: fy1, base: base, drawn: d.roofs || [] });
 
       self.box(fx1 - fx0 + 0.5, FLOOR_T, fy1 - fy0 + 0.5, (fx0 + fx1) / 2, base - FLOOR_T / 2, (fy0 + fy1) / 2, self.mat(C.slab), false, true);
       rooms.forEach(function (r) { self.floor(r, base); });
@@ -218,9 +218,11 @@
       fixtures.forEach(function (f) { self.fixture(f, base); });
     });
 
-    // roofs: each level's footprint minus the footprint of the next visible level above it
-    if (this.settings.roof !== "none") footprints.forEach(function (fp, i) {
+    // roofs: sections drawn with the Roof tool win; otherwise each level's footprint minus the level above
+    footprints.forEach(function (fp, i) {
       if (!fp) return;
+      if (fp.drawn.length) { fp.drawn.forEach(function (rf) { self.roof({ x0: rf.x, x1: rf.x + rf.w, z0: rf.y, z1: rf.y + rf.h }, fp.base + (+rf.eave || WALL_H), rf); }); return; }
+      if (self.settings.roof === "none") return;
       var above = null; for (var j = i + 1; j < footprints.length; j++) if (footprints[j]) { above = footprints[j]; break; }
       var rects = above ? self.subtract(fp, above) : [fp];
       rects.forEach(function (r) { if (r.x1 - r.x0 >= 4 && r.z1 - r.z0 >= 4) self.roof(r, fp.base + WALL_H); });
@@ -308,14 +310,18 @@
   };
 
   // Roof over one rectangle at eave height y0. Hip / gable / flat with overhang and a soffit closing the underside.
-  P.roof = function (r, y0) {
-    var style = this.settings.roof, pitch = { hip4: 4, hip6: 6, hip8: 8, gable4: 4, gable6: 6, gable8: 8 }[style] || 6;
-    var x0 = r.x0 - OVERHANG, x1 = r.x1 + OVERHANG, z0 = r.z0 - OVERHANG, z1 = r.z1 + OVERHANG, W = x1 - x0, D = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  // rf (optional) is a section drawn with the Roof tool: {style hip|gable|shed|flat, pitch, ridge auto|x|y, overhang, high n|s|w|e}.
+  P.roof = function (r, y0, rf) {
+    var style, pitch, ov = OVERHANG, ridge = "auto", high = "n";
+    if (rf) { style = rf.style || "hip"; pitch = +rf.pitch || 6; ov = rf.overhang != null ? +rf.overhang : OVERHANG; ridge = rf.ridge || "auto"; high = rf.high || "n"; }
+    else { var key = this.settings.roof; style = key.indexOf("gable") === 0 ? "gable" : key === "flat" ? "flat" : "hip"; pitch = { hip4: 4, hip6: 6, hip8: 8, gable4: 4, gable6: 6, gable8: 8 }[key] || 6; }
+    var x0 = r.x0 - ov, x1 = r.x1 + ov, z0 = r.z0 - ov, z1 = r.z1 + ov, W = x1 - x0, D = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     this.box(W, 0.3, D, cx, y0 - 0.15, cz, this.mat(C.interior), false, true);  // soffit / ceiling
     if (style === "flat") { this.box(W, 0.5, D, cx, y0 + 0.25, cz, this.roofMat, true, true); return; }
+    if (style === "shed") return this.shedRoof(x0, x1, z0, z1, y0, pitch, high, r);
     var pos = [], uv = [], tri = function (a, b, c) { [a, b, c].forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0] + p[2] * 0.0, p[1] * 1.2 + p[2]); }); };
     var quad = function (a, b, c, d) { tri(a, b, c); tri(a, c, d); };
-    var alongX = W >= D, half = (alongX ? D : W) / 2, h = pitch / 12 * half, yr = y0 + h;
+    var alongX = ridge === "x" ? true : ridge === "y" ? false : W >= D, half = (alongX ? D : W) / 2, h = pitch / 12 * half, yr = y0 + h;
     var hip = style.indexOf("hip") === 0, ridgeIn = hip ? half : 0;
     var A, B; // ridge endpoints
     if (alongX) { A = [x0 + ridgeIn, yr, cz]; B = [x1 - ridgeIn, yr, cz]; }
@@ -335,6 +341,27 @@
     var geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
     var mesh = new THREE.Mesh(geo, this.roofMat); mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
+  };
+  // Single-slope roof: the high edge sits on the side named by `high`; the two side walls are closed with the exterior material.
+  P.shedRoof = function (x0, x1, z0, z1, y0, pitch, high, r) {
+    var span = (high === "n" || high === "s") ? (z1 - z0) : (x1 - x0), h = pitch / 12 * span, yh = y0 + h;
+    var hi = function (x, z) { return (high === "n" && z === z0) || (high === "s" && z === z1) || (high === "w" && x === x0) || (high === "e" && x === x1); };
+    var P4 = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(function (p) { return [p[0], hi(p[0], p[1]) ? yh : y0, p[1]]; });
+    var pos = [], uv = [], tri = function (a, b, c) { [a, b, c].forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0], p[1] * 1.2 + p[2]); }); };
+    tri(P4[0], P4[3], P4[2]); tri(P4[0], P4[2], P4[1]);
+    var geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
+    var mesh = new THREE.Mesh(geo, this.roofMat); mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
+    // close the two sides (trapezoids) and the high end (rectangle) over the covered area, in the wall material
+    var ext = this.extMat, self = this, q = function (a, b, c, d) { self.gableEnd([a, b, c], ext); self.gableEnd([a, c, d], ext); };
+    if (high === "n" || high === "s") {
+      var zh = high === "n" ? r.z0 : r.z1, zl = high === "n" ? r.z1 : r.z0;
+      q([r.x0, y0, zl], [r.x0, y0, zh], [r.x0, yh, zh], [r.x0, y0 + 0.01, zl]); q([r.x1, y0, zh], [r.x1, y0, zl], [r.x1, y0 + 0.01, zl], [r.x1, yh, zh]);
+      q([r.x0, y0, zh], [r.x1, y0, zh], [r.x1, yh, zh], [r.x0, yh, zh]);
+    } else {
+      var xh = high === "w" ? r.x0 : r.x1, xl = high === "w" ? r.x1 : r.x0;
+      q([xl, y0, r.z0], [xh, y0, r.z0], [xh, yh, r.z0], [xl, y0 + 0.01, r.z0]); q([xh, y0, r.z1], [xl, y0, r.z1], [xl, y0 + 0.01, r.z1], [xh, yh, r.z1]);
+      q([xh, y0, r.z0], [xh, y0, r.z1], [xh, yh, r.z1], [xh, yh, r.z0]);
+    }
   };
   P.gableEnd = function (tri, material) {
     var geo = new THREE.BufferGeometry(), pos = [], uv = [];
