@@ -6,7 +6,8 @@
   "use strict";
 
   var WALL_H = 9, FLOOR_T = 1, DOOR_H = 6.67, SILL = 3, HEAD = 6.67, OVERHANG = 1.5, TILE = 4; // TILE = texture tile size in ft
-  var C = { interior: "#f4f3ee", slab: "#b9b6ad", ground: "#c9d3bf", door: "#8a5a2b", garage: "#dcd8cf", glass: "#9ccbe8", frame: "#ffffff" };
+  // entry doors dark taupe and garage doors cream, like the reference renderings; trim white
+  var C = { interior: "#f4f3ee", slab: "#b9b6ad", ground: "#c9d3bf", door: "#6f6656", garage: "#e6dfd0", glass: "#9ccbe8", frame: "#ffffff" };
   var EXTERIORS = { stucco: { label: "Stucco (cream)", kind: "stucco", color: "#e6dcc6" }, white: { label: "White", kind: "stucco", color: "#f3f1ea" }, gray: { label: "Warm gray", kind: "stucco", color: "#b9b3a6" }, siding: { label: "Wood siding", kind: "siding", color: "#c9b48f" }, brick: { label: "Brick", kind: "brick", color: "#9a5a44" } };
   var ROOF_COLORS = { asphalt: { label: "Asphalt shingle", kind: "shingle", color: "#5a5b5e" }, brown: { label: "Brown shingle", kind: "shingle", color: "#6b5040" }, tile: { label: "Terracotta tile", kind: "tile", color: "#b5623f" }, metal: { label: "Standing-seam metal", kind: "metal", color: "#6d7a86" } };
   var FLOORS = { wood: { label: "Wood", kind: "wood", color: "#c9a878" }, tile: { label: "Tile", kind: "tilefloor", color: "#cfcac0" }, concrete: { label: "Concrete", kind: "concrete", color: "#b4b1aa" } };
