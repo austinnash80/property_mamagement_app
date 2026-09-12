@@ -37,6 +37,7 @@
 <div class="v3-bar">
   <span class="small text-muted">Levels</span>
   <span id="v3-levels" class="d-flex flex-wrap gap-2"></span>
+  <label class="form-check form-check-inline small mb-0 ms-1" title="Hide every roof to look down into the plan"><input class="form-check-input" type="checkbox" id="v3-roofs" checked> <span>Roofs</span></label>
   <button class="btn btn-outline-secondary btn-sm" id="v3-reset">Reset view</button>
   <span class="vr d-none d-md-inline"></span>
   <label class="small text-nowrap">Roof <select class="form-select form-select-sm d-inline-block w-auto" id="v3-roof"></select></label>
@@ -63,7 +64,8 @@
       csrf: document.querySelector('meta[name="csrf-token"]').content,
       ui: { levels: document.getElementById("v3-levels"), reset: document.getElementById("v3-reset"), render: document.getElementById("v3-render"), status: document.getElementById("v3-status"),
             roof: document.getElementById("v3-roof"), exterior: document.getElementById("v3-exterior"), roofColor: document.getElementById("v3-roofColor"), floor: document.getElementById("v3-floor"),
-            exteriorHex: document.getElementById("v3-exteriorHex"), roofHex: document.getElementById("v3-roofHex") }
+            exteriorHex: document.getElementById("v3-exteriorHex"), roofHex: document.getElementById("v3-roofHex"),
+            roofs: document.getElementById("v3-roofs") }
     });
   })();
 </script>

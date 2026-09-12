@@ -23,7 +23,7 @@
     upper: { h: 2.5, z0: 4.5, c: CAB }, hood: { h: 1, z0: 5.2, c: 0xa9adb3, metal: true }, microwave: { h: 1.25, z0: 4.5, c: 0x4a4d52, metal: true },
     range: { h: 3, c: 0x8b9096, metal: true }, range36: { h: 3, c: 0x8b9096, metal: true }, cooktop: { h: 3.1, c: 0x2b2d31, metal: true, thin: true },
     wall_oven: { h: 7, c: 0x5a5e64, metal: true }, fridge: { h: 6, c: APPL, metal: true }, dishwasher: { h: 2.9, c: APPL, metal: true }, pantry: { h: 7, c: CAB },
-    column: { h: 8.5, hgt: 8.5, c: 0xf2efe8 }, stool: { h: 2.5, c: 0x5a4632, shape: "stool" }, chair: { h: 3, c: 0x6b5a48, shape: "chair" }, table: { h: 2.5, c: 0xa77b4d }, round_table: { h: 2.5, c: 0xa77b4d, shape: "round" },
+    column: { h: 8.5, hgt: 8.5, c: 0xf2efe8 }, chimney: { h: 22, hgt: 22, c: 0x8a5a44 }, utility: { h: 6.5, c: 0xd9d9d9, metal: true }, dresser: { h: 2.7, c: 0x8a6a4b }, stool: { h: 2.5, c: 0x5a4632, shape: "stool" }, chair: { h: 3, c: 0x6b5a48, shape: "chair" }, table: { h: 2.5, c: 0xa77b4d }, round_table: { h: 2.5, c: 0xa77b4d, shape: "round" },
     washer: { h: 3, c: 0xe9e9e9 }, water_heater: { h: 5, c: 0xcfcfcf },
     bed: { h: 2, c: 0x9fb4c7 }, bed_king: { h: 2, c: 0x9fb4c7 }, sofa: { h: 2.5, c: 0x8c8f9a }, desk: { h: 2.5, c: 0xa77b4d }, car: { h: 4.7, c: 0x6b7f99 }, box: { h: 3, c: 0xbfbfbf }
   };
@@ -164,6 +164,7 @@
       ui.levels.appendChild(lab);
     });
     ui.reset.addEventListener("click", function () { self.resetView(); });
+    if (ui.roofs) { this.showRoofs = ui.roofs.checked; ui.roofs.addEventListener("change", function () { self.showRoofs = ui.roofs.checked; if (self.roofGroup) self.roofGroup.visible = self.showRoofs; }); }
     ui.render.addEventListener("click", function () { self.saveRendering(); });
     this.status = ui.status;
     var fill = function (sel, key, options) {
@@ -229,9 +230,12 @@
       rooms.forEach(function (r) { self.floor(r, base); });
       walls.forEach(function (w) { self.wall(w, openings.filter(function (o) { return o.wall === w.id; }), base); });
       fixtures.forEach(function (f) { self.fixture(f, base); });
+      (d.decks || []).forEach(function (dk) { self.deck(dk, base); });
     });
 
-    // roofs: sections drawn with the Roof tool win; otherwise each level's footprint minus the level above
+    // roofs: sections drawn with the Roof tool win; otherwise each level's footprint minus the level above.
+    // Everything roof-related goes into one group so the "Roofs" checkbox can hide it without rebuilding.
+    var roofGroup = new THREE.Group(); roofGroup.name = "roofs"; this.model.add(roofGroup); var mainModel = this.model; this.model = roofGroup;
     footprints.forEach(function (fp, i) {
       if (!fp) return;
       if (fp.drawn.length) { fp.drawn.forEach(function (rf) { self.roof({ x0: rf.x, x1: rf.x + rf.w, z0: rf.y, z1: rf.y + rf.h }, fp.base + (+rf.eave || WALL_H), rf); }); return; }
@@ -240,6 +244,7 @@
       var rects = above ? self.subtract(fp, above) : [fp];
       rects.forEach(function (r) { if (r.x1 - r.x0 >= 4 && r.z1 - r.z0 >= 4) self.roof(r, fp.base + WALL_H); });
     });
+    this.model = mainModel; this.roofGroup = roofGroup; roofGroup.visible = this.showRoofs !== false;
 
     this.bbox = any ? bbox : { minX: 0, minY: 0, maxX: 40, maxY: 30 };
     this.levelsShown = footprints.filter(Boolean).length;
@@ -326,50 +331,115 @@
     piece(cursor, len, 0, WALL_H, null, null, true);
   };
 
-  // Roof over one rectangle at eave height y0. Hip / gable / flat with overhang and a soffit closing the underside.
-  // rf (optional) is a section drawn with the Roof tool: {style hip|gable|shed|flat, pitch, ridge auto|x|y, overhang, high n|s|w|e}.
-  P.roof = function (r, y0, rf) {
-    var style, pitch, ov = OVERHANG, ridge = "auto", high = "n";
-    if (rf) { style = rf.style || "hip"; pitch = +rf.pitch || 6; ov = rf.overhang != null ? +rf.overhang : OVERHANG; ridge = rf.ridge || "auto"; high = rf.high || "n"; }
-    else { var key = this.settings.roof; style = key.indexOf("gable") === 0 ? "gable" : key === "flat" ? "flat" : "hip"; pitch = { hip4: 4, hip6: 6, hip8: 8, gable4: 4, gable6: 6, gable8: 8 }[key] || 6; }
-    var x0 = r.x0 - ov, x1 = r.x1 + ov, z0 = r.z0 - ov, z1 = r.z1 + ov, W = x1 - x0, D = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-    this.box(W, 0.3, D, cx, y0 - 0.15, cz, this.mat(C.interior), false, true);  // soffit / ceiling
-    if (style === "flat") { this.box(W, 0.5, D, cx, y0 + 0.25, cz, this.roofMat, true, true); return; }
-    if (style === "shed") return this.shedRoof(x0, x1, z0, z1, y0, pitch, high, r);
-    var pos = [], uv = [], tri = function (a, b, c) { [a, b, c].forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0] + p[2] * 0.0, p[1] * 1.2 + p[2]); }); };
-    var quad = function (a, b, c, d) { tri(a, b, c); tri(a, c, d); };
-    var alongX = ridge === "x" ? true : ridge === "y" ? false : W >= D, half = (alongX ? D : W) / 2, h = pitch / 12 * half, yr = y0 + h;
-    var hip = style.indexOf("hip") === 0, ridgeIn = hip ? half : 0;
-    var A, B; // ridge endpoints
-    if (alongX) { A = [x0 + ridgeIn, yr, cz]; B = [x1 - ridgeIn, yr, cz]; }
-    else { A = [cx, yr, z0 + ridgeIn]; B = [cx, yr, z1 - ridgeIn]; }
-    var c00 = [x0, y0, z0], c10 = [x1, y0, z0], c11 = [x1, y0, z1], c01 = [x0, y0, z1];
-    if (alongX) {
-      quad(c01, c11, B, A);          // south slope
-      quad(c10, c00, A, B);          // north slope
-      if (hip) { tri(c00, c01, A); tri(c11, c10, B); }
-      else { var g = this.extMat; this.gableEnd([[r.x0, y0, r.z0], [r.x0, y0, r.z1], [r.x0, yr, cz]], g); this.gableEnd([[r.x1, y0, r.z1], [r.x1, y0, r.z0], [r.x1, yr, cz]], g); }
-    } else {
-      quad(c00, c01, B, A);          // west slope
-      quad(c11, c10, A, B);          // east slope
-      if (hip) { tri(c10, c00, A); tri(c01, c11, B); }
-      else { var g2 = this.extMat; this.gableEnd([[r.x1, y0, r.z0], [r.x0, y0, r.z0], [cx, yr, r.z0]], g2); this.gableEnd([[r.x0, y0, r.z1], [r.x1, y0, r.z1], [cx, yr, r.z1]], g2); }
-    }
-    var geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
-    var mesh = new THREE.Mesh(geo, this.roofMat); mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
+  // ---------------------------------------------------------------- roofs
+  // Convex polygon face from world points [[x,y,z],...]; planar UVs in feet so the shingle texture stays consistent.
+  P.face = function (pts, material) {
+    if (pts.length < 3) return;
+    var pos = [], uv = [];
+    for (var i = 1; i < pts.length - 1; i++) [pts[0], pts[i], pts[i + 1]].forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0] + p[2] * 0.37, p[1] * 1.2 + p[2]); });
+    var geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
+    var m = new THREE.Mesh(geo, material); m.castShadow = m.receiveShadow = true; this.model.add(m); return m;
   };
+  P.roofMaterialFor = function (rf) {
+    var key = rf && rf.color;
+    if (!key) return this.roofMat;
+    var spec = ROOF_COLORS[key] ? Object.assign({}, ROOF_COLORS[key]) : Object.assign({}, ROOF_COLORS[this.settings.roofColor], /^#/.test(key) ? { color: key } : {});
+    return this.texMat(spec, { side: THREE.DoubleSide });
+  };
+  P.wallMat = function () { return new THREE.MeshStandardMaterial({ map: this.extMat.map, roughness: 0.9, side: THREE.DoubleSide }); };
+
+  // Roof over rectangle r {x0,x1,z0,z1} with eave height y0. rf = section drawn with the Roof tool
+  // (style, pitch, pitchB, shift, ridge, endA/endB, overhang, rake, ridgeH, color, high, dormers); absent for automatic roofs.
+  P.roof = function (r, y0, rf) {
+    var o = rf || {}, style, pitch;
+    if (rf) { style = o.style || "hip"; pitch = +o.pitch || 6; }
+    else { var key = this.settings.roof; style = key.indexOf("gable") === 0 ? "gable" : key === "flat" ? "flat" : "hip"; pitch = { hip4: 4, hip6: 6, hip8: 8, gable4: 4, gable6: 6, gable8: 8 }[key] || 6; }
+    var oe = o.overhang != null ? +o.overhang : OVERHANG, rk = o.rake != null ? +o.rake : Math.min(oe, 1), mat = this.roofMaterialFor(rf), wallMat = this.wallMat(), self = this;
+    var W = r.x1 - r.x0, D = r.z1 - r.z0;
+    // soffit / ceiling over the whole extended footprint
+    this.box(W + 2 * oe, 0.3, D + 2 * oe, (r.x0 + r.x1) / 2, y0 - 0.15, (r.z0 + r.z1) / 2, this.mat(C.interior), false, true);
+    if (style === "flat") { this.box(W + 2 * oe, 0.5, D + 2 * oe, (r.x0 + r.x1) / 2, y0 + 0.25, (r.z0 + r.z1) / 2, mat, true, true); this.fascia(r, y0, oe, [1, 1, 1, 1]); return; }
+    if (style === "shed") { this.shedRoof(r.x0 - oe, r.x1 + oe, r.z0 - oe, r.z1 + oe, y0, pitch, o.high || "n", r, mat, wallMat); this.fascia(r, y0, oe, [1, 1, 1, 1]); return; }
+    if (style === "mansard") return this.mansardRoof(r, y0, pitch, oe, mat, rf);
+
+    // ridged styles in (u along ridge, v across) coordinates
+    var alongX = o.ridge === "x" ? true : o.ridge === "y" ? false : W >= D;
+    var U0 = alongX ? r.x0 : r.z0, U1 = alongX ? r.x1 : r.z1, V0 = alongX ? r.z0 : r.x0, V1 = alongX ? r.z1 : r.x1;
+    var P = function (u, v, y) { return alongX ? [u, y, v] : [v, y, u]; };
+    var gableStyle = style === "gable" || style === "gambrel";
+    var eA = style === "gambrel" ? "gable" : (o.endA || (gableStyle ? "gable" : "hip")), eB = style === "gambrel" ? "gable" : (o.endB || (gableStyle ? "gable" : "hip"));
+    var xU0 = U0 - (eA === "gable" ? rk : oe), xU1 = U1 + (eB === "gable" ? rk : oe), xV0 = V0 - oe, xV1 = V1 + oe, span = xV1 - xV0;
+    var pA = pitch, pB = +o.pitchB || 0, dA = pB ? span * pB / (pA + pB) : span * Math.min(0.85, Math.max(0.15, 0.5 + (+o.shift || 0)));
+    var h = o.ridgeH ? Math.max(0.5, +o.ridgeH - (o.eave ? +o.eave : WALL_H)) : pA / 12 * dA;
+    var vr = xV0 + dA, yr = y0 + h;
+    var setback = function (e) { return e === "gable" ? 0 : e === "dutch" ? dA * 0.5 : dA; };
+    var sbA = setback(eA), sbB = setback(eB), uRA = xU0 + sbA, uRB = xU1 - sbB;
+
+    if (style === "gambrel") {
+      // two-pitch sides: steep lower slope to a break, then the given (upper) pitch to the ridge; gable ends
+      var bA = dA * 0.35, bB = (span - dA) * 0.35, ybA = y0 + Math.min(h * 0.62, 30 / 12 * bA), ybB = y0 + Math.min(h * 0.62, 30 / 12 * bB);
+      this.face([P(xU0, xV0, y0), P(xU1, xV0, y0), P(xU1, xV0 + bA, ybA), P(xU0, xV0 + bA, ybA)], mat);
+      this.face([P(xU0, xV0 + bA, ybA), P(xU1, xV0 + bA, ybA), P(xU1, vr, yr), P(xU0, vr, yr)], mat);
+      this.face([P(xU1, xV1, y0), P(xU0, xV1, y0), P(xU0, xV1 - bB, ybB), P(xU1, xV1 - bB, ybB)], mat);
+      this.face([P(xU1, xV1 - bB, ybB), P(xU0, xV1 - bB, ybB), P(xU0, vr, yr), P(xU1, vr, yr)], mat);
+      [U0, U1].forEach(function (u) { self.face([P(u, V0, y0), P(u, V0 + bA - oe, ybA), P(u, vr, yr), P(u, V1 - bB + oe, ybB), P(u, V1, y0)], wallMat); });
+      this.fascia(r, y0, oe, alongX ? [1, 1, 0, 0] : [0, 0, 1, 1]);
+      this.dormers(rf, { P: P, xV0: xV0, xV1: xV1, V0: V0, V1: V1, U0: U0, y0: y0, dA: dA, span: span, h: h, vr: vr, uRA: uRA, uRB: uRB, alongX: alongX }, mat, wallMat);
+      return;
+    }
+
+    // slope A (eave at xV0) and slope B (eave at xV1) as polygons; ends trim them
+    var slopeA = [P(xU0, xV0, y0), P(xU1, xV0, y0)], slopeB = [P(xU1, xV1, y0), P(xU0, xV1, y0)];
+    var endPts = function (e, atStart) {
+      // returns [pointsForSlopeA (from ridge toward eave A), pointsForSlopeB (from eave B toward ridge)] and builds the end face
+      var uE = atStart ? xU0 : xU1, uR = atStart ? uRA : uRB, sgn = atStart ? 1 : -1;
+      if (e === "gable") {
+        self.face(atStart ? [P(U0, V0, y0), P(U0, vr, yr), P(U0, V1, y0)] : [P(U1, V1, y0), P(U1, vr, yr), P(U1, V0, y0)], wallMat);
+        return { a: [P(uE, vr, yr)], b: [P(uE, vr, yr)] };
+      }
+      if (e === "hip") {
+        self.face(atStart ? [P(uE, xV0, y0), P(uR, vr, yr), P(uE, xV1, y0)] : [P(uE, xV1, y0), P(uR, vr, yr), P(uE, xV0, y0)], mat);
+        return { a: [P(uR, vr, yr)], b: [P(uR, vr, yr)] };
+      }
+      // dutch gable: hip face truncated at half height, vertical gablet above, slopes run to the gablet plane
+      var uG = uE + sgn * dA * 0.5, vA = xV0 + (vr - xV0) * 0.5, vB = xV1 - (xV1 - vr) * 0.5, yG = y0 + h * 0.5;
+      self.face(atStart ? [P(uE, xV0, y0), P(uG, vA, yG), P(uG, vB, yG), P(uE, xV1, y0)] : [P(uE, xV1, y0), P(uG, vB, yG), P(uG, vA, yG), P(uE, xV0, y0)], mat);
+      self.face([P(uG, vA, yG), P(uG, vr, yr), P(uG, vB, yG)], wallMat);
+      return { a: [P(uG, vr, yr), P(uG, vA, yG)], b: [P(uG, vB, yG), P(uG, vr, yr)] };
+    };
+    var endB = endPts(eB, false), endA = endPts(eA, true);
+    // slope A: eave A0 → eave A1 → end B points (toward ridge) → ridge → end A points (back toward eave)
+    slopeA = slopeA.concat(endB.a.slice().reverse().length === 1 ? endB.a : [endB.a[1], endB.a[0]]).concat(endA.a);
+    slopeB = slopeB.concat(endA.b.length === 1 ? endA.b : [endA.b[1], endA.b[0]]).concat(endB.b.length === 1 ? endB.b : [endB.b[0], endB.b[1]]);
+    this.face(slopeA, mat); this.face(slopeB, mat);
+    this.fascia(r, y0, oe, alongX ? [1, 1, eA !== "gable" ? 1 : 0, eB !== "gable" ? 1 : 0] : [eA !== "gable" ? 1 : 0, eB !== "gable" ? 1 : 0, 1, 1]);
+    this.dormers(rf, { P: P, xV0: xV0, xV1: xV1, V0: V0, V1: V1, U0: U0, y0: y0, dA: dA, span: span, h: h, vr: vr, uRA: uRA, uRB: uRB, alongX: alongX }, mat, wallMat);
+  };
+
+  // Fascia boards along the eaves: sides = [north(z0), south(z1), west(x0), east(x1)] flags.
+  P.fascia = function (r, y0, oe, sides) {
+    var f = this.mat(C.frame, { roughness: 0.55 }), W = r.x1 - r.x0 + 2 * oe, D = r.z1 - r.z0 + 2 * oe, cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, y = y0 - 0.1;
+    if (sides[0]) this.box(W, 0.55, 0.12, cx, y, r.z0 - oe, f, true, true);
+    if (sides[1]) this.box(W, 0.55, 0.12, cx, y, r.z1 + oe, f, true, true);
+    if (sides[2]) this.box(0.12, 0.55, D, r.x0 - oe, y, cz, f, true, true);
+    if (sides[3]) this.box(0.12, 0.55, D, r.x1 + oe, y, cz, f, true, true);
+  };
+
+  P.mansardRoof = function (r, y0, pitch, oe, mat, rf) {
+    var x0 = r.x0 - oe, x1 = r.x1 + oe, z0 = r.z0 - oe, z1 = r.z1 + oe, ins = Math.min(x1 - x0, z1 - z0) * 0.2, h = Math.max(pitch, 12) / 12 * ins, yt = y0 + h;
+    var lo = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], hi = [[x0 + ins, yt, z0 + ins], [x1 - ins, yt, z0 + ins], [x1 - ins, yt, z1 - ins], [x0 + ins, yt, z1 - ins]];
+    for (var i = 0; i < 4; i++) { var j = (i + 1) % 4; this.face([lo[i], lo[j], hi[j], hi[i]], mat); }
+    this.face([hi[3], hi[2], hi[1], hi[0]], mat);
+    this.fascia(r, y0, oe, [1, 1, 1, 1]);
+  };
+
   // Single-slope roof: the high edge sits on the side named by `high`; the two side walls are closed with the exterior material.
-  P.shedRoof = function (x0, x1, z0, z1, y0, pitch, high, r) {
+  P.shedRoof = function (x0, x1, z0, z1, y0, pitch, high, r, mat, wallMat) {
     var span = (high === "n" || high === "s") ? (z1 - z0) : (x1 - x0), h = pitch / 12 * span, yh = y0 + h;
     var hi = function (x, z) { return (high === "n" && z === z0) || (high === "s" && z === z1) || (high === "w" && x === x0) || (high === "e" && x === x1); };
     var P4 = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(function (p) { return [p[0], hi(p[0], p[1]) ? yh : y0, p[1]]; });
-    var pos = [], uv = [], tri = function (a, b, c) { [a, b, c].forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0], p[1] * 1.2 + p[2]); }); };
-    tri(P4[0], P4[3], P4[2]); tri(P4[0], P4[2], P4[1]);
-    var geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
-    var mesh = new THREE.Mesh(geo, this.roofMat); mesh.castShadow = mesh.receiveShadow = true; this.model.add(mesh);
-    // close the two sides (trapezoids) and the high end (rectangle) over the covered area, in the wall material
-    var ext = this.extMat, self = this, q = function (a, b, c, d) { self.gableEnd([a, b, c], ext); self.gableEnd([a, c, d], ext); };
+    this.face([P4[0], P4[3], P4[2], P4[1]], mat);
+    var self = this, q = function (a, b, c, d) { self.face([a, b, c, d], wallMat); };
     if (high === "n" || high === "s") {
       var zh = high === "n" ? r.z0 : r.z1, zl = high === "n" ? r.z1 : r.z0;
       q([r.x0, y0, zl], [r.x0, y0, zh], [r.x0, yh, zh], [r.x0, y0 + 0.01, zl]); q([r.x1, y0, zh], [r.x1, y0, zl], [r.x1, y0 + 0.01, zl], [r.x1, yh, zh]);
@@ -380,11 +450,86 @@
       q([xh, y0, r.z0], [xh, y0, r.z1], [xh, yh, r.z1], [xh, yh, r.z0]);
     }
   };
-  P.gableEnd = function (tri, material) {
-    var geo = new THREE.BufferGeometry(), pos = [], uv = [];
-    tri.forEach(function (p) { pos.push(p[0], p[1], p[2]); uv.push(p[0] + p[2], p[1]); });
-    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals();
-    var m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: material.map, roughness: 0.9, side: THREE.DoubleSide })); m.castShadow = m.receiveShadow = true; this.model.add(m);
+
+  // Dormers on slope a (eave at xV0) or b (eave at xV1). g carries the roof's frame: P(u,v,y), extents, ridge (vr, h).
+  P.dormers = function (rf, g, mat, wallMat) {
+    var list = rf && rf.dormers; if (!list || !list.length) return;
+    var self = this, glass = this.mat(C.glass, { transparent: true, opacity: 0.5, roughness: 0.1, metalness: 0.3 }), frame = this.mat(C.frame, { roughness: 0.5 });
+    list.forEach(function (dm) {
+      var sideA = dm.side === "a", d = sideA ? g.dA : g.span - g.dA, slope = g.h / d;                 // rise per ft toward the ridge
+      var xVe = sideA ? g.xV0 : g.xV1, dir = sideA ? 1 : -1;                                          // eave v and direction toward ridge
+      var vAt = function (t) { return xVe + dir * t; }, yAt = function (t) { return g.y0 + slope * t; };
+      var oe = (sideA ? g.V0 - g.xV0 : g.xV1 - g.V1), tf = Math.max(0.5, (+dm.setback || 2.5) + oe), w = +dm.w || 6, wallH = +dm.wall || 4.5, pd = +dm.pitch || 8;
+      var u = g.U0 + (+dm.pos || 0), yfB = yAt(tf), yf = yfB + wallH;                                 // dormer front: bottom on the roof, top of its wall
+      if (yf >= g.y0 + g.h - 0.3) yf = g.y0 + g.h - 0.3;
+      var te = (yf - g.y0) / slope;                                                                   // where the roof reaches the dormer's wall height
+      var uL = u - w / 2, uR = u + w / 2, Pp = g.P;
+      if (dm.type === "shed") {
+        var sd = pd / 12; if (sd >= slope) sd = slope * 0.6;
+        var tb = tf + (yf - yfB) / (slope - sd), yb = yAt(tb);
+        self.face([Pp(uL, vAt(tf), yfB), Pp(uR, vAt(tf), yfB), Pp(uR, vAt(tf), yf), Pp(uL, vAt(tf), yf)], wallMat);            // front
+        self.face([Pp(uL, vAt(tf), yfB), Pp(uL, vAt(tf), yf), Pp(uL, vAt(tb), yb)], wallMat);                                   // sides
+        self.face([Pp(uR, vAt(tb), yb), Pp(uR, vAt(tf), yf), Pp(uR, vAt(tf), yfB)], wallMat);
+        self.face([Pp(uL, vAt(tf - 0.5), yf - sd * 0.5), Pp(uR, vAt(tf - 0.5), yf - sd * 0.5), Pp(uR, vAt(tb), yb), Pp(uL, vAt(tb), yb)], mat);   // roof with a little overhang
+      } else {
+        var yrD = yf + pd / 12 * (w / 2), tbG = Math.min(d * 0.98, (yrD - g.y0) / slope), ybG = yAt(tbG);
+        if (te > tbG) te = tbG;
+        self.face([Pp(uL, vAt(tf), yfB), Pp(uR, vAt(tf), yfB), Pp(uR, vAt(tf), yf), Pp(u, vAt(tf), yrD), Pp(uL, vAt(tf), yf)], wallMat);   // front with gable
+        self.face([Pp(uL, vAt(tf), yfB), Pp(uL, vAt(tf), yf), Pp(uL, vAt(te), yf)], wallMat);                                              // sides
+        self.face([Pp(uR, vAt(te), yf), Pp(uR, vAt(tf), yf), Pp(uR, vAt(tf), yfB)], wallMat);
+        self.face([Pp(uL - 0.4, vAt(tf - 0.5), yf - pd / 12 * 0.4), Pp(uL - 0.4, vAt(te), yf - pd / 12 * 0.4), Pp(u, vAt(tbG), ybG), Pp(u, vAt(tf - 0.5), yrD)], mat);   // roof slopes
+        self.face([Pp(u, vAt(tf - 0.5), yrD), Pp(u, vAt(tbG), ybG), Pp(uR + 0.4, vAt(te), yf - pd / 12 * 0.4), Pp(uR + 0.4, vAt(tf - 0.5), yf - pd / 12 * 0.4)], mat);
+      }
+      // window in the front wall
+      var ww = Math.min(w * 0.6, 4), wh = Math.min(wallH * 0.6, 3), vf = vAt(tf) + dir * -0.06, y1w = yfB + (wallH - wh) / 2, y2w = y1w + wh;
+      self.face([Pp(u - ww / 2, vf, y1w), Pp(u + ww / 2, vf, y1w), Pp(u + ww / 2, vf, y2w), Pp(u - ww / 2, vf, y2w)], glass);
+      var vfr = vAt(tf) + dir * -0.1;
+      [[u - ww / 2 - 0.1, u - ww / 2], [u + ww / 2, u + ww / 2 + 0.1]].forEach(function (b) { self.face([Pp(b[0], vfr, y1w - 0.1), Pp(b[1], vfr, y1w - 0.1), Pp(b[1], vfr, y2w + 0.1), Pp(b[0], vfr, y2w + 0.1)], frame); });
+      [[y1w - 0.1, y1w], [y2w, y2w + 0.1]].forEach(function (b) { self.face([Pp(u - ww / 2, vfr, b[0]), Pp(u + ww / 2, vfr, b[0]), Pp(u + ww / 2, vfr, b[1]), Pp(u - ww / 2, vfr, b[1])], frame); });
+    });
+  };
+
+  // ---------------------------------------------------------------- decks
+  var DECK_COLORS = { wood: "#b98a5a", comp_gray: "#8f8a82", comp_brown: "#7a5a44", concrete: "#b4b1aa" };
+  P.deck = function (dk, base) {
+    var x0 = dk.x, x1 = dk.x + dk.w, z0 = dk.y, z1 = dk.y + dk.h, hgt = +dk.height || 0, top = base + hgt, self = this;
+    var deckMat = this.texMat({ kind: dk.material === "concrete" ? "concrete" : "wood", color: DECK_COLORS[dk.material] || DECK_COLORS.wood }, { roughness: 0.8 });
+    var railMat = this.mat(dk.material === "wood" ? "#f2efe8" : "#3a3d42", { roughness: 0.6 }), postMat = this.mat("#6b5a48");
+    var thick = dk.material === "concrete" ? Math.max(0.35, hgt) : 0.5;
+    this.box(dk.w, thick, dk.h, (x0 + x1) / 2, top - thick / 2, (z0 + z1) / 2, deckMat, true, true, 0, x0, z0);
+    if (hgt > 1 && dk.material !== "concrete") {   // support posts at corners and every 8 ft
+      var px = [], pz = [], nx = Math.max(1, Math.ceil(dk.w / 8)), nz = Math.max(1, Math.ceil(dk.h / 8));
+      for (var i = 0; i <= nx; i++) px.push(x0 + 0.25 + (dk.w - 0.5) * i / nx); for (var j = 0; j <= nz; j++) pz.push(z0 + 0.25 + (dk.h - 0.5) * j / nz);
+      px.forEach(function (x) { pz.forEach(function (z) { if (x === px[0] || x === px[px.length - 1] || z === pz[0] || z === pz[pz.length - 1]) self.box(0.45, top - thick - base, 0.45, x, base + (top - thick - base) / 2, z, postMat, true, true); }); });
+    }
+    var rails = dk.rails || {}, stairs = dk.stairs && dk.stairs !== "none" ? dk.stairs : null, sw = +dk.stairW || 4, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    var rail = function (ax, az, bx, bz, gapAt) {   // top rail, bottom rail, posts every 6 ft, balusters every 0.45 ft; gapAt = [center, width] to leave an opening for stairs
+      var L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, ang = -Math.atan2(bz - az, bx - ax);
+      var segs = gapAt ? [[0, Math.max(0, gapAt[0] - gapAt[1] / 2)], [Math.min(L, gapAt[0] + gapAt[1] / 2), L]] : [[0, L]];
+      segs.forEach(function (sg) {
+        var a = sg[0], b = sg[1]; if (b - a < 0.3) return;
+        var mid = (a + b) / 2, len = b - a;
+        self.box(len, 0.15, 0.3, ax + ux * mid, top + 3.0, az + uz * mid, railMat, true, true, ang);
+        self.box(len, 0.12, 0.12, ax + ux * mid, top + 0.35, az + uz * mid, railMat, true, true, ang);
+        var nP = Math.max(1, Math.round(len / 6)); for (var k = 0; k <= nP; k++) { var t = a + len * k / nP; self.box(0.3, 3.1, 0.3, ax + ux * t, top + 1.55, az + uz * t, railMat, true, true, ang); }
+        for (var t2 = a + 0.4; t2 < b; t2 += 0.45) self.box(0.08, 2.5, 0.08, ax + ux * t2, top + 1.65, az + uz * t2, railMat, false, false, ang);
+      });
+    };
+    if (rails.n) rail(x0, z0, x1, z0, stairs === "n" ? [cx - x0, sw] : null);
+    if (rails.s) rail(x0, z1, x1, z1, stairs === "s" ? [cx - x0, sw] : null);
+    if (rails.w) rail(x0, z0, x0, z1, stairs === "w" ? [cz - z0, sw] : null);
+    if (rails.e) rail(x1, z0, x1, z1, stairs === "e" ? [cz - z0, sw] : null);
+    if (stairs && hgt > 0.3) {   // stairs down to the level's floor, 7" rises, 11" treads
+      var n = Math.ceil(hgt / 0.6), rise = hgt / n, tread = 0.9167;
+      for (var k2 = 0; k2 < n; k2++) {
+        var ytop = top - rise * (k2 + 1), hh = ytop - base; if (hh <= 0) continue;
+        var off = tread * (k2 + 0.5);
+        if (stairs === "s") self.box(sw, hh, tread, cx, base + hh / 2, z1 + off, deckMat, true, true);
+        else if (stairs === "n") self.box(sw, hh, tread, cx, base + hh / 2, z0 - off, deckMat, true, true);
+        else if (stairs === "e") self.box(tread, hh, sw, x1 + off, base + hh / 2, cz, deckMat, true, true);
+        else self.box(tread, hh, sw, x0 - off, base + hh / 2, cz, deckMat, true, true);
+      }
+    }
   };
 
   P.fixture = function (f, base) {
@@ -399,8 +544,13 @@
       }
       g.position.set(cx, base, cz); g.rotation.y = rot; this.model.add(g); return;
     }
-    var h = spec.h, mesh, z0 = spec.z0 || 0, self = this;
+    var h = (+f.hgt && !spec.top && f.kind !== "column" && f.kind !== "chimney") ? +f.hgt : spec.h, mesh, z0 = spec.z0 || 0, self = this;
     var metal = spec.metal ? { roughness: 0.35, metalness: 0.5 } : {};
+    if (f.kind === "chimney") {   // brick chimney from this floor up to hgt, with a cap
+      var chH = +f.hgt || spec.hgt || 22, ch = new THREE.Mesh(new THREE.BoxGeometry(lw, chH, lh), this.texMat({ kind: "brick", color: "#8a5a44" })); ch.position.set(cx, base + chH / 2, cz); ch.rotation.y = rot; ch.castShadow = ch.receiveShadow = true; this.model.add(ch);
+      var capC = new THREE.Mesh(new THREE.BoxGeometry(lw + 0.3, 0.3, lh + 0.3), this.mat("#8f8f89")); capC.position.set(cx, base + chH + 0.15, cz); capC.rotation.y = rot; capC.castShadow = true; this.model.add(capC);
+      return;
+    }
     if (f.kind === "column") {   // craftsman porch column: stone pier, white cap, tapered white shaft, top block
       var gc = new THREE.Group(), tot = +f.hgt || spec.hgt || 8.5, pierH = Math.min(3.2, tot * 0.4), side = Math.min(lw, lh);
       var pier = new THREE.Mesh(new THREE.BoxGeometry(lw, pierH, lh), this.texMat({ kind: "stone", color: "#b3a48c" })); pier.position.y = pierH / 2; pier.castShadow = pier.receiveShadow = true; gc.add(pier);

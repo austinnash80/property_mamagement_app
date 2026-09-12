@@ -11,11 +11,17 @@
   var DOOR_KINDS = { exterior: { label: "Exterior door", w: 3, h: 6.67 }, interior: { label: "Interior door", w: 2.667, h: 6.67 }, garage: { label: "Garage door", w: 9, h: 7 }, sliding: { label: "Sliding door", w: 6, h: 6.67 } };
   var WINDOW_DEF = { w: 4, sill: 3, h: 3.67 };
   // Roof sections: axis-aligned rectangles with their own style; the 3D view builds these instead of the automatic roof.
-  var ROOF_KINDS = [["hip", "Hip"], ["gable", "Gable"], ["shed", "Shed (single slope)"], ["flat", "Flat"]];
-  var PITCHES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+  var ROOF_KINDS = [["hip", "Hip"], ["gable", "Gable"], ["shed", "Shed (single slope)"], ["flat", "Flat"], ["gambrel", "Gambrel (barn)"], ["mansard", "Mansard"]];
+  var PITCHES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 18];
   var RIDGES = [["auto", "Auto (along the long side)"], ["x", "Left ↔ right"], ["y", "Front ↔ back"]];
   var HIGH_SIDES = [["n", "Back (top of plan)"], ["s", "Front (bottom)"], ["w", "Left"], ["e", "Right"]];
-  var ROOF_DEF = { style: "hip", pitch: 6, ridge: "auto", overhang: 1.5, eave: 9, high: "n" };
+  var END_KINDS = [["hip", "Hip"], ["gable", "Gable"], ["dutch", "Dutch gable (hip with gablet)"]];
+  var ROOF_COLOR_OPTS = [["", "Same as the 3D view"], ["asphalt", "Asphalt shingle (gray)"], ["brown", "Brown shingle"], ["tile", "Terracotta tile"], ["metal", "Standing-seam metal"]];
+  var ROOF_DEF = { style: "hip", pitch: 6, ridge: "auto", overhang: 1.5, rake: 1, eave: 9, high: "n", endA: "hip", endB: "hip", shift: 0, pitchB: "", ridgeH: "", color: "", dormers: [] };
+  var DORMER_DEF = { type: "gable", side: "b", pos: null, w: 6, setback: 2.5, wall: 4.5, pitch: 8 };
+  // Decks: platform + railings + stairs, drawn as rectangles on the level they belong to
+  var DECK_MATERIALS = [["wood", "Wood (cedar)"], ["comp_gray", "Composite, gray"], ["comp_brown", "Composite, brown"], ["concrete", "Concrete patio"]];
+  var DECK_DEF = { height: 1.5, material: "wood", rails: { n: true, s: true, e: true, w: true }, stairs: "none", stairW: 4 };
   function doorKind(o, w) { return o.kind || (w && w.type === "interior" ? "interior" : "exterior"); }
   // Fixture catalog: default footprint in ft (w across, h deep). Glyphs are drawn in drawFixture.
   // g = group shown in the picker. "above" items sit above counter height and draw dashed in plan.
@@ -50,11 +56,52 @@
     sofa:        { g: "Living & bedroom", label: "Sofa", w: 7, h: 3 },
     desk:        { g: "Living & bedroom", label: "Desk", w: 5, h: 2.5 },
     column:      { g: "Other", label: "Porch column (stone base)", w: 1.5, h: 1.5, hgt: 8.5 },
+    chimney:     { g: "Other", label: "Chimney (brick)", w: 2, h: 3, hgt: 22 },
     stairs:      { g: "Other", label: "Stairs", w: 3, h: 12 },
     car:         { g: "Other", label: "Car", w: 6.5, h: 16 },
-    box:         { g: "Other", label: "Box (anything)", w: 3, h: 3 }
+    box:         { g: "Other", label: "Box (anything)", w: 3, h: 3 },
+    utility:     { g: "Laundry & utility", label: "Tall utility unit", w: 2.25, h: 2.5, hgt: 6.5 },
+    dresser:     { g: "Living & bedroom", label: "Dresser / console", w: 5, h: 1.5, hgt: 2.7 }
   };
   var FIXTURE_GROUPS = ["Kitchen", "Bath", "Laundry & utility", "Living & bedroom", "Other"];
+  var IN = 1 / 12;
+  var CATALOG = [
+    { g: "Kitchen", items: [
+      ["base12", "counter", "Base cabinet 12\"", 1, 2], ["base15", "counter", "Base cabinet 15\"", 1.25, 2], ["base18", "counter", "Base cabinet 18\"", 1.5, 2], ["base24", "counter", "Base cabinet 24\"", 2, 2], ["base30", "counter", "Base cabinet 30\"", 2.5, 2], ["base36", "counter", "Base cabinet 36\"", 3, 2],
+      ["corner36", "counter", "Corner base 36\"", 3, 3], ["counter8", "counter", "Counter run 8'", 8, 2], ["sinkbase36", "sink", "Sink base 36\"", 3, 2], ["dblsink36", "dbl_sink", "Double sink base 36\"", 3, 2],
+      ["upper12", "upper", "Upper cabinet 12\"", 1, 1], ["upper18", "upper", "Upper cabinet 18\"", 1.5, 1], ["upper24", "upper", "Upper cabinet 24\"", 2, 1], ["upper30", "upper", "Upper cabinet 30\"", 2.5, 1], ["upper36", "upper", "Upper cabinet 36\"", 3, 1], ["upper8", "upper", "Upper run 8'", 8, 1],
+      ["pantry24", "pantry", "Pantry cabinet 24\"", 2, 2], ["pantry36", "pantry", "Pantry cabinet 36\"", 3, 2],
+      ["range30", "range", "Range 30\"", 2.5, 26 * IN], ["range36", "range36", "Range 36\"", 3, 26 * IN], ["range48", "range36", "Range 48\"", 4, 27 * IN],
+      ["cooktop30", "cooktop", "Cooktop 30\"", 2.5, 21 * IN], ["cooktop36", "cooktop", "Cooktop 36\"", 3, 21 * IN], ["walloven30", "wall_oven", "Wall oven tower 30\"", 2.5, 2],
+      ["hood30", "hood", "Range hood 30\"", 2.5, 1.5], ["hood36", "hood", "Range hood 36\"", 3, 1.5], ["micro30", "microwave", "Microwave 30\" (built-in)", 2.5, 1.5],
+      ["fridge30", "fridge", "Refrigerator 30\"", 2.5, 2.5], ["fridge36cd", "fridge", "Refrigerator 36\" counter-depth", 3, 25 * IN], ["fridge36", "fridge", "Refrigerator 36\" standard", 3, 33 * IN], ["fridge42", "fridge", "Built-in refrigerator 42\"", 3.5, 2],
+      ["dw24", "dishwasher", "Dishwasher 24\"", 2, 2],
+      ["island4", "island", "Island 4'", 4, 3], ["island6", "island", "Island 6'", 6, 3], ["island8", "island", "Island 8'", 8, 3.5], ["islandseat7", "island_seat", "Island with seating 7'", 7, 3.5],
+      ["stool", "stool", "Bar stool", 1.25, 1.25], ["table4", "table", "Dining table, 4 seats (48\" × 36\")", 4, 3], ["table6", "table", "Dining table, 6 seats (72\" × 36\")", 6, 3], ["table8", "table", "Dining table, 8 seats (96\" × 42\")", 8, 3.5],
+      ["round42", "round_table", "Round table 42\"", 3.5, 3.5], ["round48", "round_table", "Round table 48\"", 4, 4], ["round60", "round_table", "Round table 60\"", 5, 5], ["chair", "chair", "Dining chair", 1.5, 1.5] ] },
+    { g: "Bath", items: [
+      ["vanity24", "vanity", "Vanity 24\"", 2, 21 * IN], ["vanity30", "vanity", "Vanity 30\"", 2.5, 21 * IN], ["vanity36", "vanity", "Vanity 36\"", 3, 21 * IN], ["vanity48", "vanity", "Vanity 48\"", 4, 21 * IN], ["vanity60", "vanity", "Double vanity 60\"", 5, 21 * IN], ["vanity72", "vanity", "Double vanity 72\"", 6, 21 * IN],
+      ["pedestal", "vanity", "Pedestal sink 24\"", 2, 20 * IN], ["toilet", "toilet", "Toilet", 1.5, 2.5],
+      ["tub60x30", "tub", "Tub 60\" × 30\"", 5, 2.5], ["tub60x32", "tub", "Tub 60\" × 32\"", 5, 32 * IN], ["tub66x36", "tub", "Tub 66\" × 36\"", 5.5, 3], ["tubfree", "tub", "Freestanding tub 67\" × 31\"", 67 * IN, 31 * IN],
+      ["shower32", "shower", "Shower 32\" × 32\"", 32 * IN, 32 * IN], ["shower36", "shower", "Shower 36\" × 36\"", 3, 3], ["shower48", "shower", "Shower 48\" × 36\"", 4, 3], ["shower60", "shower", "Shower 60\" × 36\"", 5, 3], ["tubshower", "tub", "Tub / shower 60\" × 30\"", 5, 2.5],
+      ["linen", "pantry", "Linen cabinet 24\"", 2, 1.5] ] },
+    { g: "Laundry & utility", items: [
+      ["washer", "washer", "Washer 27\"", 27 * IN, 2.5], ["dryer", "washer", "Dryer 27\"", 27 * IN, 2.5], ["stackwd", "utility", "Stacked washer / dryer 27\"", 27 * IN, 2.5, 6.5],
+      ["utilsink", "sink", "Utility sink 24\"", 2, 22 * IN], ["wh24", "water_heater", "Water heater 24\"", 2, 2], ["furnace", "utility", "Furnace 24\" × 30\"", 2, 2.5, 5] ] },
+    { g: "Living & bedroom", items: [
+      ["twin", "bed", "Twin bed 38\" × 75\"", 38 * IN, 75 * IN], ["twinxl", "bed", "Twin XL bed 38\" × 80\"", 38 * IN, 80 * IN], ["full", "bed", "Full bed 54\" × 75\"", 54 * IN, 75 * IN], ["queen", "bed", "Queen bed 60\" × 80\"", 5, 80 * IN], ["king", "bed", "King bed 76\" × 80\"", 76 * IN, 80 * IN], ["calking", "bed", "California king 72\" × 84\"", 6, 7],
+      ["nightstand", "dresser", "Nightstand 24\" × 18\"", 2, 1.5, 2.2], ["dresser60", "dresser", "Dresser 60\" × 18\"", 5, 1.5, 2.7], ["chest36", "dresser", "Chest 36\" × 18\"", 3, 1.5, 4], ["wardrobe", "pantry", "Wardrobe 48\" × 24\"", 4, 2],
+      ["sofa84", "sofa", "Sofa 84\"", 7, 3], ["loveseat", "sofa", "Loveseat 60\"", 5, 3], ["armchair", "sofa", "Armchair 36\"", 3, 3], ["coffee", "table", "Coffee table 48\" × 24\"", 4, 2, 1.5], ["tvconsole", "dresser", "TV console 60\" × 18\"", 5, 1.5, 2],
+      ["desk60", "desk", "Desk 60\" × 30\"", 5, 2.5], ["bookcase", "pantry", "Bookcase 36\" × 12\"", 3, 1, 6], ["piano", "box", "Upright piano 58\" × 24\"", 58 * IN, 2, 4] ] },
+    { g: "Other", items: [
+      ["stairs36", "stairs", "Stairs 36\" wide", 3, 12], ["stairs42", "stairs", "Stairs 42\" wide", 3.5, 12], ["column", "column", "Porch column (stone base)", 1.5, 1.5, 8.5], ["chimney", "chimney", "Chimney (brick)", 2, 3, 22],
+      ["carcompact", "car", "Car, compact (15' × 6')", 6, 15], ["carsuv", "car", "SUV / truck (16.5' × 6.5')", 6.5, 16.5], ["box", "box", "Box (anything)", 3, 3] ] }
+  ].map(function (grp) { return { g: grp.g, items: grp.items.map(function (a) { return { id: a[0], kind: a[1], label: a[2], w: a[3], h: a[4], hgt: a[5] }; }) }; });
+  var CATALOG_BY_ID = {}; CATALOG.forEach(function (grp) { grp.items.forEach(function (it) { CATALOG_BY_ID[it.id] = it; }); });
+  function catalogItemFor(f) { return CATALOG_BY_ID[f.item] || CATALOG.reduce(function (found, grp) { return found || grp.items.filter(function (it) { return it.kind === f.kind; })[0]; }, null); }
+  function catalogOptions(selectedId) {
+    return CATALOG.map(function (grp) { return '<optgroup label="' + grp.g + '">' + grp.items.map(function (it) { return '<option value="' + it.id + '"' + (selectedId === it.id ? " selected" : "") + '>' + it.label + '</option>'; }).join("") + '</optgroup>'; }).join("");
+  }
   function fixtureOptions(selected) {
     return FIXTURE_GROUPS.map(function (g) {
       var items = Object.keys(FIXTURES).filter(function (k) { return FIXTURES[k].g === g; });
@@ -66,7 +113,7 @@
   var C = {
     bg: "#ffffff", gridMinor: "#f0f2f5", gridMajor: "#dde2e8", boundary: "#9aa3ad",
     wall: "#2b2f36", sel: "#0d6efd", selFill: "rgba(13,110,253,.12)", room: "rgba(255,214,102,.22)",
-    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", guide: "#6b7280", roof: "#8b5e3c", roofFill: "rgba(139,94,60,.10)", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
+    roomText: "#4b4f57", door: "#8a5a2b", win: "#2f7fd6", label: "#1f2a37", dim: "#0d6efd", draft: "#e0742a", guide: "#6b7280", roof: "#8b5e3c", roofFill: "rgba(139,94,60,.10)", deck: "#8a6a3c", deckFill: "rgba(196,160,110,.28)", fix: "#4b5563", under: "#93a0b4", string: "#3a3f47"
   };
 
   function uid() { return Math.random().toString(36).slice(2, 10); }
@@ -79,7 +126,7 @@
   function sqft(a) { return Math.round(a).toLocaleString() + " sq ft"; }
   function normalize(d) {
     d = d && typeof d === "object" ? d : {};
-    var n = { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [], roofs: d.roofs || [] };
+    var n = { version: 1, grid: +d.grid || 0.5, walls: d.walls || [], rooms: d.rooms || [], openings: d.openings || [], labels: d.labels || [], fixtures: d.fixtures || [], guides: d.guides || [], roofs: d.roofs || [], decks: d.decks || [] };
     n.rooms.forEach(roomSync);
     return n;
   }
@@ -149,8 +196,8 @@
     '    <button class="btn btn-outline-secondary" data-tool="fixture" title="Place stairs, plumbing, appliances, furniture (X)">Fixture</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="line" title="Guide line (L): a thin dashed reference line that shows its length, e.g. a setback. Not shown in 3D.">Line</button>' +
     '    <button class="btn btn-outline-secondary" data-tool="roof" title="Roof section (O): drag a rectangle over the area a roof covers, then set hip/gable/shed, pitch and overhang. Replaces the automatic roof in 3D.">Roof</button>' +
+    '    <button class="btn btn-outline-secondary" data-tool="deck" title="Deck (K): drag a rectangle; set height, decking, railings and stairs in the side panel.">Deck</button>' +
     '  </div>' +
-    '  <select class="form-select form-select-sm w-auto fp-kind d-none" title="Which fixture to place"></select>' +
     '  <select class="form-select form-select-sm w-auto fp-doorkind d-none" title="Which kind of door to place"><option value="auto">Door: match wall</option><option value="exterior">Exterior door</option><option value="interior">Interior door</option><option value="garage">Garage door</option><option value="sliding">Sliding door</option></select>' +
     '  <div class="btn-group btn-group-sm" role="group">' +
     '    <button class="btn btn-outline-secondary" data-act="undo" title="Undo (Ctrl+Z)">Undo</button>' +
@@ -179,7 +226,7 @@
     '<div class="fp-body">' +
     '  <div class="fp-canvas-wrap"><canvas class="fp-canvas"></canvas><div class="fp-hint small"></div></div>' +
     '  <aside class="fp-panel"><div class="fp-props"></div><div class="fp-summary"></div>' +
-    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L O tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space to pan<br>Right-drag, two-finger drag or Shift+drag to box-select · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
+    '    <div class="fp-help small text-muted"><strong>Shortcuts</strong><br>V W R D N T X L O K tools · Esc finish/deselect · Del delete · arrows nudge<br>Ctrl+Z / Ctrl+Shift+Z undo/redo · Ctrl+S save · wheel zoom · drag empty space to pan<br>Right-drag, two-finger drag or Shift+drag to box-select · Shift+click adds · double-click a wall selects its whole run · Ctrl+A all · Angles dropdown or Shift = diagonals</div>' +
     '  </aside>' +
     '</div>';
 
@@ -222,7 +269,7 @@
   P.translateEl = function (type, el, dx, dy) {
     if (type === "wall" || type === "guide") { el.x1 += dx; el.x2 += dx; el.y1 += dy; el.y2 += dy; }
     else if (type === "room") translateRoom(el, dx, dy);
-    else if (type === "label" || type === "fixture" || type === "roof") { el.x += dx; el.y += dy; }
+    else if (type === "label" || type === "fixture" || type === "roof" || type === "deck") { el.x += dx; el.y += dy; }
   };
   P.anchorOf = function (type, el) { return type === "wall" || type === "guide" ? { x: el.x1, y: el.y1 } : { x: el.x, y: el.y }; };
 
@@ -244,9 +291,8 @@
     try { this.angleMode = localStorage.getItem("fp-angle") || "ortho"; } catch (_) { this.angleMode = "ortho"; }
     ang.value = this.angleMode;
     ang.addEventListener("change", function () { self.angleMode = ang.value; try { localStorage.setItem("fp-angle", ang.value); } catch (_) {} self.render(); });
-    this.kindSel = this.root.querySelector(".fp-kind");
+    this.armed = CATALOG_BY_ID.base24;   // fixture the Fixture tool will place next
     this.doorKindSel = this.root.querySelector(".fp-doorkind");
-    this.kindSel.innerHTML = fixtureOptions("counter");
     var uw = this.root.querySelector(".fp-underlay-wrap"), us = this.root.querySelector(".fp-underlay"), sibs = this.opts.siblings || [];
     if (sibs.length) {
       uw.classList.remove("d-none");
@@ -352,7 +398,7 @@
 
   // ---------------------------------------------------------------- lookup / hit testing
   P.find = function (type, id) { var list = this.listFor(type); for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; };
-  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : type === "guide" ? this.data.guides : type === "roof" ? this.data.roofs : this.data.labels; };
+  P.listFor = function (type) { return type === "wall" ? this.data.walls : type === "room" ? this.data.rooms : type === "opening" ? this.data.openings : type === "fixture" ? this.data.fixtures : type === "guide" ? this.data.guides : type === "roof" ? this.data.roofs : type === "deck" ? this.data.decks : this.data.labels; };
   P.underlay = function () {
     if (!this.underlayId) return null;
     var sib = (this.opts.siblings || []).filter(function (p) { return String(p.id) === String(this.underlayId); }, this)[0];
@@ -396,6 +442,10 @@
       r = this.data.rooms[i];
       if (pointInPoly(p, roomPts(r))) return { type: "room", id: r.id };
     }
+    for (i = this.data.decks.length - 1; i >= 0; i--) {
+      r = this.data.decks[i];
+      if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "deck", id: r.id };
+    }
     for (i = this.data.roofs.length - 1; i >= 0; i--) {
       r = this.data.roofs[i];
       if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "roof", id: r.id };
@@ -408,7 +458,7 @@
     var self = this;
     if (this.sel.type === "wall" || this.sel.type === "guide") return [{ k: "p1", w: { x: el.x1, y: el.y1 } }, { k: "p2", w: { x: el.x2, y: el.y2 } }].map(function (h) { h.s = self.toScreen(h.w.x, h.w.y); return h; });
     if (this.sel.type === "room" && !roomIsRect(el)) return roomPts(el).map(function (p, i) { return { k: "v" + i, w: { x: p[0], y: p[1] }, s: self.toScreen(p[0], p[1]) }; });
-    if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
+    if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof" || this.sel.type === "deck") return [["nw", el.x, el.y], ["ne", el.x + el.w, el.y], ["se", el.x + el.w, el.y + el.h], ["sw", el.x, el.y + el.h]].map(function (h) { return { k: h[0], w: { x: h[1], y: h[2] }, s: self.toScreen(h[1], h[2]) }; });
     return [];
   };
   P.hitHandle = function (sx, sy) {
@@ -474,8 +524,8 @@
     this.tool = t; this.draft = null; this.roomDraft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick a fixture in the dropdown, then click to place it. Rotate it from the side panel.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building.", roof: "Drag a rectangle over the area one roof section covers (it can extend past the walls). Use several for L-shapes or porches. Style, pitch and overhang are in the side panel." }[t]);
-    this.kindSel.classList.toggle("d-none", t !== "fixture");
+    if (this.props) this.updatePanel();
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick an item in the panel on the right, then click to place it. Switch to Select to move, rotate or resize it.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building.", roof: "Drag a rectangle over the area one roof section covers (it can extend past the walls). Use several for L-shapes or porches. Style, pitch, ends, dormers and overhang are in the side panel.", deck: "Drag a rectangle for the deck. Height, decking, railings and stairs are in the side panel." }[t]);
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
   };
@@ -556,7 +606,7 @@
       this.drag = { kind: "room", start: sp, cur: sp };
       return;
     }
-    if (this.tool === "roof") { var rsp = this.snapPoint(p); this.drag = { kind: "roof", start: rsp, cur: rsp }; return; }
+    if (this.tool === "roof" || this.tool === "deck") { var rsp = this.snapPoint(p); this.drag = { kind: this.tool, start: rsp, cur: rsp }; return; }
     // wall / door / window / label act on click (pointerup)
   };
 
@@ -574,7 +624,7 @@
         return this.render();
       }
       if (d.kind === "moveMulti") return this.dragMulti(d, p);
-      if (d.kind === "room" || d.kind === "roof") { d.cur = this.snapPoint(p); return this.render(); }
+      if (d.kind === "room" || d.kind === "roof" || d.kind === "deck") { d.cur = this.snapPoint(p); return this.render(); }
       if (d.kind === "move") return this.dragMove(d, p);
       if (d.kind === "handle") return this.dragHandle(d, p);
     }
@@ -685,7 +735,7 @@
       el.x1 = o.x1 + dx; el.y1 = o.y1 + dy; el.x2 = o.x2 + dx; el.y2 = o.y2 + dy;
     } else if (d.type === "room") {
       var nxr = this.snapVal(o.x + raw.x), nyr = this.snapVal(o.y + raw.y); el.pts = o.pts; translateRoom(el, nxr - o.x, nyr - o.y);
-    } else if (d.type === "label" || d.type === "fixture" || d.type === "roof") {
+    } else if (d.type === "label" || d.type === "fixture" || d.type === "roof" || d.type === "deck") {
       el.x = this.snapVal(o.x + raw.x); el.y = this.snapVal(o.y + raw.y);
     } else if (d.type === "opening") {
       var w = this.wallOf(el); if (w) { var pr = project(p, w); el.pos = this.snapVal(clamp(pr.pos, el.width / 2, pr.len - el.width / 2)); }
@@ -721,7 +771,7 @@
       if (k === "p1") { el.x1 = gnp.x; el.y1 = gnp.y; } else { el.x2 = gnp.x; el.y2 = gnp.y; }
     } else if (this.sel.type === "room" && k.charAt(0) === "v") {
       var vi = +k.slice(1), vp = this.snapPoint(p); el.pts = roomPts(el).slice(); el.pts[vi] = [vp.x, vp.y]; roomSync(el);
-    } else if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof") {
+    } else if (this.sel.type === "room" || this.sel.type === "fixture" || this.sel.type === "roof" || this.sel.type === "deck") {
       var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h, sx = this.snapVal(p.x), sy = this.snapVal(p.y);
       if (k.indexOf("w") >= 0) x1 = sx; if (k.indexOf("e") >= 0) x2 = sx; if (k.indexOf("n") >= 0) y1 = sy; if (k.indexOf("s") >= 0) y2 = sy;
       el.x = Math.min(x1, x2); el.y = Math.min(y1, y2); el.w = Math.max(this.data.grid, Math.abs(x2 - x1)); el.h = Math.max(this.data.grid, Math.abs(y2 - y1));
@@ -750,6 +800,7 @@
         this.data.rooms.forEach(function (r) { if (inside(r.x, r.y) && inside(r.x + r.w, r.y + r.h)) picked.push({ type: "room", id: r.id }); });
         this.data.fixtures.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "fixture", id: f.id }); });
         this.data.roofs.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "roof", id: f.id }); });
+        this.data.decks.forEach(function (f) { if (inside(f.x, f.y) && inside(f.x + f.w, f.y + f.h)) picked.push({ type: "deck", id: f.id }); });
         this.data.labels.forEach(function (l) { if (inside(l.x, l.y)) picked.push({ type: "label", id: l.id }); });
         var set = d.keep.slice(); picked.forEach(function (x) { if (!set.some(function (y) { return y.type === x.type && y.id === x.id; })) set.push(x); });
         this.selSet = set; this.sel = set.length ? set[0] : null;
@@ -761,11 +812,12 @@
       if (after !== d.before) { this.history.push(d.before); this.future = []; this.markDirty(); }
       this.render(); this.updatePanel(); return;
     }
-    if (d && d.kind === "roof") {
+    if (d && (d.kind === "roof" || d.kind === "deck")) {
       var ra = d.start, rb = d.cur, rx = Math.min(ra.x, rb.x), ry = Math.min(ra.y, rb.y), rw = Math.abs(rb.x - ra.x), rh = Math.abs(rb.y - ra.y);
       if (rw >= 2 && rh >= 2) {
-        var rid = uid(), def = Object.assign({}, ROOF_DEF, this.lastRoof || {});
-        this.commit(function () { this.data.roofs.push(Object.assign({ id: rid, x: rx, y: ry, w: rw, h: rh }, def)); this.setSel({ type: "roof", id: rid }); });
+        var rid = uid(), kindT = d.kind;
+        var def = kindT === "roof" ? Object.assign({}, ROOF_DEF, this.lastRoof || {}, { dormers: [] }) : JSON.parse(JSON.stringify(Object.assign({}, DECK_DEF, this.lastDeck || {})));
+        this.commit(function () { this.listFor(kindT).push(Object.assign({ id: rid, x: rx, y: ry, w: rw, h: rh }, def)); this.setSel({ type: kindT, id: rid }); });
       } else this.render();
       return;
     }
@@ -819,8 +871,9 @@
       return;
     }
     if (this.tool === "fixture") {
-      var kind = this.kindSel.value || "box", spec = FIXTURES[kind], fp = this.snapPoint(p), fid = uid();
-      this.commit(function () { this.data.fixtures.push({ id: fid, kind: kind, x: fp.x, y: fp.y, w: spec.w, h: spec.h, rot: 0, dir: kind === "stairs" ? "up" : undefined, label: kind === "stairs" ? "UP" : "" }); this.setSel({ type: "fixture", id: fid }); });
+      var it = this.armed || CATALOG_BY_ID.box, fp = this.snapPoint(p), fid = uid();
+      this.commit(function () { this.data.fixtures.push({ id: fid, kind: it.kind, item: it.id, name: it.label, x: fp.x, y: fp.y, w: it.w, h: it.h, hgt: it.hgt, rot: 0, dir: it.kind === "stairs" ? "up" : undefined, label: it.kind === "stairs" ? "UP" : "" }); this.setSel({ type: "fixture", id: fid }); });
+      this.hint("Placed " + it.label + ". Click to place another, or press V to select and adjust it.");
       return;
     }
     if (this.tool === "label") {
@@ -838,7 +891,7 @@
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? this.redo() : this.undo(); }
     if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); return this.redo(); }
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); return this.save(false); }
-    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); var all = []; ["wall", "guide", "room", "fixture", "roof", "label"].forEach(function (t) { this.listFor(t).forEach(function (x) { all.push({ type: t, id: x.id }); }); }, this); this.selSet = all; this.sel = all[0] || null; this.setTool("select"); this.updatePanel(); return; }
+    if (mod && e.key.toLowerCase() === "a") { e.preventDefault(); var all = []; ["wall", "guide", "room", "fixture", "roof", "deck", "label"].forEach(function (t) { this.listFor(t).forEach(function (x) { all.push({ type: t, id: x.id }); }); }, this); this.selSet = all; this.sel = all[0] || null; this.setTool("select"); this.updatePanel(); return; }
     if (mod) return;
     var g = this.data.grid;
     switch (e.key) {
@@ -859,6 +912,7 @@
       case "x": case "X": this.setTool("fixture"); break;
       case "l": case "L": this.setTool("line"); break;
       case "o": case "O": this.setTool("roof"); break;
+      case "k": case "K": this.setTool("deck"); break;
       case "g": case "G": this.act("grid"); break;
       case "f": case "F": this.fit(); break;
       case "+": case "=": this.act("zoomIn"); break;
@@ -871,6 +925,7 @@
 
   P.updatePanel = function (light) {
     var el = this.selected(), self = this, html = "";
+    if (this.tool === "fixture") return this.renderCatalog();
     if (this.multi()) {
       var counts = {}; this.selSet.forEach(function (x) { counts[x.type] = (counts[x.type] || 0) + 1; });
       var parts = Object.keys(counts).map(function (t) { return counts[t] + " " + (t === "guide" ? "line" : t) + (counts[t] === 1 ? "" : "s"); });
@@ -915,9 +970,9 @@
         f("Position from wall start (ft)", "pos", Math.round(el.pos * 100) / 100, 'type="number" step="0.25"') +
         (isDoor ? '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="swing">' + ({ garage: "Flip inside", sliding: "Flip sides" }[dkNow] || "Flip swing") + '</button>' + (dkNow !== "garage" ? '<button class="btn btn-outline-secondary btn-sm" data-btn="hinge">' + (dkNow === "sliding" ? "Swap panels" : "Flip hinge") + '</button>' : "") + '</div>' : "");
     } else if (this.sel.type === "fixture") {
-      var kinds = fixtureOptions(el.kind);
-      html = '<h6>Fixture</h6>' +
-        '<div class="fp-field"><label>Kind</label><select class="form-select form-select-sm" data-prop="kind">' + kinds + '</select></div>' +
+      var curItem = catalogItemFor(el);
+      html = '<h6>Fixture <span class="text-muted fw-normal">· ' + esc(el.name || (curItem && curItem.label) || (FIXTURES[el.kind] || {}).label || el.kind) + '</span></h6>' +
+        '<div class="fp-field"><label>Item (standard size)</label><select class="form-select form-select-sm" data-prop="item">' + catalogOptions(curItem && curItem.id) + '</select></div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
         (el.kind === "stairs" ? '<div class="fp-field"><label>Direction</label><select class="form-select form-select-sm" data-prop="dir"><option value="up"' + (el.dir !== "down" ? " selected" : "") + '>Up (arrow points to the top step)</option><option value="down"' + (el.dir === "down" ? " selected" : "") + '>Down</option></select></div>' : "") +
         (FIXTURES[el.kind] && FIXTURES[el.kind].hgt ? f("Height (ft)", "hgt", el.hgt || FIXTURES[el.kind].hgt, 'type="number" step="0.25" min="1"') : "") +
@@ -925,12 +980,46 @@
         '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="rotate">Rotate 90°</button></div>';
     } else if (this.sel.type === "roof") {
       var opt = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (String(cur) === String(o[0]) ? " selected" : "") + '>' + o[1] + '</option>'; }).join(""); };
+      var sel = function (label, name, list, cur) { return '<div class="fp-field"><label>' + label + '</label><select class="form-select form-select-sm" data-prop="' + name + '">' + opt(list, cur) + '</select></div>'; };
+      var ridged = el.style === "hip" || el.style === "gable" || el.style === "gambrel", alongX = el.ridge === "x" || (el.ridge !== "y" && el.w >= el.h);
+      var endLabels = alongX ? ["Left end", "Right end"] : ["Back end (top of plan)", "Front end (bottom)"], sideLabels = alongX ? [["a", "Back slope (top of plan)"], ["b", "Front slope (bottom)"]] : [["a", "Left slope"], ["b", "Right slope"]];
+      var pitchOpts = PITCHES.map(function (p) { return [p, p + ":12"]; });
       html = '<h6>Roof section</h6><div class="small text-muted mb-2">Built in 3D in place of the automatic roof for this level.</div>' +
-        '<div class="fp-field"><label>Style</label><select class="form-select form-select-sm" data-prop="style">' + opt(ROOF_KINDS, el.style) + '</select></div>' +
-        (el.style !== "flat" ? '<div class="fp-field"><label>Pitch (rise per 12")</label><select class="form-select form-select-sm" data-prop="pitch">' + opt(PITCHES.map(function (p) { return [p, p + ":12"]; }), el.pitch) + '</select></div>' : "") +
-        (el.style === "hip" || el.style === "gable" ? '<div class="fp-field"><label>Ridge runs</label><select class="form-select form-select-sm" data-prop="ridge">' + opt(RIDGES, el.ridge || "auto") + '</select></div>' : "") +
-        (el.style === "shed" ? '<div class="fp-field"><label>High side</label><select class="form-select form-select-sm" data-prop="high">' + opt(HIGH_SIDES, el.high || "n") + '</select></div>' : "") +
-        '<div class="fp-row">' + f("Overhang (ft)", "overhang", el.overhang != null ? el.overhang : 1.5, 'type="number" step="0.25" min="0"') + f("Eave height (ft)", "eave", el.eave || 9, 'type="number" step="0.5" min="1"') + '</div>' +
+        '<div class="fp-sub">Shape</div>' +
+        sel("Style", "style", ROOF_KINDS, el.style) +
+        (el.style !== "flat" ? sel(el.style === "mansard" ? "Lower slope pitch" : el.style === "gambrel" ? "Upper pitch (lower slope is steep)" : "Pitch (rise per 12\")", "pitch", pitchOpts, el.pitch) : "") +
+        (ridged || el.style === "mansard" ? sel("Ridge runs", "ridge", RIDGES, el.ridge || "auto") : "") +
+        (el.style === "shed" ? sel("High side", "high", HIGH_SIDES, el.high || "n") : "") +
+        (el.style === "hip" || el.style === "gable" ? '<div class="fp-row">' + sel(endLabels[0], "endA", END_KINDS, el.endA || (el.style === "gable" ? "gable" : "hip")) + sel(endLabels[1], "endB", END_KINDS, el.endB || (el.style === "gable" ? "gable" : "hip")) + '</div>' : "") +
+        (ridged ? '<div class="fp-row">' + sel("Other slope pitch", "pitchB", [["", "Same"]].concat(pitchOpts), el.pitchB || "") + f("Ridge shift (%)", "shift", Math.round((+el.shift || 0) * 100), 'type="number" step="5" min="-40" max="40" title="Move the ridge toward one eave (saltbox). Ignored when the other slope has its own pitch."') + '</div>' : "") +
+        '<div class="fp-sub">Edges & heights</div>' +
+        '<div class="fp-row">' + f("Eave overhang (ft)", "overhang", el.overhang != null ? el.overhang : 1.5, 'type="number" step="0.25" min="0"') + f("Rake overhang (ft)", "rake", el.rake != null ? el.rake : 1, 'type="number" step="0.25" min="0" title="Overhang at gable ends"') + '</div>' +
+        '<div class="fp-row">' + f("Eave height (ft)", "eave", el.eave || 9, 'type="number" step="0.5" min="1"') + f("Ridge height (ft, optional)", "ridgeH", el.ridgeH || "", 'type="number" step="0.5" min="1" placeholder="from pitch" title="Set this to line ridges up; the pitch then follows"') + '</div>' +
+        '<div class="fp-sub">Size & color</div>' +
+        '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.5" min="2"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.5" min="2"') + '</div>' +
+        '<div class="fp-row">' + f("X (ft)", "x", el.x, 'type="number" step="0.5"') + f("Y (ft)", "y", el.y, 'type="number" step="0.5"') + '</div>' +
+        sel("Roof color", "color", ROOF_COLOR_OPTS, el.color || "") +
+        (ridged && el.style !== "gambrel" ? '<div class="fp-sub">Dormers <button class="btn btn-outline-secondary btn-sm py-0 ms-1" data-btn="addDormer">Add</button></div>' +
+          (el.dormers || []).map(function (dm, i) {
+            return '<div class="fp-dormer" data-dormer="' + i + '"><div class="fp-row">' +
+              '<div class="fp-field"><label>Type</label><select class="form-select form-select-sm" data-dprop="type">' + opt([["gable", "Gable"], ["shed", "Shed"]], dm.type) + '</select></div>' +
+              '<div class="fp-field"><label>On</label><select class="form-select form-select-sm" data-dprop="side">' + opt(sideLabels, dm.side) + '</select></div></div>' +
+              '<div class="fp-row">' + '<div class="fp-field"><label>Position (ft)</label><input class="form-control form-control-sm" data-dprop="pos" type="number" step="0.5" value="' + (dm.pos != null ? dm.pos : Math.round((alongX ? el.w : el.h) / 2 * 2) / 2) + '" title="Center, measured along the ridge from the ' + (alongX ? "left" : "back") + '"></div>' +
+              '<div class="fp-field"><label>Width (ft)</label><input class="form-control form-control-sm" data-dprop="w" type="number" step="0.5" min="2" value="' + dm.w + '"></div></div>' +
+              '<div class="fp-row">' + '<div class="fp-field"><label>Set back (ft)</label><input class="form-control form-control-sm" data-dprop="setback" type="number" step="0.5" min="0" value="' + dm.setback + '" title="From the wall line to the dormer front"></div>' +
+              '<div class="fp-field"><label>Wall height (ft)</label><input class="form-control form-control-sm" data-dprop="wall" type="number" step="0.5" min="2" value="' + dm.wall + '"></div>' +
+              '<div class="fp-field"><label>Pitch</label><select class="form-select form-select-sm" data-dprop="pitch">' + opt(pitchOpts, dm.pitch) + '</select></div></div>' +
+              '<button class="btn btn-link btn-sm text-danger p-0 mb-2" data-btn="removeDormer" data-index="' + i + '">Remove dormer</button></div>';
+          }).join("") : "");
+    } else if (this.sel.type === "deck") {
+      var opt2 = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (String(cur) === String(o[0]) ? " selected" : "") + '>' + o[1] + '</option>'; }).join(""); };
+      var rails = el.rails || {}, cb = function (k, label) { return '<label class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" data-rail="' + k + '"' + (rails[k] ? " checked" : "") + '> ' + label + '</label>'; };
+      html = '<h6>Deck</h6>' +
+        '<div class="fp-row">' + f("Height above floor (ft)", "height", el.height != null ? el.height : 1.5, 'type="number" step="0.25" min="0" title="Deck surface above this level\'s floor"') +
+        '<div class="fp-field"><label>Decking</label><select class="form-select form-select-sm" data-prop="material">' + opt2(DECK_MATERIALS, el.material || "wood") + '</select></div></div>' +
+        '<div class="fp-field"><label>Railings</label><div>' + cb("n", "Back") + cb("s", "Front") + cb("w", "Left") + cb("e", "Right") + '</div></div>' +
+        '<div class="fp-row"><div class="fp-field"><label>Stairs</label><select class="form-select form-select-sm" data-prop="stairs">' + opt2([["none", "None"]].concat(HIGH_SIDES.map(function (h) { return [h[0], "Down the " + h[1].toLowerCase().replace(" (top of plan)", "").replace(" (bottom)", "") + " side"]; })), el.stairs || "none") + '</select></div>' +
+        f("Stair width (ft)", "stairW", el.stairW || 4, 'type="number" step="0.5" min="2"') + '</div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.5" min="2"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.5" min="2"') + '</div>' +
         '<div class="fp-row">' + f("X (ft)", "x", el.x, 'type="number" step="0.5"') + f("Y (ft)", "y", el.y, 'type="number" step="0.5"') + '</div>';
     } else if (this.sel.type === "guide") {
@@ -963,12 +1052,24 @@
           else if (name === "kind") {
             cur.kind = v;
             if (self.sel.type === "opening" && DOOR_KINDS[v]) { cur.width = DOOR_KINDS[v].w; cur.height = DOOR_KINDS[v].h; }
-            if (self.sel.type === "fixture") { if (v === "stairs") { cur.dir = cur.dir || "up"; if (!cur.label) cur.label = "UP"; } else if (/^(UP|DN)$/.test(cur.label || "")) cur.label = ""; }
+          }
+          else if (name === "item") {
+            var it2 = CATALOG_BY_ID[v]; if (!it2) return;
+            var wasRot = (cur.rot || 0) % 180 !== 0;
+            cur.kind = it2.kind; cur.item = it2.id; cur.name = it2.label; cur.w = wasRot ? it2.h : it2.w; cur.h = wasRot ? it2.w : it2.h; cur.hgt = it2.hgt;
+            if (it2.kind === "stairs") { cur.dir = cur.dir || "up"; if (!cur.label) cur.label = "UP"; } else if (/^(UP|DN)$/.test(cur.label || "")) cur.label = "";
           }
           else if (name === "label") cur.label = v;
-          else if (name === "style" || name === "ridge" || name === "high") { cur[name] = v; self.lastRoof = Object.assign({}, self.lastRoof || {}, { style: cur.style, pitch: cur.pitch, ridge: cur.ridge, overhang: cur.overhang, eave: cur.eave, high: cur.high }); }
+          else if (self.sel.type === "roof" && ["style", "ridge", "high", "endA", "endB", "color", "pitchB"].indexOf(name) >= 0) {
+            cur[name] = v; if (name === "style" && (v === "gable") && !cur.endA) { cur.endA = cur.endB = "gable"; }
+            if (name === "style" && v === "hip" && cur.endA === "gable" && cur.endB === "gable") { cur.endA = cur.endB = "hip"; }
+            self.lastRoof = Object.assign({}, self.lastRoof || {}, { style: cur.style, pitch: cur.pitch, ridge: cur.ridge, overhang: cur.overhang, rake: cur.rake, eave: cur.eave, high: cur.high, endA: cur.endA, endB: cur.endB, color: cur.color });
+          }
+          else if (self.sel.type === "deck" && (name === "material" || name === "stairs")) { cur[name] = v; self.lastDeck = Object.assign({}, self.lastDeck || {}, { material: cur.material, height: cur.height }); }
           else if (name === "pitch") { cur.pitch = +v || 6; self.lastRoof = Object.assign({}, self.lastRoof || {}, { pitch: cur.pitch }); }
-          else if (name === "overhang" || name === "eave") { var ov = +v; if (isFinite(ov) && ov >= 0) { cur[name] = ov; self.lastRoof = Object.assign({}, self.lastRoof || {}); self.lastRoof[name] = ov; } }
+          else if (name === "shift") { cur.shift = clamp((+v || 0) / 100, -0.4, 0.4); }
+          else if (name === "ridgeH") { cur.ridgeH = v === "" ? "" : (+v || ""); }
+          else if (name === "overhang" || name === "eave" || name === "rake" || name === "height" || name === "stairW") { var ov = +v; if (isFinite(ov) && ov >= 0) { cur[name] = ov; if (self.sel.type === "roof") { self.lastRoof = Object.assign({}, self.lastRoof || {}); self.lastRoof[name] = ov; } else if (name === "height") { self.lastDeck = Object.assign({}, self.lastDeck || {}, { height: ov }); } } }
           else if (name === "dir") { cur.dir = v; if (!cur.label || /^(UP|DN|DOWN)$/i.test(cur.label)) cur.label = v === "down" ? "DN" : "UP"; }
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
@@ -993,10 +1094,42 @@
         if (b.dataset.btn === "delete") return self.deleteSelected();
         self.commit(function () {
           if (b.dataset.btn === "swing") cur.swing = -(cur.swing || 1);
+          else if (b.dataset.btn === "addDormer") { cur.dormers = cur.dormers || []; var alongX2 = cur.ridge === "x" || (cur.ridge !== "y" && cur.w >= cur.h); cur.dormers.push(Object.assign({}, DORMER_DEF, { pos: Math.round((alongX2 ? cur.w : cur.h) / 2 * 2) / 2 })); }
+          else if (b.dataset.btn === "removeDormer") { (cur.dormers || []).splice(+b.dataset.index, 1); }
           else if (b.dataset.btn === "hinge") cur.hinge = cur.hinge ? 0 : 1;
           else if (b.dataset.btn === "rotate") { var cx = cur.x + cur.w / 2, cy = cur.y + cur.h / 2, w = cur.w; cur.w = cur.h; cur.h = w; cur.x = self.snapVal(cx - cur.w / 2); cur.y = self.snapVal(cy - cur.h / 2); cur.rot = ((cur.rot || 0) + 90) % 360; }
         });
       });
+    });
+    this.props.querySelectorAll("[data-dprop]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var cur = self.selected(); if (!cur || !cur.dormers) return;
+        var idx = +inp.closest("[data-dormer]").dataset.dormer, key = inp.dataset.dprop, v = inp.value;
+        self.commit(function () { var dm = cur.dormers[idx]; if (!dm) return; dm[key] = (key === "type" || key === "side") ? v : +v; }, true);
+      });
+    });
+    this.props.querySelectorAll("[data-rail]").forEach(function (inp) {
+      inp.addEventListener("change", function () { var cur = self.selected(); if (!cur) return; self.commit(function () { cur.rails = cur.rails || {}; cur.rails[inp.dataset.rail] = inp.checked; }, true); });
+    });
+    this.renderSummary();
+  };
+
+  // Fixture library: takes over the side panel while the Fixture tool is active.
+  P.renderCatalog = function () {
+    var self = this, q = (this.catalogQuery || "").toLowerCase(), html = '<h6>Fixtures</h6><div class="small text-muted mb-2">Standard sizes. Pick one, then click the plan to place it.</div>' +
+      '<input class="form-control form-control-sm mb-2" data-fsearch placeholder="Search, e.g. range 36 or queen" value="' + esc(this.catalogQuery || "") + '">' +
+      '<div class="fp-cat">' + CATALOG.map(function (grp) {
+        var items = grp.items.filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) >= 0 || grp.g.toLowerCase().indexOf(q) >= 0; });
+        if (!items.length) return "";
+        return '<div class="fp-cat-group">' + grp.g + '</div>' + items.map(function (it) {
+          return '<button type="button" class="fp-cat-item' + (self.armed && self.armed.id === it.id ? " active" : "") + '" data-item="' + it.id + '"><span>' + it.label + '</span><small>' + ftIn(it.w) + " × " + ftIn(it.h) + '</small></button>';
+        }).join("");
+      }).join("") + '</div>';
+    this.props.innerHTML = html; this.propsFor = "catalog";
+    var search = this.props.querySelector("[data-fsearch]");
+    search.addEventListener("input", function () { var pos = search.selectionStart; self.catalogQuery = search.value; self.renderCatalog(); var s2 = self.props.querySelector("[data-fsearch]"); s2.focus(); s2.setSelectionRange(pos, pos); });
+    this.props.querySelectorAll("[data-item]").forEach(function (b) {
+      b.addEventListener("click", function () { self.armed = CATALOG_BY_ID[b.dataset.item]; self.props.querySelectorAll(".fp-cat-item").forEach(function (x) { x.classList.toggle("active", x === b); }); self.hint("Click the plan to place " + self.armed.label + "."); });
     });
     this.renderSummary();
   };
@@ -1006,7 +1139,7 @@
     var set = function (name, v) { var i = this.props.querySelector('[data-prop="' + name + '"]'); if (i && document.activeElement !== i) i.value = v; }.bind(this);
     if (this.sel.type === "wall" || this.sel.type === "guide") { set("length", ftIn(seg(el).len)); set("p1", el.x1 + ", " + el.y1); set("p2", el.x2 + ", " + el.y2); }
     if (this.sel.type === "room") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); set("area", sqft(roomArea(el))); set("shape", roomPts(el).length + " corners · " + ftIn(el.w) + " × " + ftIn(el.h) + " overall"); }
-    if (this.sel.type === "fixture" || this.sel.type === "roof") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); }
+    if (this.sel.type === "fixture" || this.sel.type === "roof" || this.sel.type === "deck") { set("w", el.w); set("h", el.h); set("x", el.x); set("y", el.y); }
     if (this.sel.type === "opening") set("pos", Math.round(el.pos * 100) / 100);
   };
 
@@ -1018,7 +1151,7 @@
     var doors = d.openings.filter(function (o) { return o.type === "door"; }).length, wins = d.openings.length - doors;
     var extLen = 0; d.walls.forEach(function (w) { if (w.type === "exterior") extLen += seg(w).len; });
     this.summary.innerHTML = '<h6 class="mt-3">Summary</h6>' +
-      '<div class="small text-muted mb-1">' + d.walls.length + ' walls (' + ftIn(extLen) + ' exterior) · ' + doors + ' doors · ' + wins + ' windows · ' + d.fixtures.length + ' fixtures' + (d.roofs.length ? ' · ' + d.roofs.length + ' roof section' + (d.roofs.length === 1 ? '' : 's') : '') + '</div>' +
+      '<div class="small text-muted mb-1">' + d.walls.length + ' walls (' + ftIn(extLen) + ' exterior) · ' + doors + ' doors · ' + wins + ' windows · ' + d.fixtures.length + ' fixtures' + (d.roofs.length ? ' · ' + d.roofs.length + ' roof section' + (d.roofs.length === 1 ? '' : 's') : '') + (d.decks.length ? ' · ' + d.decks.length + ' deck' + (d.decks.length === 1 ? '' : 's') : '') + '</div>' +
       (d.rooms.length ? '<table class="table table-sm small mb-1"><tbody>' + rows + '</tbody><tfoot><tr><th colspan="2">Total</th><th class="text-end">' + Math.round(total).toLocaleString() + ' sq ft</th></tr></tfoot></table>' : '<div class="small text-muted">No rooms yet.</div>');
     this.summary.querySelectorAll("[data-room]").forEach(function (tr) { tr.style.cursor = "pointer"; tr.addEventListener("click", function () { self.setSel({ type: "room", id: tr.dataset.room }); self.render(); self.updatePanel(); }); });
   };
@@ -1117,7 +1250,8 @@
     });
     ctx.lineCap = "square";
 
-    // roof sections: translucent outline with ridge / hip lines (drawn over the plan, under labels)
+    // decks (under roofs), then roof sections: translucent outline with ridge / hip lines
+    d.decks.forEach(function (dk) { self.drawDeckPlan(ctx, dk, S, s, o.ui && self.isSelected("deck", dk.id)); });
     d.roofs.forEach(function (rf) { self.drawRoofPlan(ctx, rf, S, s, o.ui && self.isSelected("roof", rf.id)); });
 
     // guide lines (reference only)
@@ -1178,6 +1312,13 @@
         ctx.fillStyle = "rgba(13,110,253,.08)"; ctx.fillRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y);
         ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(ma.x, ma.y, mb.x - ma.x, mb.y - ma.y); ctx.setLineDash([]);
       }
+      // deck draft
+      if (this.drag && this.drag.kind === "deck") {
+        var da2 = S(this.drag.start.x, this.drag.start.y), db2 = S(this.drag.cur.x, this.drag.cur.y);
+        ctx.fillStyle = C.deckFill; ctx.fillRect(da2.x, da2.y, db2.x - da2.x, db2.y - da2.y); ctx.strokeStyle = C.deck; ctx.lineWidth = 1.2; ctx.strokeRect(da2.x, da2.y, db2.x - da2.x, db2.y - da2.y);
+        var dw2 = Math.abs(this.drag.cur.x - this.drag.start.x), dh2 = Math.abs(this.drag.cur.y - this.drag.start.y);
+        ctx.fillStyle = C.deck; ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("Deck " + ftIn(dw2) + " × " + ftIn(dh2) + " · " + sqft(dw2 * dh2), Math.min(da2.x, db2.x) + 4, Math.min(da2.y, db2.y) - 4);
+      }
       // roof draft
       if (this.drag && this.drag.kind === "roof") {
         var ra2 = S(this.drag.start.x, this.drag.start.y), rb2 = S(this.drag.cur.x, this.drag.cur.y);
@@ -1193,7 +1334,7 @@
         ctx.fillStyle = C.sel; ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(ftIn(rw) + " × " + ftIn(rh) + " · " + sqft(rw * rh), Math.min(a.x, bb.x) + 4, Math.min(a.y, bb.y) - 4);
       }
       // hover snap cursor for placement tools
-      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "roof" || this.tool === "label")) {
+      if (this.mouse && !this.drag && (this.tool === "wall" || this.tool === "line" || this.tool === "room" || this.tool === "roof" || this.tool === "deck" || this.tool === "label")) {
         var sp = this.snapPoint(this.mouse), sc = S(sp.x, sp.y);
         ctx.strokeStyle = C.draft; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sc.x - 6, sc.y); ctx.lineTo(sc.x + 6, sc.y); ctx.moveTo(sc.x, sc.y - 6); ctx.lineTo(sc.x, sc.y + 6); ctx.stroke();
       }
@@ -1262,6 +1403,7 @@
       case "pantry": line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); break;
       case "upper": break;
       case "column": ctx.strokeRect(x0 + lw * .25, y0 + lh * .25, lw * .5, lh * .5); break;
+      case "chimney": line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); ctx.strokeRect(x0 + 3, y0 + 3, lw - 6, lh - 6); break;
       case "island_seat": ctx.setLineDash([3, 3]); line(x0, y0 + lh - 1.2 * s, x0 + lw, y0 + lh - 1.2 * s); ctx.setLineDash([]); break;
       case "stool": ell(0, 0, lw * .28, lh * .28); break;
       case "round_table": ell(0, 0, lw * .38, lh * .38); break;
@@ -1370,22 +1512,73 @@
     ctx.lineWidth = 1.2;
     var alongX = rf.ridge === "x" || (rf.ridge !== "y" && W >= H), cx = (A.x + B.x) / 2, cy = (A.y + B.y) / 2;
     var line = function (a, b, c, d2) { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d2); ctx.stroke(); };
-    if (rf.style === "hip") {
-      var half = Math.min(W, H) / 2;
-      if (alongX) { line(A.x + half, cy, B.x - half, cy); line(A.x, A.y, A.x + half, cy); line(A.x, B.y, A.x + half, cy); line(B.x, A.y, B.x - half, cy); line(B.x, B.y, B.x - half, cy); }
-      else { line(cx, A.y + half, cx, B.y - half); line(A.x, A.y, cx, A.y + half); line(B.x, A.y, cx, A.y + half); line(A.x, B.y, cx, B.y - half); line(B.x, B.y, cx, B.y - half); }
-    } else if (rf.style === "gable") {
-      if (alongX) line(A.x, cy, B.x, cy); else line(cx, A.y, cx, B.y);
+    if (rf.style === "hip" || rf.style === "gable" || rf.style === "gambrel" || rf.style === "mansard") {
+      // ridge across-position (shifted or from two pitches), hip setbacks per end
+      var span = alongX ? H : W, len = alongX ? W : H, pA = +rf.pitch || 6, pB = +rf.pitchB || 0, dA = pB ? span * pB / (pA + pB) : span * clamp(0.5 + (+rf.shift || 0), 0.15, 0.85);
+      if (rf.style === "mansard") { var ins = Math.min(span, len) * 0.2; ctx.strokeRect(A.x + ins, A.y + ins, W - 2 * ins, H - 2 * ins); line(A.x, A.y, A.x + ins, A.y + ins); line(B.x, A.y, B.x - ins, A.y + ins); line(A.x, B.y, A.x + ins, B.y - ins); line(B.x, B.y, B.x - ins, B.y - ins); }
+      else {
+        var eA = rf.style === "gable" || rf.style === "gambrel" ? (rf.endA || "gable") : (rf.endA || "hip"), eB = rf.style === "gable" || rf.style === "gambrel" ? (rf.endB || "gable") : (rf.endB || "hip");
+        if (rf.style === "gambrel") eA = eB = "gable";
+        var sbA = eA === "gable" ? 0 : eA === "dutch" ? dA * 0.5 : dA, sbB = eB === "gable" ? 0 : eB === "dutch" ? dA * 0.5 : dA;
+        var ridgeAt = alongX ? A.y + dA : A.x + dA;
+        if (alongX) {
+          line(A.x + sbA, ridgeAt, B.x - sbB, ridgeAt);
+          if (eA !== "gable") { line(A.x, A.y, A.x + sbA, ridgeAt); line(A.x, B.y, A.x + sbA, ridgeAt); if (eA === "dutch") line(A.x + sbA, A.y + dA * 0.5, A.x + sbA, B.y - (span - dA) * 0.5); }
+          if (eB !== "gable") { line(B.x, A.y, B.x - sbB, ridgeAt); line(B.x, B.y, B.x - sbB, ridgeAt); if (eB === "dutch") line(B.x - sbB, A.y + dA * 0.5, B.x - sbB, B.y - (span - dA) * 0.5); }
+          if (rf.style === "gambrel") { ctx.setLineDash([2, 3]); line(A.x, A.y + dA * 0.3, B.x, A.y + dA * 0.3); line(A.x, B.y - (span - dA) * 0.3, B.x, B.y - (span - dA) * 0.3); ctx.setLineDash([]); }
+        } else {
+          line(ridgeAt, A.y + sbA, ridgeAt, B.y - sbB);
+          if (eA !== "gable") { line(A.x, A.y, ridgeAt, A.y + sbA); line(B.x, A.y, ridgeAt, A.y + sbA); if (eA === "dutch") line(A.x + dA * 0.5, A.y + sbA, B.x - (span - dA) * 0.5, A.y + sbA); }
+          if (eB !== "gable") { line(A.x, B.y, ridgeAt, B.y - sbB); line(B.x, B.y, ridgeAt, B.y - sbB); if (eB === "dutch") line(A.x + dA * 0.5, B.y - sbB, B.x - (span - dA) * 0.5, B.y - sbB); }
+          if (rf.style === "gambrel") { ctx.setLineDash([2, 3]); line(A.x + dA * 0.3, A.y, A.x + dA * 0.3, B.y); line(B.x - (span - dA) * 0.3, A.y, B.x - (span - dA) * 0.3, B.y); ctx.setLineDash([]); }
+        }
+        // dormers: small rectangles on their slope
+        (rf.dormers || []).forEach(function (dm) {
+          var u = (alongX ? A.x : A.y) + (+dm.pos || 0) * s + (alongX ? o * s : o * s), wpx = (+dm.w || 6) * s, dep = Math.max(3 * s, 2.5 * s), sb = ((+dm.setback || 2.5) + o) * s;
+          var tA = dm.side === "a";
+          ctx.save(); ctx.lineWidth = 1.2;
+          if (alongX) { var yy = tA ? A.y + sb : B.y - sb - dep; ctx.strokeRect(u - wpx / 2, yy, wpx, dep); line(u, yy, u, yy + dep); }
+          else { var xx = tA ? A.x + sb : B.x - sb - dep; ctx.strokeRect(xx, u - wpx / 2, dep, wpx); line(xx, u, xx + dep, u); }
+          ctx.restore();
+        });
+      }
     } else if (rf.style === "shed") {
       var hs = rf.high || "n", from = { n: [cx, A.y + 8], s: [cx, B.y - 8], w: [A.x + 8, cy], e: [B.x - 8, cy] }[hs], to = { n: [cx, B.y - 8], s: [cx, A.y + 8], w: [B.x - 8, cy], e: [A.x + 8, cy] }[hs];
       line(from[0], from[1], to[0], to[1]);
       var ang = Math.atan2(to[1] - from[1], to[0] - from[0]); ctx.beginPath(); ctx.moveTo(to[0], to[1]); ctx.lineTo(to[0] - 7 * Math.cos(ang - 0.4), to[1] - 7 * Math.sin(ang - 0.4)); ctx.lineTo(to[0] - 7 * Math.cos(ang + 0.4), to[1] - 7 * Math.sin(ang + 0.4)); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
     }
     if (W > 60 && H > 24) {
-      var tag = (ROOF_KINDS.filter(function (k) { return k[0] === rf.style; })[0] || [rf.style, rf.style])[1].replace(/ \(.*\)/, "") + (rf.style !== "flat" ? " " + (rf.pitch || 6) + ":12" : "");
+      var tag = (ROOF_KINDS.filter(function (k) { return k[0] === rf.style; })[0] || [rf.style, rf.style])[1].replace(/ \(.*\)/, "") + (rf.style !== "flat" ? " " + (rf.pitch || 6) + ":12" : "") + ((rf.dormers || []).length ? " · " + rf.dormers.length + " dormer" + (rf.dormers.length > 1 ? "s" : "") : "");
       ctx.font = "10px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top"; var tw = ctx.measureText(tag).width;
       ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.fillRect(A.x + 4, A.y + 4, tw + 6, 14); ctx.fillStyle = col; ctx.fillText(tag, A.x + 7, A.y + 6);
     }
+    ctx.restore();
+  };
+
+  P.drawDeckPlan = function (ctx, dk, S, s, selected) {
+    var A = S(dk.x, dk.y), B = S(dk.x + dk.w, dk.y + dk.h), W = B.x - A.x, H = B.y - A.y, col = selected ? C.sel : C.deck;
+    ctx.save();
+    ctx.fillStyle = selected ? C.selFill : C.deckFill; ctx.fillRect(A.x, A.y, W, H);
+    // decking boards run across the short dimension
+    ctx.strokeStyle = "rgba(120,90,50,.35)"; ctx.lineWidth = 1; var board = 0.5 * s;
+    if (board >= 3) { if (W >= H) for (var bx = A.x + board; bx < B.x; bx += board) { ctx.beginPath(); ctx.moveTo(bx, A.y); ctx.lineTo(bx, B.y); ctx.stroke(); } else for (var by = A.y + board; by < B.y; by += board) { ctx.beginPath(); ctx.moveTo(A.x, by); ctx.lineTo(B.x, by); ctx.stroke(); } }
+    ctx.strokeStyle = col; ctx.lineWidth = selected ? 1.6 : 1.1; ctx.strokeRect(A.x, A.y, W, H);
+    // railings: heavy line on railed sides
+    var r = dk.rails || {}; ctx.lineWidth = 3.5; ctx.beginPath();
+    if (r.n) { ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, A.y); } if (r.s) { ctx.moveTo(A.x, B.y); ctx.lineTo(B.x, B.y); } if (r.w) { ctx.moveTo(A.x, A.y); ctx.lineTo(A.x, B.y); } if (r.e) { ctx.moveTo(B.x, A.y); ctx.lineTo(B.x, B.y); }
+    ctx.stroke();
+    // stairs: treads outside the chosen side
+    if (dk.stairs && dk.stairs !== "none") {
+      var n = Math.max(1, Math.ceil((+dk.height || 0) / 0.6)), tread = 0.9167 * s, sw = (+dk.stairW || 4) * s, cx = (A.x + B.x) / 2, cy = (A.y + B.y) / 2;
+      ctx.lineWidth = 1; ctx.strokeStyle = col;
+      for (var i = 0; i < n; i++) {
+        if (dk.stairs === "s") ctx.strokeRect(cx - sw / 2, B.y + i * tread, sw, tread);
+        else if (dk.stairs === "n") ctx.strokeRect(cx - sw / 2, A.y - (i + 1) * tread, sw, tread);
+        else if (dk.stairs === "e") ctx.strokeRect(B.x + i * tread, cy - sw / 2, tread, sw);
+        else ctx.strokeRect(A.x - (i + 1) * tread, cy - sw / 2, tread, sw);
+      }
+    }
+    if (W > 50 && H > 20) { var tag = "Deck" + (dk.height ? " +" + ftIn(+dk.height) : ""); ctx.font = "10px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top"; var tw = ctx.measureText(tag).width; ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.fillRect(A.x + 4, B.y - 18, tw + 6, 14); ctx.fillStyle = col; ctx.fillText(tag, A.x + 7, B.y - 16); }
     ctx.restore();
   };
 
