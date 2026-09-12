@@ -49,6 +49,7 @@
     bed_king:    { g: "Living & bedroom", label: "Bed (king)", w: 6.33, h: 6.67 },
     sofa:        { g: "Living & bedroom", label: "Sofa", w: 7, h: 3 },
     desk:        { g: "Living & bedroom", label: "Desk", w: 5, h: 2.5 },
+    column:      { g: "Other", label: "Porch column (stone base)", w: 1.5, h: 1.5, hgt: 8.5 },
     stairs:      { g: "Other", label: "Stairs", w: 3, h: 12 },
     car:         { g: "Other", label: "Car", w: 6.5, h: 16 },
     box:         { g: "Other", label: "Box (anything)", w: 3, h: 3 }
@@ -919,6 +920,7 @@
         '<div class="fp-field"><label>Kind</label><select class="form-select form-select-sm" data-prop="kind">' + kinds + '</select></div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
         (el.kind === "stairs" ? '<div class="fp-field"><label>Direction</label><select class="form-select form-select-sm" data-prop="dir"><option value="up"' + (el.dir !== "down" ? " selected" : "") + '>Up (arrow points to the top step)</option><option value="down"' + (el.dir === "down" ? " selected" : "") + '>Down</option></select></div>' : "") +
+        (FIXTURES[el.kind] && FIXTURES[el.kind].hgt ? f("Height (ft)", "hgt", el.hgt || FIXTURES[el.kind].hgt, 'type="number" step="0.25" min="1"') : "") +
         f("Label", "label", el.label || "", 'placeholder="optional text, e.g. UP or DN"') +
         '<div class="d-flex gap-1 mb-2"><button class="btn btn-outline-secondary btn-sm" data-btn="rotate">Rotate 90°</button></div>';
     } else if (this.sel.type === "roof") {
@@ -970,7 +972,7 @@
           else if (name === "dir") { cur.dir = v; if (!cur.label || /^(UP|DN|DOWN)$/i.test(cur.label)) cur.label = v === "down" ? "DN" : "UP"; }
           else if (name === "name" || name === "text") cur[name] = v;
           else if (name === "pos") { var w = self.wallOf(cur); if (w) cur.pos = clamp(+v || 0, cur.width / 2, seg(w).len - cur.width / 2); }
-          else if (["w", "h", "x", "y", "width", "size", "height", "sill"].indexOf(name) >= 0) {
+          else if (["w", "h", "x", "y", "width", "size", "height", "sill", "hgt"].indexOf(name) >= 0) {
             var n = +v; if (!isFinite(n) || !(name === "x" || name === "y" || name === "sill" || n > 0)) return;
             if (self.sel.type === "room") { if (name === "x" || name === "y") translateRoom(cur, name === "x" ? n - cur.x : 0, name === "y" ? n - cur.y : 0); else { cur[name] = n; cur.pts = rectPts(cur); roomSync(cur); } }
             else cur[name] = n;
@@ -1259,6 +1261,7 @@
       case "microwave": ctx.strokeRect(x0 + 3, y0 + 3, lw * .7 - 3, lh - 6); break;
       case "pantry": line(x0, y0, x0 + lw, y0 + lh); line(x0 + lw, y0, x0, y0 + lh); break;
       case "upper": break;
+      case "column": ctx.strokeRect(x0 + lw * .25, y0 + lh * .25, lw * .5, lh * .5); break;
       case "island_seat": ctx.setLineDash([3, 3]); line(x0, y0 + lh - 1.2 * s, x0 + lw, y0 + lh - 1.2 * s); ctx.setLineDash([]); break;
       case "stool": ell(0, 0, lw * .28, lh * .28); break;
       case "round_table": ell(0, 0, lw * .38, lh * .38); break;

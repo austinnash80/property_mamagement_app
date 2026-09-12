@@ -23,7 +23,7 @@
     upper: { h: 2.5, z0: 4.5, c: CAB }, hood: { h: 1, z0: 5.2, c: 0xa9adb3, metal: true }, microwave: { h: 1.25, z0: 4.5, c: 0x4a4d52, metal: true },
     range: { h: 3, c: 0x8b9096, metal: true }, range36: { h: 3, c: 0x8b9096, metal: true }, cooktop: { h: 3.1, c: 0x2b2d31, metal: true, thin: true },
     wall_oven: { h: 7, c: 0x5a5e64, metal: true }, fridge: { h: 6, c: APPL, metal: true }, dishwasher: { h: 2.9, c: APPL, metal: true }, pantry: { h: 7, c: CAB },
-    stool: { h: 2.5, c: 0x5a4632, shape: "stool" }, chair: { h: 3, c: 0x6b5a48, shape: "chair" }, table: { h: 2.5, c: 0xa77b4d }, round_table: { h: 2.5, c: 0xa77b4d, shape: "round" },
+    column: { h: 8.5, hgt: 8.5, c: 0xf2efe8 }, stool: { h: 2.5, c: 0x5a4632, shape: "stool" }, chair: { h: 3, c: 0x6b5a48, shape: "chair" }, table: { h: 2.5, c: 0xa77b4d }, round_table: { h: 2.5, c: 0xa77b4d, shape: "round" },
     washer: { h: 3, c: 0xe9e9e9 }, water_heater: { h: 5, c: 0xcfcfcf },
     bed: { h: 2, c: 0x9fb4c7 }, bed_king: { h: 2, c: 0x9fb4c7 }, sofa: { h: 2.5, c: 0x8c8f9a }, desk: { h: 2.5, c: 0xa77b4d }, car: { h: 4.7, c: 0x6b7f99 }, box: { h: 3, c: 0xbfbfbf }
   };
@@ -48,6 +48,11 @@
       case "wood": var pw = ppf * 0.5; for (y = 0; y < size; y += pw) { x = -rnd() * ppf * 3; while (x < size) { var len = ppf * (2 + rnd() * 3); shade(rnd() * 0.14, rnd() < 0.6); g.fillRect(x, y, len, pw); shade(0.3, true); g.fillRect(x, y, 1.5, pw); x += len; } shade(0.22, true); g.fillRect(0, y, size, 1); } break;
       case "tilefloor": shade(0.2, true); for (x = 0; x <= size; x += ppf) g.fillRect(x - 1, 0, 2, size); for (y = 0; y <= size; y += ppf) g.fillRect(0, y - 1, size, 2); break;
       case "concrete": for (var j = 0; j < 7000; j++) { shade(0.06, rnd() < 0.5); g.fillRect(rnd() * size, rnd() * size, 2, 2); } break;
+      case "stone": {   // ledgestone veneer: irregular courses of tan / grey / brown blocks with mortar joints
+        g.fillStyle = "#c9c1b3"; g.fillRect(0, 0, size, size);
+        var pal = ["#b9a688", "#a89478", "#c4b394", "#9c8f7c", "#b1a08a", "#8f8271", "#cbbba0"], yy = 0;
+        while (yy < size) { var ch = ppf * (0.35 + rnd() * 0.45), xx = -rnd() * ppf; while (xx < size) { var bw2 = ppf * (0.6 + rnd() * 1.6); g.fillStyle = pal[Math.floor(rnd() * pal.length)]; g.fillRect(xx + 1.5, yy + 1.5, bw2 - 3, ch - 3); shade(rnd() * 0.12, rnd() < 0.5); g.fillRect(xx + 1.5, yy + 1.5, bw2 - 3, ch - 3); xx += bw2; } yy += ch; }
+        break; }
     }
     var t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1 / TILE, 1 / TILE); t.anisotropy = 4; t.encoding = THREE.sRGBEncoding;
     return t;
@@ -311,6 +316,10 @@
         piece(a, b, sill, head, self.mat(C.glass, { transparent: true, opacity: 0.45, roughness: 0.1, metalness: 0.3 }), 0.08, false);
         piece(a - 0.06, b + 0.06, sill - 0.12, sill, frame, t + 0.14, false); piece(a - 0.06, b + 0.06, head, head + 0.12, frame, t + 0.1, false);
         piece(a - 0.06, a + 0.06, sill, head, frame, t + 0.1, false); piece(b - 0.06, b + 0.06, sill, head, frame, t + 0.1, false);
+        // window grids: lites about 1.5 ft square, bars just proud of the glass on both sides
+        var cols = Math.max(1, Math.round((b - a) / 1.5)), rows = Math.max(1, Math.round((head - sill) / 1.5)), gi;
+        for (gi = 1; gi < cols; gi++) { var gx = a + (b - a) * gi / cols; piece(gx - 0.03, gx + 0.03, sill, head, frame, 0.14, false); }
+        for (gi = 1; gi < rows; gi++) { var gy = sill + (head - sill) * gi / rows; piece(a, b, gy - 0.03, gy + 0.03, frame, 0.14, false); }
       }
       cursor = b;
     });
@@ -392,6 +401,14 @@
     }
     var h = spec.h, mesh, z0 = spec.z0 || 0, self = this;
     var metal = spec.metal ? { roughness: 0.35, metalness: 0.5 } : {};
+    if (f.kind === "column") {   // craftsman porch column: stone pier, white cap, tapered white shaft, top block
+      var gc = new THREE.Group(), tot = +f.hgt || spec.hgt || 8.5, pierH = Math.min(3.2, tot * 0.4), side = Math.min(lw, lh);
+      var pier = new THREE.Mesh(new THREE.BoxGeometry(lw, pierH, lh), this.texMat({ kind: "stone", color: "#b3a48c" })); pier.position.y = pierH / 2; pier.castShadow = pier.receiveShadow = true; gc.add(pier);
+      var cap = new THREE.Mesh(new THREE.BoxGeometry(lw + 0.25, 0.25, lh + 0.25), this.mat("#f2efe8", { roughness: 0.6 })); cap.position.y = pierH + 0.125; cap.castShadow = true; gc.add(cap);
+      var shaftH = Math.max(0.5, tot - pierH - 0.25 - 0.3), shaft = new THREE.Mesh(new THREE.CylinderGeometry(side * 0.28, side * 0.36, shaftH, 4), this.mat("#f4f1ea", { roughness: 0.6 })); shaft.rotation.y = Math.PI / 4; shaft.position.y = pierH + 0.25 + shaftH / 2; shaft.castShadow = true; gc.add(shaft);
+      var head = new THREE.Mesh(new THREE.BoxGeometry(side * 0.9, 0.3, side * 0.9), this.mat("#f2efe8", { roughness: 0.6 })); head.position.y = tot - 0.15; head.castShadow = true; gc.add(head);
+      gc.position.set(cx, base, cz); gc.rotation.y = rot; this.model.add(gc); return;
+    }
     if (spec.top) {   // cabinets with a countertop slab (sink/vanity get a basin cut-out look)
       var g2 = new THREE.Group(), cabH = h - 0.12;
       var cab = new THREE.Mesh(new THREE.BoxGeometry(lw, cabH, lh), this.mat(spec.c)); cab.position.y = cabH / 2; cab.castShadow = cab.receiveShadow = true; g2.add(cab);
