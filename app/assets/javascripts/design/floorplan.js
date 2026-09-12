@@ -432,12 +432,12 @@
     for (i = this.data.guides.length - 1; i >= 0; i--) {
       if (project(p, this.data.guides[i]).d <= 6 / s) return { type: "guide", id: this.data.guides[i].id };
     }
+    var fxHit = this.fixtureAt(p);
+    if (fxHit) return { type: "fixture", id: fxHit.id };
     var nw = this.nearestWall(p);
     if (nw) return { type: "wall", id: nw.wall.id };
-    for (i = this.data.fixtures.length - 1; i >= 0; i--) {
-      r = this.data.fixtures[i];
-      if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "fixture", id: r.id };
-    }
+    var edgeHit = this.rectEdgeHit(p);
+    if (edgeHit) return edgeHit;
     for (i = this.data.rooms.length - 1; i >= 0; i--) {
       r = this.data.rooms[i];
       if (pointInPoly(p, roomPts(r))) return { type: "room", id: r.id };
@@ -451,6 +451,34 @@
       if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return { type: "roof", id: r.id };
     }
     return null;
+  };
+
+  // Roof sections and decks are usually under rooms and fixtures, so their outlines (and a roof's overhang line) are
+  // selectable from anywhere on the plan by clicking within a few pixels of the edge.
+  P.rectEdgeHit = function (p) {
+    var tol = 6 / this.view.scale, i, self = this;
+    var nearRect = function (x0, y0, x1, y1) {
+      var insideX = p.x >= x0 - tol && p.x <= x1 + tol, insideY = p.y >= y0 - tol && p.y <= y1 + tol;
+      return insideX && insideY && (Math.abs(p.x - x0) <= tol || Math.abs(p.x - x1) <= tol || Math.abs(p.y - y0) <= tol || Math.abs(p.y - y1) <= tol);
+    };
+    for (i = this.data.decks.length - 1; i >= 0; i--) { var dk = this.data.decks[i]; if (nearRect(dk.x, dk.y, dk.x + dk.w, dk.y + dk.h)) return { type: "deck", id: dk.id }; }
+    for (i = this.data.roofs.length - 1; i >= 0; i--) {
+      var rf = this.data.roofs[i], o = rf.overhang != null ? +rf.overhang : 1.5;
+      if (nearRect(rf.x, rf.y, rf.x + rf.w, rf.y + rf.h) || nearRect(rf.x - o, rf.y - o, rf.x + rf.w + o, rf.y + rf.h + o)) return { type: "roof", id: rf.id };
+    }
+    return null;
+  };
+  P.fixtureAt = function (p) {   // topmost fixture containing the point
+    for (var i = this.data.fixtures.length - 1; i >= 0; i--) { var r = this.data.fixtures[i]; if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r; }
+    return null;
+  };
+  // Tools that own a kind of object: while active, only that kind can be selected, moved, resized or deleted.
+  var TOOL_OWNS = { fixture: "fixture", roof: "roof", deck: "deck" };
+  var SURFACES = { counter: 1, island: 1, island_seat: 1, table: 1, round_table: 1, desk: 1, dresser: 1 };   // things you put other fixtures on
+  P.rectAt = function (type, p) {   // topmost roof / deck containing the point (any depth)
+    var list = this.listFor(type);
+    for (var i = list.length - 1; i >= 0; i--) { var r = list[i]; if (p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) return r; }
+    var e = this.rectEdgeHit(p); return e && e.type === type ? this.find(type, e.id) : null;
   };
 
   P.handles = function () {  // screen-space handles for the selection
@@ -524,8 +552,9 @@
     this.tool = t; this.draft = null; this.roomDraft = null; this.hover = null;
     this.root.querySelectorAll("[data-tool]").forEach(function (b) { b.classList.toggle("active", b.dataset.tool === t); });
     this.canvas.style.cursor = t === "select" ? "default" : "crosshair";
+    if ((t === "roof" || t === "deck") && this.sel && this.sel.type !== t) this.setSel(null);   // show the section list, not an unrelated item
     if (this.props) this.updatePanel();
-    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick an item in the panel on the right, then click to place it. Switch to Select to move, rotate or resize it.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building.", roof: "Drag a rectangle over the area one roof section covers (it can extend past the walls). Use several for L-shapes or porches. Style, pitch, ends, dormers and overhang are in the side panel.", deck: "Drag a rectangle for the deck. Height, decking, railings and stairs are in the side panel." }[t]);
+    this.hint({ select: "", wall: "Click to start a wall, click at each corner, Esc or Enter to finish. Use the Angles dropdown (or hold Shift) for diagonals.", room: "Drag a rectangle, or click corner by corner for any shape (click the first point again to close). Tip: double-click inside walls in Select to make a room automatically.", door: "Click a wall to place a door.", window: "Click a wall to place a window.", label: "Click to place text, then type. Double-click any label later to change it.", fixture: "Pick an item on the right, then click to place it. Click a placed fixture to select it, drag to move; only fixtures respond in this tool.", line: "Click to start a guide line, click to end it (keeps going; Esc or Enter to stop). Shows its length; not part of the building.", roof: "Drag a rectangle over the area one roof section covers (it can extend past the walls). Use several for L-shapes or porches. Style, pitch, ends, dormers and overhang are in the side panel.", deck: "Drag a rectangle for the deck. Height, decking, railings and stairs are in the side panel." }[t]);
     this.doorKindSel.classList.toggle("d-none", t !== "door");
     this.render();
   };
@@ -599,6 +628,20 @@
       }
       this.render(); this.updatePanel();
       return;
+    }
+    var owns = TOOL_OWNS[this.tool];
+    if (owns) {
+      var oh = this.hitHandle(m.x, m.y);
+      if (oh && this.sel && this.sel.type === owns) { this.drag = { kind: "handle", h: oh, el: this.selected(), before: JSON.stringify(this.data), orig: JSON.parse(JSON.stringify(this.selected())) }; return; }
+      var own = owns === "fixture" ? this.fixtureAt(p) : this.rectAt(owns, p);
+      if (own) {
+        if (e.shiftKey) { this.toggleSel({ type: owns, id: own.id }); this.render(); this.updatePanel(); this.drag = { kind: "noop" }; return; }
+        // a plain click on a counter / island / table still places the armed fixture on it; a drag moves it
+        var placeOnClick = owns === "fixture" && !!SURFACES[own.kind] && !(this.sel && this.sel.id === own.id);
+        if (!placeOnClick) { this.setSel({ type: owns, id: own.id }); this.render(); this.updatePanel(); }
+        this.drag = { kind: "move", el: own, type: owns, start: p, orig: JSON.parse(JSON.stringify(own)), before: JSON.stringify(this.data), moved: false, placeOnClick: placeOnClick };
+        return;
+      }
     }
     if (this.tool === "room") {
       if (this.roomDraft) return;           // clicking out a polygon; handled on pointerup
@@ -807,13 +850,19 @@
       }
       this.render(); this.updatePanel(); return;
     }
+    if (d && d.kind === "noop") return;
     if (d && (d.kind === "move" || d.kind === "handle" || d.kind === "moveMulti")) {
       var after = JSON.stringify(this.data);
       if (after !== d.before) { this.history.push(d.before); this.future = []; this.markDirty(); }
-      this.render(); this.updatePanel(); return;
+      if (!(d.kind === "move" && d.placeOnClick && !d.moved && isClick)) { this.render(); this.updatePanel(); return; }
+      // else: a click on a counter / island / table in the Fixture tool → place the armed item there (below)
     }
     if (d && (d.kind === "roof" || d.kind === "deck")) {
       var ra = d.start, rb = d.cur, rx = Math.min(ra.x, rb.x), ry = Math.min(ra.y, rb.y), rw = Math.abs(rb.x - ra.x), rh = Math.abs(rb.y - ra.y);
+      if ((rw < 2 || rh < 2) && isClick) {
+        var existing = this.rectAt(d.kind, p);
+        if (existing) { this.setSel({ type: d.kind, id: existing.id }); this.render(); this.updatePanel(); return; }
+      }
       if (rw >= 2 && rh >= 2) {
         var rid = uid(), kindT = d.kind;
         var def = kindT === "roof" ? Object.assign({}, ROOF_DEF, this.lastRoof || {}, { dormers: [] }) : JSON.parse(JSON.stringify(Object.assign({}, DECK_DEF, this.lastDeck || {})));
@@ -925,7 +974,11 @@
 
   P.updatePanel = function (light) {
     var el = this.selected(), self = this, html = "";
-    if (this.tool === "fixture") return this.renderCatalog();
+    if (this.tool === "fixture" && !(el && this.sel.type === "fixture")) return this.renderCatalog();
+    if ((this.tool === "roof" || this.tool === "deck") && !el) {
+      this.props.innerHTML = '<h6>' + (this.tool === "roof" ? "Roof sections" : "Decks") + '</h6><div class="small text-muted mb-2">' + (this.tool === "roof" ? "Drag a rectangle to add a section, or click an existing one to change or delete it." : "Drag a rectangle to add a deck, or click an existing one to change or delete it.") + '</div>' + this.sectionList(this.tool);
+      this.propsFor = "list-" + this.tool; this.wireSectionList(); this.renderSummary(); return;
+    }
     if (this.multi()) {
       var counts = {}; this.selSet.forEach(function (x) { counts[x.type] = (counts[x.type] || 0) + 1; });
       var parts = Object.keys(counts).map(function (t) { return counts[t] + " " + (t === "guide" ? "line" : t) + (counts[t] === 1 ? "" : "s"); });
@@ -972,6 +1025,7 @@
     } else if (this.sel.type === "fixture") {
       var curItem = catalogItemFor(el);
       html = '<h6>Fixture <span class="text-muted fw-normal">· ' + esc(el.name || (curItem && curItem.label) || (FIXTURES[el.kind] || {}).label || el.kind) + '</span></h6>' +
+        (this.tool === "fixture" ? '<button type="button" class="btn btn-outline-secondary btn-sm mb-2" data-btn="library">◂ Back to the library</button><div class="small text-muted mb-2">Drag it to move, corner handles resize, Delete removes. Click empty floor to place another ' + esc(this.armed ? this.armed.label : "item") + '.</div>' : "") +
         '<div class="fp-field"><label>Item (standard size)</label><select class="form-select form-select-sm" data-prop="item">' + catalogOptions(curItem && curItem.id) + '</select></div>' +
         '<div class="fp-row">' + f("Width (ft)", "w", el.w, 'type="number" step="0.25" min="0.25"') + f("Depth (ft)", "h", el.h, 'type="number" step="0.25" min="0.25"') + '</div>' +
         (el.kind === "stairs" ? '<div class="fp-field"><label>Direction</label><select class="form-select form-select-sm" data-prop="dir"><option value="up"' + (el.dir !== "down" ? " selected" : "") + '>Up (arrow points to the top step)</option><option value="down"' + (el.dir === "down" ? " selected" : "") + '>Down</option></select></div>' : "") +
@@ -1031,7 +1085,9 @@
       html = '<h6>Label</h6>' + f("Text", "text", el.text) + f("Size (ft)", "size", el.size || 1, 'type="number" step="0.25" min="0.25"');
     }
     if (el) html += '<button class="btn btn-outline-danger btn-sm mt-1" data-btn="delete">Delete</button>';
+    if (el && (this.sel.type === "roof" || this.sel.type === "deck")) html += '<div class="fp-sub">All ' + (this.sel.type === "roof" ? "roof sections" : "decks") + ' on this level</div>' + this.sectionList(this.sel.type);
     this.props.innerHTML = html;
+    this.wireSectionList();
 
     this.props.querySelectorAll("[data-prop]").forEach(function (inp) {
       var name = inp.dataset.prop;
@@ -1092,6 +1148,7 @@
       b.addEventListener("click", function () {
         var cur = self.selected(); if (!cur) return;
         if (b.dataset.btn === "delete") return self.deleteSelected();
+        if (b.dataset.btn === "library") { self.setSel(null); self.render(); self.updatePanel(); return; }
         self.commit(function () {
           if (b.dataset.btn === "swing") cur.swing = -(cur.swing || 1);
           else if (b.dataset.btn === "addDormer") { cur.dormers = cur.dormers || []; var alongX2 = cur.ridge === "x" || (cur.ridge !== "y" && cur.w >= cur.h); cur.dormers.push(Object.assign({}, DORMER_DEF, { pos: Math.round((alongX2 ? cur.w : cur.h) / 2 * 2) / 2 })); }
@@ -1112,6 +1169,21 @@
       inp.addEventListener("change", function () { var cur = self.selected(); if (!cur) return; self.commit(function () { cur.rails = cur.rails || {}; cur.rails[inp.dataset.rail] = inp.checked; }, true); });
     });
     this.renderSummary();
+  };
+
+  P.sectionList = function (type) {
+    var self = this, list = this.listFor(type);
+    if (!list.length) return '<div class="small text-muted">None yet.</div>';
+    return '<div class="fp-cat">' + list.map(function (r, i) {
+      var tag = type === "roof" ? ((ROOF_KINDS.filter(function (k) { return k[0] === r.style; })[0] || [r.style, r.style])[1].replace(/ \(.*\)/, "") + (r.style !== "flat" ? " " + (r.pitch || 6) + ":12" : "")) : ("Deck" + (r.height ? " +" + ftIn(+r.height) : ""));
+      return '<button type="button" class="fp-cat-item' + (self.sel && self.sel.id === r.id ? " active" : "") + '" data-section="' + type + ':' + r.id + '"><span>' + (i + 1) + '. ' + tag + '</span><small>' + ftIn(r.w) + " × " + ftIn(r.h) + " at " + ftIn(r.x) + ", " + ftIn(r.y) + '</small></button>';
+    }).join("") + '</div>';
+  };
+  P.wireSectionList = function () {
+    var self = this;
+    this.props.querySelectorAll("[data-section]").forEach(function (b) {
+      b.addEventListener("click", function () { var parts = b.dataset.section.split(":"); self.setSel({ type: parts[0], id: parts[1] }); self.render(); self.updatePanel(); });
+    });
   };
 
   // Fixture library: takes over the side panel while the Fixture tool is active.
