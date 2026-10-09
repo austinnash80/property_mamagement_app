@@ -30,6 +30,9 @@ module Family
     "Contacts", "Utilities & accounts", "Streaming services", "Other"
   ].freeze
 
+  # Andie: the sections entries are filed under, in the order they are shown.
+  ANDIE_SECTIONS = ["Doctors", "Contacts & addresses", "School & care", "Health", "Other"].freeze
+
   # Places to go: kind => label.
   PLACE_KINDS = {
     "restaurant" => "Restaurant",

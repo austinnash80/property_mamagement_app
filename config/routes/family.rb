@@ -30,6 +30,10 @@ namespace :family, path: "family" do
     member { patch :toggle_pin }
   end
 
+  # Andie: doctor numbers, addresses, school details, everything kept for Andie.
+  # Everything lives on the index page, so there is no show action.
+  resources :andie_entries, path: "andie", except: :show
+
   # Places to go: restaurants, shops, the farmers market.
   resources :places do
     member do

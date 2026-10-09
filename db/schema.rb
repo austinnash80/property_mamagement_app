@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_08_000200) do
+ActiveRecord::Schema.define(version: 2026_10_09_000100) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -141,6 +141,17 @@ ActiveRecord::Schema.define(version: 2026_10_08_000200) do
     t.datetime "updated_at", precision: 6, null: false
     t.index ["concept_id"], name: "index_design_notes_on_concept_id"
     t.index ["pinned"], name: "index_design_notes_on_pinned"
+  end
+
+  create_table "family_andie_entries", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "section", default: "Other", null: false
+    t.string "value"
+    t.text "notes"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["section"], name: "index_family_andie_entries_on_section"
   end
 
   create_table "family_events", force: :cascade do |t|
@@ -413,6 +424,7 @@ ActiveRecord::Schema.define(version: 2026_10_08_000200) do
   add_foreign_key "design_floor_plans", "design_concepts", column: "concept_id"
   add_foreign_key "design_images", "design_concepts", column: "concept_id"
   add_foreign_key "design_notes", "design_concepts", column: "concept_id"
+  add_foreign_key "family_andie_entries", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "family_events", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "family_events", "users", column: "person_id", on_delete: :nullify
   add_foreign_key "family_notes", "users", on_delete: :cascade

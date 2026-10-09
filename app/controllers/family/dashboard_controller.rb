@@ -9,6 +9,7 @@ class Family::DashboardController < Family::BaseController
     @events_this_week = Family::Event.overlapping(Family.today..(Family.today + 7)).count
 
     @reference_count = Family::Reference.count
+    @andie_count     = Family::AndieEntry.count
     @note_count      = Family::Note.for_user(current_user).count
     @places_want     = Family::Place.want_to_go.count
     @places_been     = Family::Place.been.count

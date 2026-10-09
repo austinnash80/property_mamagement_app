@@ -83,26 +83,7 @@
   <%= render "form", reference: @reference %>
 </dialog>
 
-<%# Native <dialog> modal — no JS library needed, same vanilla approach as the header menu. %>
-<style>
-  .fa-modal { width: min(40rem, calc(100vw - 2rem)); border: 1px solid #e6e6e6; border-radius: .5rem;
-              padding: 1rem 1.1rem 1.1rem; box-shadow: 0 1rem 2rem rgba(0,0,0,.18); }
-  .fa-modal::backdrop { background: rgba(0,0,0,.35); }
-  .fa-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
-</style>
-<script>
-  if (!window.__faDialog) {
-    window.__faDialog = true;
-    document.addEventListener("click", function (e) {
-      var open = e.target.closest("[data-open-dialog]");
-      if (open) { document.getElementById(open.dataset.openDialog).showModal(); return; }
-      var close = e.target.closest("[data-close-dialog]");
-      if (close) close.closest("dialog").close();
-    });
-  }
-  // Reopen after a failed save so the validation errors are on screen.
-  document.querySelectorAll("dialog[data-open-on-load]").forEach(function (d) { d.showModal(); });
-</script>
+<%= render "family/shared/dialog" %>
 
 <script>
   // Filter the list as you type. Every entry is already on the page, so this is a

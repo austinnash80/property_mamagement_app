@@ -74,6 +74,22 @@
 
   <div class="col-12 col-sm-6 col-lg-4">
     <div class="card h-100">
+      <div class="fa-card-top" style="background: #b08a9a"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Andie</h5>
+        <p class="card-text fa-muted small mb-3">
+          Doctors, addresses, school, health.<br>
+          <%= pluralize @andie_count, "entry", plural: "entries" %> saved
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_andie_entries_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
       <div class="fa-card-top" style="background: #7c6f9c"></div>
       <div class="card-body d-flex flex-column">
         <h5 class="card-title">Scratchpad</h5>

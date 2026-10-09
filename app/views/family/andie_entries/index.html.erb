@@ -1,0 +1,55 @@
+<div class="fa-page-head">
+  <h2>Andie</h2>
+  <p class="fa-muted mb-0">Everything kept for Andie in one place — doctors, addresses, school, health.</p>
+</div>
+
+<div class="mb-2">
+  <button type="button" class="btn btn-primary btn-sm" data-open-dialog="andie-add">Add new</button>
+</div>
+
+<% if @entries.empty? %>
+  <p class="fa-muted text-center py-4 mb-0">
+    Nothing saved yet. Start with the pediatrician's number or the home address.
+  </p>
+<% end %>
+
+<% Family::ANDIE_SECTIONS.each do |section| %>
+  <% entries = @by_section[section] or next %>
+  <div class="fa-group">
+    <div class="fa-group-head"><h3><%= section %></h3></div>
+    <% entries.each do |entry| %>
+      <div class="fa-ref">
+        <div class="fa-ref-body">
+          <div class="fa-ref-title"><%= entry.title %></div>
+          <% if entry.value.present? %>
+            <div class="fa-ref-value">
+              <% if entry.phone? %>
+                <%= link_to entry.value, entry.tel_href, class: "text-decoration-none text-reset" %>
+              <% else %>
+                <%= entry.value %>
+              <% end %>
+            </div>
+          <% end %>
+          <% if entry.notes.present? %>
+            <div class="small fa-muted" style="white-space: pre-wrap"><%= entry.notes %></div>
+          <% end %>
+        </div>
+        <div class="fa-actions">
+          <%= link_to "Edit", edit_family_andie_entry_path(entry), class: "small text-decoration-none fa-muted me-2" %>
+          <%= link_to "Delete", family_andie_entry_path(entry), method: :delete,
+                      data: { confirm: "Delete “#{entry.title}”?" }, class: "small text-decoration-none fa-muted" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<dialog id="andie-add" class="fa-modal" <%= "data-open-on-load" if @open_form %>>
+  <div class="fa-modal-head">
+    <h3 class="h6 mb-0">Add an entry</h3>
+    <button type="button" class="btn-close" aria-label="Close" data-close-dialog></button>
+  </div>
+  <%= render "form", entry: @entry %>
+</dialog>
+
+<%= render "family/shared/dialog" %>
