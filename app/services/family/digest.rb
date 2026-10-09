@@ -6,8 +6,8 @@ module Family::Digest
   # Returns a short summary string for the log.
   def send_morning!(day, force: false)
     events  = Family::Event.overlapping(day..day).includes(:person).to_a
-    due     = Family::Task.open.where(due_on: day).includes(:list).to_a
-    overdue = Family::Task.open.where("due_on < ?", day).count
+    due     = Family::Task.unfinished.where(due_on: day).includes(:list).to_a
+    overdue = Family::Task.unfinished.where("due_on < ?", day).count
     return "nothing to say for #{day}" if events.empty? && due.empty? && overdue.zero?
 
     body  = body_for(events, due, overdue)

@@ -6,7 +6,7 @@ class Family::Task < ApplicationRecord
 
   validates :title, presence: true
 
-  scope :open,      -> { where(done_at: nil) }
+  scope :unfinished, -> { where(done_at: nil) }
   scope :done,      -> { where.not(done_at: nil) }
   scope :ordered,   -> { order(Arel.sql("due_on ASC NULLS LAST"), position: :asc, created_at: :asc) }
   scope :recently_done, -> { done.order(done_at: :desc) }

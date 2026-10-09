@@ -14,7 +14,7 @@ class HomeController < ApplicationController
       properties: Property.count,
       projects:   Portfolio::Project.count,
       concepts:   Design::Concept.count,
-      open_tasks: Family::Task.open.count
+      open_tasks: Family::Task.unfinished.count
     }
   end
 end

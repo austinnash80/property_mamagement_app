@@ -145,7 +145,7 @@ GEM
       timeout
     net-smtp (0.5.0)
       net-protocol
-    nio4r (2.7.1)
+    nio4r (2.7.5)
     nokogiri (1.16.4-aarch64-linux)
       racc (~> 1.4)
     nokogiri (1.16.4-arm-linux)
@@ -161,7 +161,7 @@ GEM
     openssl (4.0.2)
     pg (1.5.6)
     public_suffix (5.0.5)
-    puma (5.6.8)
+    puma (7.2.1)
       nio4r (~> 2.0)
     racc (1.7.3)
     rack (2.2.9)
@@ -289,7 +289,7 @@ DEPENDENCIES
   net-pop
   net-smtp
   pg (~> 1.1)
-  puma (~> 5.0)
+  puma (~> 7.0)
   rack-mini-profiler (~> 2.0)
   rails (~> 6.1.5)
   sass-rails (>= 6)
@@ -304,7 +304,7 @@ DEPENDENCIES
   webpacker (~> 5.0)
 
 RUBY VERSION
-   ruby 3.2.1p31
+   ruby 3.2.11p268
 
 BUNDLED WITH
    2.5.9

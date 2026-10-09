@@ -9,6 +9,6 @@ class Family::List < ApplicationRecord
   before_validation { self.position = (Family::List.maximum(:position) || 0) + 1 if position.blank? || position.zero? }
 
   def open_count
-    tasks.open.size
+    tasks.unfinished.size
   end
 end

@@ -13,7 +13,7 @@ class Family::EventsController < Family::BaseController
       event.days.each { |day| @events_by_day[day] << event if @grid_range.cover?(day) }
     end
 
-    @tasks_by_day = Family::Task.open.where(due_on: @grid_range).includes(:list).group_by(&:due_on)
+    @tasks_by_day = Family::Task.unfinished.where(due_on: @grid_range).includes(:list).group_by(&:due_on)
     @upcoming     = Family::Event.upcoming.includes(:person).limit(8)
   end
 

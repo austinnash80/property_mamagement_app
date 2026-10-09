@@ -8,7 +8,7 @@ class Family::TasksController < Family::BaseController
 
   def overview
     @lists = Family::List.ordered
-    @open_by_list = Family::Task.open.ordered.group_by(&:list_id)
+    @open_by_list = Family::Task.unfinished.ordered.group_by(&:list_id)
     @task = Family::Task.new(list: @lists.first)
   end
 
@@ -28,7 +28,7 @@ class Family::TasksController < Family::BaseController
     scope = scope.where(assignee_id: @person.id) if @person
     scope = scope.tagged(@tag)
 
-    @buckets = scope.open.ordered.group_by(&:bucket)
+    @buckets = scope.unfinished.ordered.group_by(&:bucket)
     @done    = scope.recently_done.limit(15)
     @task    = Family::Task.new(list: @list || @lists.first, tags: @tag, assignee: @person)
   end
