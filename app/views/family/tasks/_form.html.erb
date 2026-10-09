@@ -9,17 +9,13 @@
   </div>
 
   <div class="row g-3 mb-3">
-    <div class="col-sm-4">
+    <div class="col-sm-6">
       <%= f.label :list_id, "List", class: "form-label" %>
       <%= f.collection_select :list_id, @lists, :id, :name, {}, class: "form-select" %>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-6">
       <%= f.label :assignee_id, "Assigned to", class: "form-label" %>
       <%= f.collection_select :assignee_id, @people, :id, :display_name, { include_blank: "Anyone" }, class: "form-select" %>
-    </div>
-    <div class="col-sm-4">
-      <%= f.label :due_on, "Due", class: "form-label" %>
-      <%= f.date_field :due_on, class: "form-control" %>
     </div>
   </div>
 

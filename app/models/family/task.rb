@@ -8,7 +8,7 @@ class Family::Task < ApplicationRecord
 
   scope :unfinished, -> { where(done_at: nil) }
   scope :done,      -> { where.not(done_at: nil) }
-  scope :ordered,   -> { order(Arel.sql("due_on ASC NULLS LAST"), position: :asc, created_at: :asc) }
+  scope :ordered,   -> { order(position: :asc, created_at: :asc) }
   scope :recently_done, -> { done.order(done_at: :desc) }
   scope :tagged, lambda { |tag|
     next all if tag.blank?
@@ -36,19 +36,5 @@ class Family::Task < ApplicationRecord
 
   def reopen!
     update!(done_at: nil, done_by: nil)
-  end
-
-  def overdue?
-    due_on.present? && !done? && due_on < Family.today
-  end
-
-  # Which section of the list this task belongs under.
-  def bucket
-    today = Family.today
-    return :none    if due_on.blank?
-    return :overdue if due_on < today
-    return :today   if due_on == today
-    return :week    if due_on <= today.end_of_week
-    :later
   end
 end

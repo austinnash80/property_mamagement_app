@@ -1,0 +1,83 @@
+<%# Notification controls for this device, inside the hamburger menu. The block
+    starts hidden and is shown by the script once it finds a push subscription in
+    this browser. "Turn on" stays on the family home (dashboard/_push_optin);
+    the same script reveals that card when this device is not on. Only
+    JavaScript in the Family section. %>
+<% if FamilyPush.enabled? %>
+  <div id="fa-push-menu" hidden data-vapid="<%= FamilyPush.keys[:public] %>"
+       data-url="<%= family_push_subscription_path %>" data-csrf="<%= form_authenticity_token %>">
+    <button type="button" id="fa-push-off">Turn off notifications</button>
+    <%= button_to "Send a test notification", test_family_push_subscription_path, method: :post %>
+  </div>
+
+  <script>
+  (function () {
+    function init() {
+      var menu = document.getElementById("fa-push-menu");   // every family page
+      var box  = document.getElementById("fa-push");        // family home only
+      if (!menu) return;
+      var vapid = menu.dataset.vapid, url = menu.dataset.url, csrf = menu.dataset.csrf;
+      var offBtn = document.getElementById("fa-push-off");
+      var onBtn = document.getElementById("fa-push-on"), status = document.getElementById("fa-push-status");
+      var iosNote = document.getElementById("fa-push-ios");
+
+      // Show the home-page card, optionally replacing its text with a reason.
+      function show(t) { if (!box) return; if (t) status.textContent = t; box.hidden = false; }
+
+      var supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+      // iPhone Safari only allows push from a home-screen app.
+      if (isIOS && !standalone) { if (box) { iosNote.hidden = false; show(); } return; }
+      if (!supported) { show("This browser doesn't support notifications."); return; }
+      if (Notification.permission === "denied") { show("Notifications are blocked for this site in your browser settings."); return; }
+
+      function urlB64ToUint8Array(s) {
+        var pad = "=".repeat((4 - s.length % 4) % 4), b64 = (s + pad).replace(/-/g, "+").replace(/_/g, "/");
+        var raw = atob(b64), out = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+      }
+      function post(method, body) {
+        return fetch(url, { method: method, credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": csrf },
+          body: JSON.stringify(body) });
+      }
+
+      navigator.serviceWorker.register("/sw.js").then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (sub) {
+          if (sub) {
+            menu.hidden = false;                       // this device is on: turn off from the menu
+          } else if (box) {
+            onBtn.hidden = false; show();              // not on: offer to turn on, on the home page
+          }
+
+          if (onBtn) onBtn.addEventListener("click", function () {
+            onBtn.disabled = true; show("Asking permission…");
+            Notification.requestPermission().then(function (perm) {
+              if (perm !== "granted") { show("Notifications stay off until you allow them."); onBtn.disabled = false; return; }
+              return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(vapid) })
+                .then(function (s) {
+                  var j = s.toJSON();
+                  return post("POST", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
+                })
+                .then(function (r) { if (!r.ok) throw new Error("save failed"); window.location.reload(); });
+            }).catch(function () { show("Couldn't turn notifications on. Try again in a moment."); onBtn.disabled = false; });
+          });
+
+          offBtn.addEventListener("click", function () {
+            offBtn.disabled = true;
+            reg.pushManager.getSubscription().then(function (s) {
+              if (!s) return;
+              return post("DELETE", { endpoint: s.endpoint }).then(function () { return s.unsubscribe(); });
+            }).then(function () { window.location.reload(); })
+              .catch(function () { offBtn.textContent = "Couldn't turn off, try again"; offBtn.disabled = false; });
+          });
+        });
+      }).catch(function () { show("Couldn't set up notifications in this browser."); });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+  })();
+  </script>
+<% end %>

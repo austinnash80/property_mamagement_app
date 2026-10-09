@@ -24,12 +24,6 @@
       <dt class="col-4 col-sm-3 fa-muted fw-normal">Assigned to</dt>
       <dd class="col-8 col-sm-9"><%= @task.assignee&.display_name || "Anyone" %></dd>
 
-      <dt class="col-4 col-sm-3 fa-muted fw-normal">Due</dt>
-      <dd class="col-8 col-sm-9 <%= "fa-due-over" if @task.overdue? %>">
-        <%= @task.due_on ? @task.due_on.strftime("%A, %B %-d, %Y") : "No date" %>
-        <%= "(overdue)" if @task.overdue? %>
-      </dd>
-
       <dt class="col-4 col-sm-3 fa-muted fw-normal">Added</dt>
       <dd class="col-8 col-sm-9">
         <%= @task.created_at.in_time_zone(Family::ZONE).strftime("%b %-d, %Y") %><%= " by #{@task.created_by.display_name}" if @task.created_by %>

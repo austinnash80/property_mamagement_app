@@ -11,7 +11,7 @@
         <h5 class="card-title">To-do list</h5>
         <p class="card-text fa-muted small mb-3">
           <%= pluralize @open_count, "open task" %><br>
-          <%= @mine_count %> assigned to you<% if @overdue_count > 0 %> · <span class="fa-due-over"><%= @overdue_count %> overdue</span><% end %>
+          <%= @mine_count %> assigned to you
         </p>
         <div class="mt-auto">
           <%= link_to "Open", family_todo_path, class: "btn fa-btn" %>

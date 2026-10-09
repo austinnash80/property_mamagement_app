@@ -28,7 +28,7 @@ class Family::TasksController < Family::BaseController
     scope = scope.where(assignee_id: @person.id) if @person
     scope = scope.tagged(@tag)
 
-    @buckets = scope.unfinished.ordered.group_by(&:bucket)
+    @open    = scope.unfinished.ordered
     @done    = scope.recently_done.limit(15)
     @task    = Family::Task.new(list: @list || @lists.first, tags: @tag, assignee: @person)
   end
@@ -39,7 +39,7 @@ class Family::TasksController < Family::BaseController
 
   def new
     form_options
-    @task = Family::Task.new(list_id: params[:list], due_on: params[:due_on], tags: params[:tag])
+    @task = Family::Task.new(list_id: params[:list], tags: params[:tag])
   end
 
   def edit
@@ -50,13 +50,12 @@ class Family::TasksController < Family::BaseController
     @task = Family::Task.new(task_params.merge(created_by: current_user))
     if @task.save
       notify_others_about("task", @task.title, url: family_task_path(@task),
-                          detail: [@task.list.name, (@task.due_on && "due #{@task.due_on.strftime('%a %b %-d')}"),
-                                   (@task.assignee && "for #{@task.assignee.display_name}")].compact.join(", "))
+                          detail: [@task.list.name, (@task.assignee && "for #{@task.assignee.display_name}")].compact.join(", "))
       redirect_to after_save_path, notice: "Task added."
     else
       form_options
       if params[:quick].present?
-        @buckets, @done = {}, Family::Task.none
+        @open, @done = Family::Task.none, Family::Task.none
         render :index, status: :unprocessable_entity
       else
         render :new, status: :unprocessable_entity
@@ -107,7 +106,7 @@ class Family::TasksController < Family::BaseController
   end
 
   def task_params
-    params.require(:family_task).permit(:list_id, :title, :notes, :tags, :assignee_id, :due_on)
+    params.require(:family_task).permit(:list_id, :title, :notes, :tags, :assignee_id)
   end
 
   # Quick-add keeps you where you were: on the overview, or in the view you

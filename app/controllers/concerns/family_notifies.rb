@@ -10,7 +10,7 @@ module FamilyNotifies
     params[:notify].present?
   end
 
-  # body: "Austin added a task: Replace the faucet (Home improvement, due Fri Oct 9)"
+  # body: "Austin added a task: Replace the faucet (Home improvement, for Christina)"
   def notify_others_about(kind, title, detail: nil, url:)
     return unless notify_requested?
     who  = current_user&.display_name || "Someone"

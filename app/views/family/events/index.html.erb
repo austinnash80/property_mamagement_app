@@ -1,5 +1,4 @@
-<%# Month grid plus an upcoming list. Task due dates appear alongside events so
-    one page covers "what's happening" and "what's owed". %>
+<%# Month grid plus an upcoming list. %>
 
 <div class="fa-cal-head">
   <div class="fa-cal-nav">
@@ -23,7 +22,6 @@
   <% @grid_range.each do |day| %>
     <%
       events = @events_by_day[day]
-      tasks  = @tasks_by_day[day] || []
       classes = ["fa-cal-day"]
       classes << "fa-other-month" unless day.month == @month.month
       classes << "fa-is-today"    if day == Family.today
@@ -42,17 +40,6 @@
       <% end %>
       <% if events.size > 3 %>
         <div class="fa-cal-more">+<%= events.size - 3 %> more</div>
-      <% end %>
-
-      <% tasks.first(2).each do |task| %>
-        <%= link_to family_task_path(task),
-                    class: "fa-cal-item fa-cal-task #{'fa-cal-overdue' if task.overdue?}",
-                    title: "Task due: #{task.title}" do %>
-          <span class="fa-cal-time">☐</span><%= task.title %>
-        <% end %>
-      <% end %>
-      <% if tasks.size > 2 %>
-        <%= link_to "+#{tasks.size - 2} due", family_tasks_path, class: "fa-cal-more text-decoration-none" %>
       <% end %>
     </div>
   <% end %>

@@ -1,5 +1,5 @@
 <%# One row of the list. The checkbox is a real form post - no JavaScript. %>
-<div class="fa-task <%= "done" if task.done? %> <%= "overdue" if task.overdue? %>" style="--fa-list: <%= task.list.color %>">
+<div class="fa-task <%= "done" if task.done? %>" style="--fa-list: <%= task.list.color %>">
   <%= button_to toggle_family_task_path(task, list: params[:list], tag: params[:tag], person: params[:person]), method: :patch,
                 class: "fa-check #{'is-done' if task.done?}", form_class: "d-inline",
                 "aria-label": (task.done? ? "Mark as not done" : "Mark as done") do %>
@@ -17,11 +17,6 @@
       <span class="fa-chip" style="background: <%= task.list.color %>1a; color: <%= task.list.color %>"><%= task.list.name %></span>
       <% task.tag_list.each do |tag| %><span class="fa-chip"><%= tag %></span><% end %>
       <% if task.assignee %><span><%= task.assignee.display_name %></span><% end %>
-      <% if task.due_on %>
-        <span class="<%= "fa-due-over" if task.overdue? %>">
-          <%= task.overdue? ? "Due #{task.due_on.strftime('%b %-d')}" : task.due_on.strftime("%a %b %-d") %>
-        </span>
-      <% end %>
       <% if task.done? %>
         <span>Done <%= task.done_at.in_time_zone(Family::ZONE).strftime("%b %-d") %><%= " by #{task.done_by.display_name}" if task.done_by %></span>
       <% end %>

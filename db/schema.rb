@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_05_000600) do
+ActiveRecord::Schema.define(version: 2026_10_08_000200) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -224,7 +224,6 @@ ActiveRecord::Schema.define(version: 2026_10_05_000600) do
     t.string "title", null: false
     t.text "notes"
     t.bigint "assignee_id"
-    t.date "due_on"
     t.datetime "done_at"
     t.bigint "done_by_id"
     t.integer "position", default: 0, null: false
@@ -235,7 +234,6 @@ ActiveRecord::Schema.define(version: 2026_10_05_000600) do
     t.index ["assignee_id"], name: "index_family_tasks_on_assignee_id"
     t.index ["created_by_id"], name: "index_family_tasks_on_created_by_id"
     t.index ["done_at"], name: "index_family_tasks_on_done_at"
-    t.index ["due_on"], name: "index_family_tasks_on_due_on"
     t.index ["list_id"], name: "index_family_tasks_on_list_id"
   end
 

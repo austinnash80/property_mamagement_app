@@ -1,16 +1,17 @@
-<%# "Turn on notifications" for this device. The only JavaScript in the Family
-    section: register the service worker, ask permission, post the subscription.
-    Hidden entirely when push isn't configured (no VAPID keys). %>
+<%# "Turn on notifications" for this device. Starts hidden: the script in
+    family/shared/_push_menu shows it only when this browser has no push
+    subscription (or can't have one, with a note saying why). Once a device is
+    on, the card stays hidden and "Turn off" lives in the hamburger menu.
+    Rendered only when push is configured (VAPID keys). %>
 <% if FamilyPush.enabled? %>
-  <% mine = Family::PushSubscription.where(user: current_user).order(:created_at) %>
-  <div class="fa-push" id="fa-push" data-vapid="<%= FamilyPush.keys[:public] %>"
-       data-url="<%= family_push_subscription_path %>" data-csrf="<%= form_authenticity_token %>">
+  <% others = Family::PushSubscription.where(user: current_user).order(:created_at) %>
+  <div class="fa-push" id="fa-push" hidden>
     <div class="fa-push-row">
       <div class="fa-push-text">
         <strong>Notifications</strong>
         <span class="fa-muted" id="fa-push-status">
-          <% if mine.any? %>
-            On for <%= mine.map(&:device_label).tally.map { |d, n| n > 1 ? "#{n} #{d.pluralize}" : d }.to_sentence %>.
+          <% if others.any? %>
+            On for <%= others.map(&:device_label).tally.map { |d, n| n > 1 ? "#{n} #{d.pluralize}" : d }.to_sentence %>, not on this device yet.
           <% else %>
             Get a ping on this device when someone adds something for you, plus the 7am digest.
           <% end %>
@@ -21,74 +22,7 @@
       </div>
       <div class="fa-push-actions">
         <button type="button" class="btn btn-primary btn-sm" id="fa-push-on" hidden>Turn on</button>
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="fa-push-off" hidden>Turn off here</button>
-        <% if mine.any? %>
-          <%= button_to "Send a test", test_family_push_subscription_path, method: :post,
-                        class: "btn btn-outline-secondary btn-sm", form_class: "d-inline" %>
-        <% end %>
       </div>
     </div>
   </div>
-
-  <script>
-  (function () {
-    var box = document.getElementById("fa-push");
-    if (!box) return;
-    var status = document.getElementById("fa-push-status");
-    var onBtn = document.getElementById("fa-push-on"), offBtn = document.getElementById("fa-push-off");
-    var iosNote = document.getElementById("fa-push-ios");
-    var vapid = box.dataset.vapid, url = box.dataset.url, csrf = box.dataset.csrf;
-
-    var supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-
-    function say(t) { status.textContent = t; }
-
-    // iPhone Safari only allows push from a home-screen app.
-    if (isIOS && !standalone) { iosNote.hidden = false; return; }
-    if (!supported) { say("This browser doesn't support notifications."); return; }
-    if (Notification.permission === "denied") { say("Notifications are blocked for this site in your browser settings."); return; }
-
-    function urlB64ToUint8Array(s) {
-      var pad = "=".repeat((4 - s.length % 4) % 4), b64 = (s + pad).replace(/-/g, "+").replace(/_/g, "/");
-      var raw = atob(b64), out = new Uint8Array(raw.length);
-      for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-      return out;
-    }
-    function post(method, body) {
-      return fetch(url, { method: method, credentials: "same-origin",
-        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": csrf },
-        body: JSON.stringify(body) });
-    }
-
-    navigator.serviceWorker.register("/sw.js").then(function (reg) {
-      return reg.pushManager.getSubscription().then(function (sub) {
-        if (sub) { offBtn.hidden = false; } else { onBtn.hidden = false; }
-
-        onBtn.addEventListener("click", function () {
-          onBtn.disabled = true; say("Asking permission…");
-          Notification.requestPermission().then(function (perm) {
-            if (perm !== "granted") { say("Notifications stay off until you allow them."); onBtn.disabled = false; return; }
-            return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(vapid) })
-              .then(function (s) {
-                var j = s.toJSON();
-                return post("POST", { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
-              })
-              .then(function (r) { if (!r.ok) throw new Error("save failed"); window.location.reload(); });
-          }).catch(function () { say("Couldn't turn notifications on. Try again in a moment."); onBtn.disabled = false; });
-        });
-
-        offBtn.addEventListener("click", function () {
-          offBtn.disabled = true;
-          reg.pushManager.getSubscription().then(function (s) {
-            if (!s) return;
-            return post("DELETE", { endpoint: s.endpoint }).then(function () { return s.unsubscribe(); });
-          }).then(function () { window.location.reload(); })
-            .catch(function () { say("Couldn't turn notifications off."); offBtn.disabled = false; });
-        });
-      });
-    }).catch(function () { say("Couldn't set up notifications in this browser."); });
-  })();
-  </script>
 <% end %>

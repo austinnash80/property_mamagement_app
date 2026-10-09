@@ -1,5 +1,6 @@
 <%# Small hamburger menu for the feature section headers (top left). Carries the
-    account controls that used to sit in each section's nav bar. %>
+    account controls that used to sit in each section's nav bar. A layout can add
+    its own items above "Sign out" by passing `extra: "path/to/partial"`. %>
 <style>
   .fm-bar { padding: .75rem .75rem .25rem; text-align: left; }
   .fm { position: relative; display: inline-block;
@@ -30,6 +31,7 @@
       <% if signed_in? %>
         <% if full_access? %><%= link_to "Main home", root_path %><% end %>
         <%= link_to "Change password", edit_account_path %>
+        <%= render extra if local_assigns[:extra] %>
         <%= button_to "Sign out", logout_path, method: :delete %>
       <% else %>
         <%= link_to "Sign in", login_path %>

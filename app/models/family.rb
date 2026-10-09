@@ -6,9 +6,9 @@ module Family
   end
 
   # The app as a whole runs in UTC (config.time_zone is unset), which would make
-  # a task due today read as overdue from 5pm local onwards. Due dates are a
-  # household thing, so the Family section asks a local clock what "today" is
-  # rather than changing the global zone under the accounting and booking code.
+  # "today" roll over at 5pm local. The calendar is a household thing, so the
+  # Family section asks a local clock what "today" is rather than changing the
+  # global zone under the accounting and booking code.
   ZONE = "America/Los_Angeles".freeze
 
   def self.today
@@ -27,7 +27,7 @@ module Family
   # they are shown.
   REFERENCE_CATEGORIES = [
     "Wifi & codes", "Home systems", "Paint & finishes",
-    "Contacts", "Utilities & accounts", "Other"
+    "Contacts", "Utilities & accounts", "Streaming services", "Other"
   ].freeze
 
   # Places to go: kind => label.

@@ -38,11 +38,6 @@
             <% tasks.first(preview).each do |task| %>
               <li>
                 <span class="fa-card-title"><%= task.title %></span>
-                <% if task.due_on %>
-                  <span class="fa-card-due <%= "fa-due-over" if task.overdue? %>">
-                    <%= task.due_on.strftime("%b %-d") %>
-                  </span>
-                <% end %>
               </li>
             <% end %>
           </ul>

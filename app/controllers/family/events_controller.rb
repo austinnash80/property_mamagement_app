@@ -1,5 +1,4 @@
-# The family calendar. The month grid also shows task due dates, so one page
-# answers "what's happening, and what's owed" for the week.
+# The family calendar: a month grid of events, plus what is coming up.
 class Family::EventsController < Family::BaseController
   before_action :set_event, only: %i[show edit update destroy]
 
@@ -13,7 +12,6 @@ class Family::EventsController < Family::BaseController
       event.days.each { |day| @events_by_day[day] << event if @grid_range.cover?(day) }
     end
 
-    @tasks_by_day = Family::Task.unfinished.where(due_on: @grid_range).includes(:list).group_by(&:due_on)
     @upcoming     = Family::Event.upcoming.includes(:person).limit(8)
   end
 

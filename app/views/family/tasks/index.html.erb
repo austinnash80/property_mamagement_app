@@ -37,14 +37,11 @@
     <%= f.submit "Add", class: "btn btn-primary" %>
   </div>
   <div class="row g-2 mt-2">
-    <div class="col-6 col-sm-4">
-      <%= f.date_field :due_on, class: "form-control form-control-sm", "aria-label": "Due date" %>
-    </div>
-    <div class="col-6 col-sm-4">
+    <div class="col-5 col-sm-4">
       <%= f.collection_select :assignee_id, @people, :id, :display_name,
             { include_blank: "Anyone" }, class: "form-select form-select-sm" %>
     </div>
-    <div class="col-12 col-sm-4">
+    <div class="col-7 col-sm-8">
       <%= f.text_field :tags, class: "form-control form-control-sm",
             placeholder: "Tags, e.g. Errand", autocomplete: "off" %>
     </div>
@@ -52,24 +49,15 @@
   <div class="mt-1"><%= render "family/shared/notify_checkbox", compact: true, id: "quick" %></div>
 <% end %>
 
-<%
-  buckets = { overdue: "Overdue", today: "Today", week: "This week", later: "Later", none: "No date" }
-  open_count = @buckets.values.sum(&:size)
-%>
-
-<% if open_count.zero? %>
+<% if @open.empty? %>
   <p class="fa-muted text-center py-4 mb-0">
     Nothing open here.
     <%= link_to "Back to all views", family_todo_path, class: "text-decoration-none" %>
   </p>
-<% end %>
-
-<% buckets.each do |key, label| %>
-  <% tasks = @buckets[key] || [] %>
-  <% next if tasks.empty? %>
-  <section class="fa-bucket" id="<%= key %>">
-    <h2><%= label %> <span class="fa-muted">(<%= tasks.size %>)</span></h2>
-    <%= render partial: "task", collection: tasks %>
+<% else %>
+  <section class="fa-bucket" id="open">
+    <h2>Open <span class="fa-muted">(<%= @open.size %>)</span></h2>
+    <%= render partial: "task", collection: @open %>
   </section>
 <% end %>
 
