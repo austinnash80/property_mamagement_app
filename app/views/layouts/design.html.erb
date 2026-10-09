@@ -1,21 +1,33 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8">
     <title>Design Center</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <%# Title face used by the property management header. %>
+    <link href="https://fonts.googleapis.com/css?family=Playfair+Display+SC" rel="stylesheet">
     <%# rails-ujs powers `method: :delete` links and data-confirm dialogs %>
     <script src="https://cdn.jsdelivr.net/npm/@rails/ujs@6.1.7/lib/assets/compiled/rails-ujs.js"></script>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= yield :head %>
     <style>
-      body { background: #f4f3ef; }
-      .dc-header { background: #1f2a37; color: #fff; }
-      .dc-header h1 a { color: #fff; }
-      .dc-nav a { text-decoration: none; margin-right: 1.25rem; color: #c9d1dc; font-weight: 500; }
-      .dc-nav a:hover { color: #fff; }
-      .dc-nav .dc-account, .dc-nav .btn-link.dc-account { color: #c9d1dc; text-decoration: none; font-weight: 500; font-size: inherit; margin-right: 1.25rem; }
+      <%# Matches what the property management pages actually render: Verdana 13px body,
+          Playfair Display SC title. (header.scss asks for Open Sans but scaffolds.scss wins.) %>
+      body { font-family: verdana, arial, helvetica, sans-serif; font-size: 13px; line-height: 18px;
+             background: #fafafa; color: #333; }
+      .dc-header { background: #fff; color: #333; box-shadow: 0 0 5px rgba(0, 0, 0, 0.1); }
+      .dc-header h1 { font: normal 3.5em 'Playfair Display SC', serif; text-align: center; margin: 0; }
+      .dc-header h1 a { color: #333; text-decoration: none; }
+      .dc-nav { max-width: 800px; margin: auto; display: flex; flex-wrap: wrap; }
+      .dc-nav a, .dc-nav form { flex-grow: 1; text-align: center; padding: 1.25em; position: relative; }
+      .dc-nav a { text-decoration: none; color: #000; }
+      .dc-nav a::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                         transform: scaleX(0); background: blue;
+                         transition: 0.7s transform cubic-bezier(0.06, 0.9, 0.28, 1); }
+      .dc-nav a:hover::after { transform: scaleX(1); }
+      .dc-nav .dc-account { color: #000; text-decoration: none; font-size: inherit; }
       .dc-muted { color: #6c757d; }
       .dc-section { margin-top: 2rem; }
       .dc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
@@ -23,7 +35,7 @@
       .dc-gallery img { width: 100%; height: 170px; object-fit: cover; display: block; }
       .dc-gallery figcaption { font-size: .8rem; padding: .35rem .5rem; }
       .dc-cover { width: 100%; height: 150px; object-fit: cover; border-radius: .4rem .4rem 0 0; }
-      .dc-note { background: #fffdf5; border-color: #ece6cf; }
+      .dc-note { background: #fff; border-color: #e3e5e8; }
       .dc-note.pinned { border-color: #e0b84a; }
       .dc-note-body { white-space: pre-wrap; }
       .dc-large { max-width: 100%; max-height: 80vh; border-radius: .4rem; background: #fff; }
@@ -33,23 +45,18 @@
   </head>
   <body>
     <header class="dc-header mb-4">
-      <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between">
-        <div>
-          <h1 class="h4 mb-1"><%= link_to "Design Center", design_root_path, class: "text-decoration-none" %></h1>
-          <nav class="dc-nav small">
-            <%= link_to "Dashboard", design_root_path %>
-            <%= link_to "Concepts", design_concepts_path %>
-            <%= link_to "Notes", design_notes_path %>
-            <%= link_to "Images", design_images_path %>
-            <%= link_to "Floor plans", design_floor_plans_path %>
-          </nav>
-        </div>
-        <nav class="dc-nav small">
-          <a href="/portfolio">Project Portfolio</a>
-          <a href="/">← Property Management</a>
-          <%= render "application/account_menu", link_class: "dc-account" %>
-        </nav>
-      </div>
+      <%= render "application/feature_menu" %>
+      <h1><%= link_to "Design Center", design_root_path %></h1>
+      <nav class="dc-nav">
+        <%= link_to "Dashboard", design_root_path %>
+        <%= link_to "Concepts", design_concepts_path %>
+        <%= link_to "Notes", design_notes_path %>
+        <%= link_to "Images", design_images_path %>
+        <%= link_to "Floor plans", design_floor_plans_path %>
+        <a href="/portfolio">Portfolio</a>
+        <a href="/pages/homepage">Property Management</a>
+        <a href="/">Home</a>
+      </nav>
     </header>
 
     <div class="<%= content_for?(:wide) ? "container-fluid px-4" : "container" %> pb-5">

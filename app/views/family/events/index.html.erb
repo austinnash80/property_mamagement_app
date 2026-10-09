@@ -1,0 +1,86 @@
+<%# Month grid plus an upcoming list. Task due dates appear alongside events so
+    one page covers "what's happening" and "what's owed". %>
+
+<div class="fa-cal-head">
+  <div class="fa-cal-nav">
+    <%= link_to "‹", family_calendar_path(month: (@month - 1.month).strftime("%Y-%m")),
+                class: "fa-cal-step", "aria-label": "Previous month" %>
+    <h2><%= @month.strftime("%B %Y") %></h2>
+    <%= link_to "›", family_calendar_path(month: (@month + 1.month).strftime("%Y-%m")),
+                class: "fa-cal-step", "aria-label": "Next month" %>
+    <% unless @month == Family.today.beginning_of_month %>
+      <%= link_to "Today", family_calendar_path, class: "small text-decoration-none ms-2" %>
+    <% end %>
+  </div>
+  <%= link_to "New event", new_family_event_path, class: "btn btn-primary btn-sm" %>
+</div>
+
+<div class="fa-cal">
+  <% %w[Sun Mon Tue Wed Thu Fri Sat].each do |day| %>
+    <div class="fa-cal-dow"><%= day %></div>
+  <% end %>
+
+  <% @grid_range.each do |day| %>
+    <%
+      events = @events_by_day[day]
+      tasks  = @tasks_by_day[day] || []
+      classes = ["fa-cal-day"]
+      classes << "fa-other-month" unless day.month == @month.month
+      classes << "fa-is-today"    if day == Family.today
+    %>
+    <div class="<%= classes.join(" ") %>">
+      <div class="fa-cal-date">
+        <%= link_to day.day, new_family_event_path(date: day), class: "fa-cal-add",
+                    title: "Add an event on #{day.strftime('%b %-d')}" %>
+      </div>
+
+      <% events.first(3).each do |event| %>
+        <%= link_to family_event_path(event), class: "fa-cal-item fa-cal-event", title: event.title do %>
+          <% if (t = event.short_time) %><span class="fa-cal-time"><%= t %></span><% end %>
+          <%= event.title %>
+        <% end %>
+      <% end %>
+      <% if events.size > 3 %>
+        <div class="fa-cal-more">+<%= events.size - 3 %> more</div>
+      <% end %>
+
+      <% tasks.first(2).each do |task| %>
+        <%= link_to family_task_path(task),
+                    class: "fa-cal-item fa-cal-task #{'fa-cal-overdue' if task.overdue?}",
+                    title: "Task due: #{task.title}" do %>
+          <span class="fa-cal-time">☐</span><%= task.title %>
+        <% end %>
+      <% end %>
+      <% if tasks.size > 2 %>
+        <%= link_to "+#{tasks.size - 2} due", family_tasks_path, class: "fa-cal-more text-decoration-none" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<section class="fa-group">
+  <div class="fa-group-head"><h3>Coming up</h3></div>
+  <% if @upcoming.any? %>
+    <% @upcoming.each do |event| %>
+      <div class="fa-task" style="--fa-list: #0f766e">
+        <div class="fa-cal-when">
+          <div class="fa-cal-when-d"><%= event.starts_on.strftime("%-d") %></div>
+          <div class="fa-cal-when-m"><%= event.starts_on.strftime("%b") %></div>
+        </div>
+        <div class="fa-task-body">
+          <div class="fa-task-title">
+            <%= link_to event.title, family_event_path(event), class: "text-decoration-none text-reset" %>
+          </div>
+          <div class="fa-task-meta">
+            <span><%= event.starts_on.strftime("%A") %><%= " – #{event.last_day.strftime('%b %-d')}" if event.multi_day? %></span>
+            <span><%= event.time_label %></span>
+            <% if event.location.present? %><span><%= event.location %></span><% end %>
+            <% if event.person %><span class="fa-chip"><%= event.person.display_name %></span><% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  <% else %>
+    <p class="fa-muted small mb-0">Nothing on the calendar yet. <%= link_to "Add the first event", new_family_event_path %>.</p>
+  <% end %>
+</section>

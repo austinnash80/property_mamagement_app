@@ -1,0 +1,37 @@
+<%# The private scratchpad. Only the signed-in person's own notes are ever
+    loaded here — see Family::NotesController#scope. %>
+
+<div class="fa-page-head">
+  <h2>Scratchpad</h2>
+  <p class="fa-muted mb-0">Private to you — nobody else in the family sees these.</p>
+</div>
+
+<%= form_with model: @note, url: family_notes_path, local: true, class: "mb-4" do |f| %>
+  <% if @note.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= @note.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div class="input-group">
+    <%= f.text_field :title, class: "form-control", placeholder: "New note…", autocomplete: "off" %>
+    <%= f.submit "Start", class: "btn btn-primary" %>
+  </div>
+<% end %>
+
+<% if @notes.any? %>
+  <div class="fa-cards">
+    <% @notes.each do |note| %>
+      <%= link_to edit_family_note_path(note), class: "fa-card", style: "--fa-list: #7c6f9c" do %>
+        <div class="fa-card-head">
+          <span class="fa-card-name"><%= note.title %></span>
+        </div>
+        <% if note.body.present? %>
+          <p class="fa-note-preview"><%= note.preview %></p>
+        <% else %>
+          <p class="fa-card-empty">Empty — open it and start writing.</p>
+        <% end %>
+        <p class="fa-note-when">Updated <%= note.updated_at.in_time_zone(Family::ZONE).strftime("%b %-d") %></p>
+      <% end %>
+    <% end %>
+  </div>
+<% else %>
+  <p class="fa-muted small mb-0">Nothing here yet. Put a title in the box above and start writing.</p>
+<% end %>

@@ -1,0 +1,90 @@
+<%# Feature launcher: one card per Family App feature. New features get a card
+    here as they are built. %>
+
+<%= render "family/dashboard/push_optin" %>
+
+<div class="row g-4">
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="fa-card-top" style="background: #8a9a8b"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">To-do list</h5>
+        <p class="card-text fa-muted small mb-3">
+          <%= pluralize @open_count, "open task" %><br>
+          <%= @mine_count %> assigned to you<% if @overdue_count > 0 %> · <span class="fa-due-over"><%= @overdue_count %> overdue</span><% end %>
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_todo_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="fa-card-top" style="background: #7d8a96"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Calendar</h5>
+        <p class="card-text fa-muted small mb-3">
+          <% if @next_event %>
+            Next up: <%= @next_event.title %>, <%= @next_event.starts_on.strftime("%b %-d") %><br>
+          <% else %>
+            Nothing scheduled yet<br>
+          <% end %>
+          <%= pluralize @events_this_week, "event" %> in the next 7 days
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_calendar_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="fa-card-top" style="background: #9c8e7e"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Household reference</h5>
+        <p class="card-text fa-muted small mb-3">
+          Wifi, codes, filter sizes, paint colors, numbers.<br>
+          <%= pluralize @reference_count, "entry", plural: "entries" %> saved
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_references_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="fa-card-top" style="background: #b08968"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Places to go</h5>
+        <p class="card-text fa-muted small mb-3">
+          Restaurants, shops, the farmers market.<br>
+          <%= pluralize @places_want, "place" %> to try · <%= @places_been %> been
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_places_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card h-100">
+      <div class="fa-card-top" style="background: #7c6f9c"></div>
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">Scratchpad</h5>
+        <p class="card-text fa-muted small mb-3">
+          Private to you — brainstorms and half-formed ideas.<br>
+          <%= pluralize @note_count, "note" %> saved
+        </p>
+        <div class="mt-auto">
+          <%= link_to "Open", family_notes_path, class: "btn fa-btn" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

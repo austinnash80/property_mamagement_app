@@ -1,0 +1,26 @@
+<h2 class="h5 mb-3">Lists</h2>
+
+<% @lists.each do |list| %>
+  <div class="fa-task" style="--fa-list: <%= list.color %>">
+    <div class="fa-task-body">
+      <div class="fa-task-title"><%= list.name %></div>
+      <div class="fa-task-meta">
+        <span><%= pluralize list.open_count, "open task" %></span>
+        <%= link_to "View", family_tasks_path(list: list.id), class: "text-decoration-none" %>
+      </div>
+    </div>
+    <div class="fa-actions">
+      <%= link_to "Edit", edit_family_list_path(list), class: "small text-decoration-none fa-muted me-2" %>
+      <%= link_to "Delete", family_list_path(list), method: :delete,
+                  data: { confirm: "Delete “#{list.name}” and its #{pluralize list.tasks.count, 'task'}?" },
+                  class: "small text-decoration-none fa-muted" %>
+    </div>
+  </div>
+<% end %>
+
+<div class="card mt-3">
+  <div class="card-body">
+    <h3 class="h6 mb-2">New list</h3>
+    <%= render "form", list: @list %>
+  </div>
+</div>

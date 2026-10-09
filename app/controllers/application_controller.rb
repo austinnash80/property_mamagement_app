@@ -3,7 +3,11 @@ class ApplicationController < ActionController::Base
   # until the user signs out or changes their password. Controllers can override
   # public_request? to allow anonymous reads (the portfolio does, for reviewers).
   before_action :require_login
-  helper_method :signed_in?, :current_user
+  # Deny by default: every section is owner/full-access only unless it opts out
+  # (Family::BaseController, AccountsController and HomeController do). A
+  # section added later is locked to family-role accounts automatically.
+  before_action :require_full_access
+  helper_method :signed_in?, :current_user, :full_access?
 
   private
 
@@ -22,6 +26,16 @@ class ApplicationController < ActionController::Base
     return if Rails.env.development? && User.none?   # fresh dev database: nothing to sign in with yet
     session[:return_to] = request.fullpath if request.get?
     redirect_to login_path, alert: "Please sign in."
+  end
+
+  def full_access?
+    current_user.nil? || current_user.full_access?
+  end
+
+  def require_full_access
+    return if current_user.nil?          # anonymous reads are handled by require_login/public_request?
+    return if current_user.full_access?
+    redirect_to family_root_path, alert: "That section isn't part of your account."
   end
 
   def public_request?

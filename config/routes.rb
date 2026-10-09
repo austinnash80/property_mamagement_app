@@ -12,6 +12,9 @@ Rails.application.routes.draw do
   # Design Center: independent section, routes in config/routes/design.rb
   draw(:design)
 
+  # Family App: independent section, routes in config/routes/family.rb
+  draw(:family)
+
   resources :booking_days
   resources :searches
   resources :accounting_lists do
@@ -45,5 +48,8 @@ Rails.application.routes.draw do
   get 'pages/manage_property'
   get 'pages/reports'
   get 'pages/streaming_passwords'
-  root to: "pages#homepage"
+
+  # Site home: a hub linking to each section of the site. The property
+  # management section's own landing page stays at /pages/homepage.
+  root to: "home#index"
 end

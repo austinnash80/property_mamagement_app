@@ -1,0 +1,39 @@
+<%= form_with model: place, url: (place.persisted? ? family_place_path(place) : family_places_path), local: true do |f| %>
+  <% if place.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= place.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= f.label :name, class: "form-label" %>
+    <%= f.text_field :name, class: "form-control", autofocus: true %>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-sm-4">
+      <%= f.label :kind, class: "form-label" %>
+      <%= f.select :kind, Family::PLACE_KINDS.map { |k, l| [l, k] }, {}, class: "form-select" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :area, "Area", class: "form-label" %>
+      <%= f.text_field :area, class: "form-control", placeholder: "La Jolla" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :url, "Website", class: "form-label" %>
+      <%= f.text_field :url, class: "form-control", placeholder: "example.com" %>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <%= f.label :notes, class: "form-label" %>
+    <%= f.text_area :notes, rows: 3, class: "form-control", placeholder: "Who recommended it, what to order, when it's quiet." %>
+  </div>
+
+  <div class="form-check mb-3">
+    <%= f.check_box :favorite, class: "form-check-input" %>
+    <%= f.label :favorite, "Favorite", class: "form-check-label" %>
+  </div>
+
+  <% unless place.persisted? %><%= render "family/shared/notify_checkbox" %><% end %>
+  <%= f.submit (place.persisted? ? "Save" : "Add place"), class: "btn btn-primary" %>
+  <%= link_to "Cancel", family_places_path, class: "btn btn-link fa-muted" %>
+<% end %>

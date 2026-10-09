@@ -1,0 +1,161 @@
+<div class="fa-page-head">
+  <h2>Household reference</h2>
+  <p class="fa-muted mb-0">The things you'd otherwise text each other about — codes, sizes, colors, numbers.</p>
+</div>
+
+<%# The Search button is the no-JS fallback; with JS the list filters as you type. %>
+<%= form_with url: family_references_path, method: :get, local: true, class: "mb-2", id: "ref-search" do %>
+  <div class="input-group input-group-lg">
+    <%= text_field_tag :q, @q, class: "form-control", placeholder: "Search everything…",
+                       autocomplete: "off", autofocus: true %>
+    <%= submit_tag "Search", class: "btn btn-outline-secondary", name: nil %>
+  </div>
+<% end %>
+
+<div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+  <button type="button" class="btn btn-primary btn-sm" data-open-dialog="ref-add">Add new</button>
+  <%= link_to "Back to search", family_references_path,
+              class: "small text-decoration-none fa-muted", id: "ref-back",
+              hidden: !(@q || @show_all) %>
+  <%= link_to "View all (#{@total})", family_references_path(all: 1),
+              class: "small text-decoration-none", id: "ref-all", hidden: @show_all %>
+</div>
+
+<div class="fa-group-head">
+  <h3 id="ref-heading" <%= "hidden" if @visible.none? %>>
+    <% if @q %>
+      <%= pluralize(@visible.size, "match") %> for “<%= @q %>”
+    <% elsif @show_all %>
+      All <%= pluralize(@total, "entry") %>
+    <% else %>
+      Pinned
+    <% end %>
+  </h3>
+</div>
+
+<div id="ref-list" data-mode="<%= @show_all ? "all" : "pinned" %>">
+  <% @entries.each do |entry| %>
+    <div class="fa-ref <%= "pinned" if entry.pinned %>"
+         data-search="<%= entry.searchable_text %>"
+         data-pinned="<%= entry.pinned %>"
+         <%= "hidden" unless @visible.include?(entry) %>>
+      <%= button_to toggle_pin_family_reference_path(entry), method: :patch,
+                    class: "fa-pin #{'is-pinned' if entry.pinned}", form_class: "d-inline",
+                    "aria-label": (entry.pinned ? "Unpin" : "Pin to the top") do %>
+        <span>★</span>
+      <% end %>
+      <div class="fa-ref-body">
+        <div class="fa-ref-title">
+          <%= entry.title %>
+          <span class="fa-chip ms-1"><%= entry.category %></span>
+        </div>
+        <% if entry.value.present? %><div class="fa-ref-value"><%= entry.value %></div><% end %>
+        <% if entry.notes.present? %>
+          <div class="small fa-muted" style="white-space: pre-wrap"><%= entry.notes %></div>
+        <% end %>
+      </div>
+      <div class="fa-actions">
+        <%= link_to "Edit", edit_family_reference_path(entry), class: "small text-decoration-none fa-muted me-2" %>
+        <%= link_to "Delete", family_reference_path(entry), method: :delete,
+                    data: { confirm: "Delete “#{entry.title}”?" }, class: "small text-decoration-none fa-muted" %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<p class="fa-muted text-center py-4 mb-0" id="ref-empty" <%= "hidden" if @visible.any? %>>
+  <% if @total.zero? %>
+    Nothing saved yet. Start with the wifi password, the HVAC filter size, or the vet's number.
+  <% else %>
+    <span id="ref-empty-search" <%= "hidden" unless @q %>>No matches.</span>
+    <span id="ref-empty-pinned" <%= "hidden" if @q %>>
+      Search above, or <%= link_to "view all #{@total}", family_references_path(all: 1), class: "text-decoration-none" %>.
+      Pin an entry with its ★ to keep it here.
+    </span>
+  <% end %>
+</p>
+
+<dialog id="ref-add" class="fa-modal" <%= "data-open-on-load" if @open_form %>>
+  <div class="fa-modal-head">
+    <h3 class="h6 mb-0">Add an entry</h3>
+    <button type="button" class="btn-close" aria-label="Close" data-close-dialog></button>
+  </div>
+  <%= render "form", reference: @reference %>
+</dialog>
+
+<%# Native <dialog> modal — no JS library needed, same vanilla approach as the header menu. %>
+<style>
+  .fa-modal { width: min(40rem, calc(100vw - 2rem)); border: 1px solid #e6e6e6; border-radius: .5rem;
+              padding: 1rem 1.1rem 1.1rem; box-shadow: 0 1rem 2rem rgba(0,0,0,.18); }
+  .fa-modal::backdrop { background: rgba(0,0,0,.35); }
+  .fa-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+</style>
+<script>
+  if (!window.__faDialog) {
+    window.__faDialog = true;
+    document.addEventListener("click", function (e) {
+      var open = e.target.closest("[data-open-dialog]");
+      if (open) { document.getElementById(open.dataset.openDialog).showModal(); return; }
+      var close = e.target.closest("[data-close-dialog]");
+      if (close) close.closest("dialog").close();
+    });
+  }
+  // Reopen after a failed save so the validation errors are on screen.
+  document.querySelectorAll("dialog[data-open-on-load]").forEach(function (d) { d.showModal(); });
+</script>
+
+<script>
+  // Filter the list as you type. Every entry is already on the page, so this is a
+  // plain show/hide against each row's data-search — no request, no debounce needed.
+  (function () {
+    var form = document.getElementById("ref-search");
+    var list = document.getElementById("ref-list");
+    if (!form || !list) return;
+
+    var box     = form.querySelector("input[name='q']");
+    var rows    = Array.prototype.slice.call(list.querySelectorAll(".fa-ref"));
+    var heading = document.getElementById("ref-heading");
+    var empty   = document.getElementById("ref-empty");
+    var noMatch = document.getElementById("ref-empty-search");
+    var hint    = document.getElementById("ref-empty-pinned");
+    var back    = document.getElementById("ref-back");
+    var viewAll = document.getElementById("ref-all");
+    var showAll = list.dataset.mode === "all";
+    var total   = rows.length;
+
+    // Submitting would only reload the same filtered list.
+    form.addEventListener("submit", function (e) { e.preventDefault(); box.blur(); });
+
+    function render() {
+      var q = box.value.trim().toLowerCase();
+      var shown = 0;
+
+      rows.forEach(function (row) {
+        var visible = q ? row.dataset.search.indexOf(q) !== -1
+                        : (showAll || row.dataset.pinned === "true");
+        row.hidden = !visible;
+        if (visible) shown++;
+      });
+
+      if (q) {
+        heading.textContent = shown + (shown === 1 ? " match" : " matches") + " for “" + box.value.trim() + "”";
+      } else if (showAll) {
+        heading.textContent = "All " + total + (total === 1 ? " entry" : " entries");
+      } else {
+        heading.textContent = "Pinned";
+      }
+
+      heading.hidden = shown === 0;
+      if (empty && total > 0) {
+        empty.hidden = shown !== 0;
+        if (noMatch) noMatch.hidden = !q;
+        if (hint) hint.hidden = !!q;
+      }
+      if (back) back.hidden = !q && !showAll;
+      if (viewAll) viewAll.hidden = showAll || !!q;
+    }
+
+    box.addEventListener("input", render);
+    render();
+  })();
+</script>

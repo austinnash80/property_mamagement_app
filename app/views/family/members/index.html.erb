@@ -1,0 +1,34 @@
+<h2 class="h5 mb-1">Family members</h2>
+<p class="fa-muted small">
+  This app doesn't send email, so there are no invites or password-reset links: set a password here and
+  pass it along. Each person can change their own afterwards from <%= link_to "the Password page", edit_account_path %>.
+</p>
+
+<% @members.each do |member| %>
+  <div class="fa-task" style="--fa-list: <%= member.full_access? ? '#2563eb' : '#0f766e' %>">
+    <div class="fa-task-body">
+      <div class="fa-task-title"><%= member.display_name %> <% if member == current_user %><span class="fa-chip">you</span><% end %></div>
+      <div class="fa-task-meta">
+        <span><%= member.email %></span>
+        <span class="fa-chip">
+          <%= { "owner" => "Owner · everything", "full" => "Everything", "family" => "Family App only" }[member.role] %>
+        </span>
+      </div>
+    </div>
+    <div class="fa-actions">
+      <%= link_to "Edit", edit_family_member_path(member), class: "small text-decoration-none fa-muted me-2" %>
+      <% unless member == current_user %>
+        <%= link_to "Remove", family_member_path(member), method: :delete,
+                    data: { confirm: "Remove #{member.display_name}'s login?" },
+                    class: "small text-decoration-none fa-muted" %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<div class="card mt-3">
+  <div class="card-body">
+    <h3 class="h6 mb-2">Add a member</h3>
+    <%= render "form", member: @member %>
+  </div>
+</div>

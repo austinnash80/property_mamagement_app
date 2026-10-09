@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Nash Family</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <%# rails-ujs powers `method: :delete`/`:patch` links and data-confirm dialogs %>
+    <script src="https://cdn.jsdelivr.net/npm/@rails/ujs@6.1.7/lib/assets/compiled/rails-ujs.js"></script>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%# Installable as a home-screen app, which is also what iPhone needs for push. %>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Nash Family">
+    <%= yield :head %>
+    <%# Same palette and fonts as the property-management section: Playfair title on a
+        Verdana body, #fafafa page on a white header, blue underline on nav hover.
+        header.scss asks for Open Sans but scaffolds.scss wins, so Verdana is what
+        the property management pages actually render. %>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css?family=Playfair+Display+SC&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: verdana, arial, helvetica, sans-serif; font-size: 13px; line-height: 18px;
+             background: #fafafa; color: #333; }
+      .fa-header { background: #fff; box-shadow: 0 0 5px rgba(0,0,0,.1); }
+      .fa-header h1 { font: normal 3.5em 'Playfair Display SC', serif; text-align: center; margin: 0; }
+      .fa-header h1 a { color: #333; text-decoration: none; }
+      .fa-nav { max-width: 800px; margin: auto; display: flex; flex-wrap: wrap; }
+      .fa-nav a, .fa-nav form { flex-grow: 1; text-align: center; padding: 1.25em .5em; position: relative; }
+      .fa-nav a { color: #000; text-decoration: none; }
+      .fa-nav a::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+                         transform: scaleX(0); background: blue;
+                         transition: .7s transform cubic-bezier(.06,.9,.28,1); }
+      .fa-nav a:hover::after { transform: scaleX(1); }
+      .fa-nav a.active::after { transform: scaleX(1); background: #2563eb; }
+      .fa-nav .btn-link { color: #000; text-decoration: none; padding: 0; vertical-align: baseline; }
+      .fa-muted { color: #6c757d; }
+
+      /* Page headings: friendly but plain. */
+      .fa-page-head { margin-bottom: 1.1rem; }
+      .fa-page-head h2 { font-size: 1.35rem; margin: 0 0 .15rem; display: flex; align-items: center; gap: .5rem; }
+      .fa-page-head p { font-size: .9rem; }
+      .fa-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+
+      /* The three "needs attention" counters on the overview. */
+      .fa-stat { display: block; text-align: center; text-decoration: none; color: inherit;
+                 background: #fff; border: 1px solid #e6e6e6; border-radius: .4rem; padding: .6rem .3rem; }
+      .fa-stat:hover { border-color: #c9ced6; color: inherit; }
+      .fa-stat-n { font-size: 1.5rem; font-weight: 600; line-height: 1.1; }
+      .fa-stat-l { font-size: .78rem; color: #6c757d; }
+
+      /* Grouped ways in: lists, tags, people. */
+      .fa-group { margin-top: 1.75rem; }
+      .fa-group-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .5rem; }
+      .fa-group-head h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em;
+                          color: #6c757d; margin: 0; }
+      .fa-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: .5rem; }
+      .fa-tile { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+                 background: #fff; border: 1px solid #e6e6e6; border-radius: .4rem;
+                 border-left: 4px solid var(--fa-list, #d7dbe0); padding: .6rem .75rem;
+                 text-decoration: none; color: #333; }
+      .fa-tile:hover { border-color: #c9ced6; border-left-color: var(--fa-list, #9aa1a9); color: #333; }
+      .fa-tile-name { font-weight: 600; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .fa-tile-n { font-size: .85rem; color: #6c757d; flex: 0 0 auto; }
+
+      /* Notifications opt-in on the family home */
+      .fa-push { background: #fff; border: 1px solid #e6e6e6; border-radius: .4rem; padding: .7rem .9rem; margin-bottom: 1.25rem; }
+      .fa-push-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+      .fa-push-text { font-size: .9rem; flex: 1 1 18rem; }
+      .fa-push-text strong { margin-right: .35rem; }
+      .fa-push-actions { display: flex; gap: .4rem; flex: 0 0 auto; }
+
+      /* Household reference */
+      .fa-ref { display: flex; align-items: flex-start; gap: .6rem;
+                background: #fff; border: 1px solid #e6e6e6; border-radius: .4rem;
+                padding: .65rem .8rem; margin-bottom: .5rem; }
+      .fa-ref.pinned { border-color: #e0b84a; background: #fffdf5; }
+      .fa-ref-body { flex: 1 1 auto; min-width: 0; }
+      .fa-ref-title { font-weight: 600; font-size: .95rem; }
+      .fa-ref-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                      font-size: 1rem; color: #1f2a37; word-break: break-word; margin: .1rem 0; }
+      .fa-pin, .fa-starbtn { border: 0; background: none; padding: 0; line-height: 1; flex: 0 0 auto;
+                             color: #c7ccd3; font-size: 1.05rem; }
+      .fa-pin:hover, .fa-starbtn:hover { color: #e0b84a; }
+      .fa-pin.is-pinned, .fa-starbtn.is-fav { color: #e0b84a; }
+      .fa-star { color: #e0b84a; }
+      .fa-task.visited { opacity: .72; }
+
+      /* Calendar */
+      .fa-cal-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+                     justify-content: space-between; margin-bottom: .85rem; }
+      .fa-cal-nav { display: flex; align-items: center; gap: .4rem; }
+      .fa-cal-nav h2 { font-size: 1.3rem; margin: 0; min-width: 9.5rem; }
+      .fa-cal-step { display: inline-flex; align-items: center; justify-content: center;
+                     width: 1.9rem; height: 1.9rem; border: 1px solid #e3e5e8; border-radius: .3rem;
+                     background: #fff; color: #333; text-decoration: none; font-size: 1.1rem; line-height: 1; }
+      .fa-cal-step:hover { border-color: #c9ced6; color: #000; }
+      .fa-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+                gap: 1px; background: #e6e6e6; border: 1px solid #e6e6e6; border-radius: .4rem; overflow: hidden; }
+      .fa-cal-dow { background: #f1f2f4; text-align: center; font-size: .72rem; letter-spacing: .04em;
+                    text-transform: uppercase; color: #6c757d; padding: .35rem 0; }
+      .fa-cal-day { background: #fff; min-height: 6.2rem; padding: .25rem .3rem; overflow: hidden; }
+      .fa-cal-day.fa-other-month { background: #fafafa; }
+      .fa-cal-day.fa-other-month .fa-cal-add { color: #b9bfc7; }
+      .fa-cal-day.fa-is-today { background: #f3f7ff; }
+      .fa-cal-date { text-align: right; line-height: 1; }
+      .fa-cal-add { display: inline-block; font-size: .78rem; color: #6c757d; text-decoration: none;
+                    padding: .1rem .3rem; border-radius: .25rem; }
+      .fa-cal-add:hover { background: #2563eb; color: #fff; }
+      .fa-is-today .fa-cal-add { background: #2563eb; color: #fff; font-weight: 600; }
+      .fa-cal-item { display: block; font-size: .72rem; line-height: 1.25; margin-top: .12rem;
+                     padding: .1rem .25rem; border-radius: .2rem; text-decoration: none;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .fa-cal-event { background: #e3f0ee; color: #0f766e; }
+      .fa-cal-event:hover { background: #0f766e; color: #fff; }
+      .fa-cal-task { background: #eef2f7; color: #475569; }
+      .fa-cal-task:hover { background: #475569; color: #fff; }
+      .fa-cal-task.fa-cal-overdue { background: #fdeaec; color: #b02a37; }
+      .fa-cal-task.fa-cal-overdue:hover { background: #dc3545; color: #fff; }
+      .fa-cal-time { font-weight: 600; margin-right: .2rem; }
+      .fa-cal-more { font-size: .68rem; color: #6c757d; padding: .1rem .25rem; }
+      /* The date badge on the "Coming up" rows. */
+      .fa-cal-when { flex: 0 0 auto; width: 2.6rem; text-align: center; line-height: 1; }
+      .fa-cal-when-d { font-size: 1.15rem; font-weight: 600; }
+      .fa-cal-when-m { font-size: .68rem; text-transform: uppercase; color: #6c757d; letter-spacing: .04em; }
+      @media (max-width: 575px) {
+        .fa-cal-day { min-height: 4.4rem; padding: .18rem .2rem; }
+        .fa-cal-item { font-size: .62rem; }
+        .fa-cal-nav h2 { font-size: 1.1rem; min-width: 7.5rem; }
+      }
+      .fa-card-top { height: 4px; border-radius: .25rem .25rem 0 0; }
+      /* Flat neutral button: the muted card accents would be drowned out by
+         Bootstrap's gradient primary. */
+      .fa-btn { min-width: 150px; background: #475569; border: 1px solid #475569; color: #fff; }
+      .fa-btn:hover, .fa-btn:focus { background: #334155; border-color: #334155; color: #fff; }
+      .fa-card-dashed { border-style: dashed; background: transparent; }
+      .fa-narrow { max-width: 820px; }
+      .fa-due-over { color: #dc3545; font-weight: 600; }
+
+      /* To-do overview: one card per list, previewing what is on it. */
+      .fa-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+      .fa-card { display: block; text-decoration: none; color: #333; background: #fff;
+                 border: 1px solid #e6e6e6; border-radius: .4rem;
+                 border-top: 4px solid var(--fa-list, #2563eb); padding: .75rem .9rem; }
+      .fa-card:hover { border-color: #c9ced6; color: #333;
+                       box-shadow: 0 .25rem .75rem rgba(0,0,0,.07); }
+      .fa-card-head { display: flex; align-items: baseline; justify-content: space-between;
+                      gap: .5rem; margin-bottom: .45rem; }
+      .fa-card-name { font-weight: 600; font-size: 1rem; }
+      .fa-card-n { font-size: .78rem; color: #6c757d; flex: 0 0 auto; }
+      .fa-card-items { list-style: none; margin: 0; padding: 0; }
+      .fa-card-items li { display: flex; justify-content: space-between; gap: .5rem;
+                          padding: .3rem 0; border-top: 1px solid #f1f2f4; }
+      .fa-card-items li:first-child { border-top: 0; }
+      .fa-card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .fa-card-due { font-size: .78rem; color: #6c757d; flex: 0 0 auto; }
+      .fa-card-more, .fa-card-empty { font-size: .8rem; color: #9aa1a9; margin: .45rem 0 0; }
+
+      /* Scratchpad cards: a preview of the note instead of a task list. */
+      .fa-note-preview { font-size: .85rem; color: #5b6269; margin: 0;
+                         display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+                         overflow: hidden; }
+      .fa-note-when { font-size: .75rem; color: #9aa1a9; margin: .5rem 0 0; }
+
+      /* Task rows: roomy enough to tap on a phone, tidy on a desktop. */
+      .fa-task { position: relative; display: flex; align-items: flex-start; gap: .75rem;
+                 background: #fff; border: 1px solid #e6e6e6; border-radius: .4rem;
+                 border-left: 4px solid var(--fa-list, #2563eb); padding: .7rem .85rem; margin-bottom: .5rem; }
+      .fa-task.done { opacity: .55; }
+      .fa-task.done .fa-task-title { text-decoration: line-through; }
+      .fa-task.overdue { border-color: #dc3545; border-left-color: #dc3545; }
+      .fa-check { border: 0; background: none; padding: 0; line-height: 1; flex: 0 0 auto; }
+      .fa-check span { display: inline-block; width: 24px; height: 24px; border-radius: 50%;
+                       border: 2px solid #b9bfc7; color: #fff; font-size: 14px; text-align: center; line-height: 21px; }
+      .fa-check:hover span { border-color: #2563eb; }
+      .fa-check.is-done span { background: #2563eb; border-color: #2563eb; }
+      .fa-task-body { flex: 1 1 auto; min-width: 0; }
+      .fa-task-title { font-weight: 600; }
+      .fa-task-meta { font-size: .8rem; color: #6c757d; display: flex; flex-wrap: wrap; gap: .25rem .75rem; margin-top: .15rem; }
+      .fa-task-meta .fa-due-over { color: #dc3545; font-weight: 600; }
+      .fa-actions { flex: 0 0 auto; white-space: nowrap; }
+      .fa-chip { display: inline-block; font-size: .75rem; padding: .05rem .5rem; border-radius: 1rem;
+                 background: #eef2f7; color: #475569; }
+      .fa-bucket h2 { font-size: .9rem; text-transform: uppercase; letter-spacing: .04em;
+                      color: #6c757d; margin: 1.5rem 0 .5rem; }
+      .fa-filter a { text-decoration: none; }
+      @media (max-width: 575px) {
+        .fa-header h1 { font-size: 2.4em; }
+        .fa-nav a, .fa-nav form { padding: .9em .35em; }
+        .fa-task { padding: .85rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="fa-header mb-4">
+      <div class="container py-3">
+        <%= render "application/feature_menu" %>
+        <h1><%= link_to "Nash Family", family_root_path %></h1>
+        <%# The dashboard is itself the feature launcher, so it carries no nav. Every
+            other page lists the Family App features; the title links back home. %>
+        <% unless controller_name == "dashboard" %>
+          <nav class="fa-nav">
+            <%= link_to "To-do", family_todo_path, class: ("active" if controller_name == "tasks") %>
+            <%= link_to "Calendar", family_calendar_path, class: ("active" if controller_name == "events") %>
+            <%= link_to "Reference", family_references_path, class: ("active" if controller_name == "references") %>
+            <%= link_to "Places", family_places_path, class: ("active" if controller_name == "places") %>
+          </nav>
+        <% end %>
+      </div>
+    </header>
+
+    <%# The card grid wants the full container; the reading-width pages don't. %>
+    <%# The card grid and the month calendar want room; reading pages don't. %>
+    <% wide = controller_name == "dashboard" || (controller_name == "events" && action_name == "index") %>
+    <div class="container pb-5 <%= "fa-narrow" unless wide %>">
+      <% if notice.present? %><div class="alert alert-success py-2"><%= notice %></div><% end %>
+      <% if alert.present?  %><div class="alert alert-danger py-2"><%= alert %></div><% end %>
+      <%= yield %>
+    </div>
+  </body>
+</html>

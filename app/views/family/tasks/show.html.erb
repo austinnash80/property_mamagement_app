@@ -1,0 +1,64 @@
+<div class="mb-2"><%= link_to "← Back to the list", family_tasks_path(list: @task.list_id), class: "small fa-muted text-decoration-none" %></div>
+
+<div class="card mb-3" style="border-left: 4px solid <%= @task.list.color %>">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3">
+      <%= button_to toggle_family_task_path(@task), method: :patch,
+                    class: "fa-check #{'is-done' if @task.done?}", form_class: "d-inline",
+                    "aria-label": (@task.done? ? "Mark as not done" : "Mark as done") do %>
+        <span><%= "✓" if @task.done? %></span>
+      <% end %>
+      <div class="flex-grow-1">
+        <h2 class="h5 mb-1 <%= "text-decoration-line-through fa-muted" if @task.done? %>"><%= @task.title %></h2>
+        <div>
+          <span class="fa-chip" style="background: <%= @task.list.color %>1a; color: <%= @task.list.color %>"><%= @task.list.name %></span>
+          <% @task.tag_list.each do |tag| %>
+            <%= link_to tag, family_tasks_path(tag: tag), class: "fa-chip text-decoration-none" %>
+          <% end %>
+        </div>
+      </div>
+      <%= link_to "Edit", edit_family_task_path(@task), class: "btn btn-outline-secondary btn-sm" %>
+    </div>
+
+    <dl class="row mb-0 mt-3 small">
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Assigned to</dt>
+      <dd class="col-8 col-sm-9"><%= @task.assignee&.display_name || "Anyone" %></dd>
+
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Due</dt>
+      <dd class="col-8 col-sm-9 <%= "fa-due-over" if @task.overdue? %>">
+        <%= @task.due_on ? @task.due_on.strftime("%A, %B %-d, %Y") : "No date" %>
+        <%= "(overdue)" if @task.overdue? %>
+      </dd>
+
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Added</dt>
+      <dd class="col-8 col-sm-9">
+        <%= @task.created_at.in_time_zone(Family::ZONE).strftime("%b %-d, %Y") %><%= " by #{@task.created_by.display_name}" if @task.created_by %>
+      </dd>
+
+      <% if @task.done? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Completed</dt>
+        <dd class="col-8 col-sm-9">
+          <%= @task.done_at.in_time_zone(Family::ZONE).strftime("%b %-d, %Y") %><%= " by #{@task.done_by.display_name}" if @task.done_by %>
+        </dd>
+      <% end %>
+    </dl>
+  </div>
+</div>
+
+<%# The note lives with the task; this box writes straight to it. %>
+<div class="card mb-3">
+  <div class="card-body">
+    <h3 class="h6 mb-2">Note</h3>
+    <%= form_with model: @task, url: family_task_path(@task), local: true do |f| %>
+      <%= hidden_field_tag :stay, 1 %>
+      <%= f.text_area :notes, rows: 5, class: "form-control mb-2",
+                      placeholder: "Measurements, store, who to call, what is left to do…" %>
+      <%= f.submit "Save note", class: "btn btn-primary btn-sm" %>
+    <% end %>
+  </div>
+</div>
+
+<div class="text-end">
+  <%= link_to "Delete task", family_task_path(@task), method: :delete,
+              data: { confirm: "Delete “#{@task.title}”?" }, class: "small fa-muted text-decoration-none" %>
+</div>

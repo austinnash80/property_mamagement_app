@@ -1,0 +1,47 @@
+<div class="mb-2">
+  <%= link_to "← Calendar", family_calendar_path(month: @event.starts_on.strftime("%Y-%m")),
+              class: "small fa-muted text-decoration-none" %>
+</div>
+
+<div class="card mb-3" style="border-left: 4px solid #0f766e">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3">
+      <div class="flex-grow-1">
+        <h2 class="h5 mb-1 <%= "fa-muted" if @event.past? %>"><%= @event.title %></h2>
+        <div class="fa-muted small"><%= @event.time_label %></div>
+      </div>
+      <%= link_to "Edit", edit_family_event_path(@event), class: "btn btn-outline-secondary btn-sm" %>
+    </div>
+
+    <dl class="row mb-0 mt-3 small">
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">When</dt>
+      <dd class="col-8 col-sm-9">
+        <%= @event.starts_on.strftime("%A, %B %-d, %Y") %>
+        <% if @event.multi_day? %> – <%= @event.last_day.strftime("%A, %B %-d, %Y") %><% end %>
+      </dd>
+
+      <% if @event.location.present? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Where</dt>
+        <dd class="col-8 col-sm-9"><%= @event.location %></dd>
+      <% end %>
+
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Who</dt>
+      <dd class="col-8 col-sm-9"><%= @event.person&.display_name || "Everyone" %></dd>
+
+      <% if @event.notes.present? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Notes</dt>
+        <dd class="col-8 col-sm-9" style="white-space: pre-wrap"><%= @event.notes %></dd>
+      <% end %>
+
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Added</dt>
+      <dd class="col-8 col-sm-9">
+        <%= @event.created_at.in_time_zone(Family::ZONE).strftime("%b %-d, %Y") %><%= " by #{@event.created_by.display_name}" if @event.created_by %>
+      </dd>
+    </dl>
+  </div>
+</div>
+
+<div class="text-end">
+  <%= link_to "Delete event", family_event_path(@event), method: :delete,
+              data: { confirm: "Delete “#{@event.title}”?" }, class: "small fa-muted text-decoration-none" %>
+</div>

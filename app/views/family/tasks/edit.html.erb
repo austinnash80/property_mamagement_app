@@ -1,0 +1,6 @@
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <h2 class="h5 mb-0">Edit task</h2>
+  <%= link_to "Delete", family_task_path(@task), method: :delete,
+              data: { confirm: "Delete “#{@task.title}”?" }, class: "small fa-muted text-decoration-none" %>
+</div>
+<%= render "form", task: @task %>

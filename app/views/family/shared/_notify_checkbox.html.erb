@@ -1,0 +1,11 @@
+<%# "Notify Christina" on create forms. Names the other person when there is
+    exactly one; otherwise "everyone else". Hidden when there is nobody to
+    notify or push isn't configured. `compact` is the inline quick-add style. %>
+<% others = User.where.not(id: current_user&.id).by_name.to_a %>
+<% if FamilyPush.enabled? && others.any? %>
+  <% label = others.one? ? "Notify #{others.first.display_name}" : "Notify everyone else" %>
+  <div class="form-check <%= local_assigns[:compact] ? "d-inline-block small" : "mb-3" %>">
+    <%= check_box_tag :notify, 1, false, class: "form-check-input", id: "notify-#{local_assigns[:id] || 'main'}" %>
+    <%= label_tag "notify-#{local_assigns[:id] || 'main'}", label, class: "form-check-label" %>
+  </div>
+<% end %>

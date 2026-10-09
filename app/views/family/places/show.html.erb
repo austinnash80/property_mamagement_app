@@ -1,0 +1,50 @@
+<div class="mb-2"><%= link_to "← Places to go", family_places_path, class: "small fa-muted text-decoration-none" %></div>
+
+<div class="card mb-3" style="border-left: 4px solid <%= @place.visited? ? '#0f766e' : '#b45309' %>">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3">
+      <%= button_to visit_family_place_path(@place), method: :patch,
+                    class: "fa-check #{'is-done' if @place.visited?}", form_class: "d-inline",
+                    "aria-label": (@place.visited? ? "Move back to want to go" : "Mark as been") do %>
+        <span><%= "✓" if @place.visited? %></span>
+      <% end %>
+      <div class="flex-grow-1">
+        <h2 class="h5 mb-1">
+          <%= @place.name %>
+          <% if @place.favorite %><span class="fa-star">★</span><% end %>
+        </h2>
+        <div class="fa-muted small"><%= @place.kind_label %><%= " · #{@place.area}" if @place.area.present? %></div>
+      </div>
+      <%= link_to "Edit", edit_family_place_path(@place), class: "btn btn-outline-secondary btn-sm" %>
+    </div>
+
+    <dl class="row mb-0 mt-3 small">
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Status</dt>
+      <dd class="col-8 col-sm-9">
+        <%= @place.visited? ? "Been — #{@place.visited_at.in_time_zone(Family::ZONE).strftime('%b %-d, %Y')}" : "Want to go" %>
+      </dd>
+
+      <% if @place.url.present? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Website</dt>
+        <dd class="col-8 col-sm-9">
+          <%= link_to @place.url, @place.url, target: "_blank", rel: "noopener noreferrer" %>
+        </dd>
+      <% end %>
+
+      <% if @place.notes.present? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Notes</dt>
+        <dd class="col-8 col-sm-9" style="white-space: pre-wrap"><%= @place.notes %></dd>
+      <% end %>
+
+      <dt class="col-4 col-sm-3 fa-muted fw-normal">Added</dt>
+      <dd class="col-8 col-sm-9">
+        <%= @place.created_at.in_time_zone(Family::ZONE).strftime("%b %-d, %Y") %><%= " by #{@place.created_by.display_name}" if @place.created_by %>
+      </dd>
+    </dl>
+  </div>
+</div>
+
+<div class="text-end">
+  <%= link_to "Delete place", family_place_path(@place), method: :delete,
+              data: { confirm: "Delete “#{@place.name}”?" }, class: "small fa-muted text-decoration-none" %>
+</div>

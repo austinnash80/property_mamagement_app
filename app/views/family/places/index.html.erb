@@ -1,0 +1,59 @@
+<div class="fa-page-head">
+  <h2>Places to go</h2>
+  <p class="fa-muted mb-0">Somewhere to park "we should try that" — restaurants, shops, the farmers market.</p>
+</div>
+
+<%# Quick add: a name and a kind is enough. %>
+<%= form_with model: @place, url: family_places_path, local: true, class: "mb-3" do |f| %>
+  <%= hidden_field_tag :view, params[:view] %>
+  <%= hidden_field_tag :kind, params[:kind] %>
+  <% if @place.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= @place.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div class="input-group">
+    <%= f.text_field :name, class: "form-control", placeholder: "Add a place…", autocomplete: "off" %>
+    <%= f.select :kind, Family::PLACE_KINDS.map { |k, l| [l, k] }, {}, class: "form-select", style: "max-width: 11rem" %>
+    <%= f.submit "Add", class: "btn btn-primary" %>
+  </div>
+  <div class="row g-2 mt-2">
+    <div class="col-6"><%= f.text_field :area, class: "form-control form-control-sm", placeholder: "Area, e.g. La Jolla" %></div>
+    <div class="col-6"><%= f.text_field :url, class: "form-control form-control-sm", placeholder: "Website (optional)" %></div>
+  </div>
+  <div class="mt-1"><%= render "family/shared/notify_checkbox", compact: true, id: "quick" %></div>
+<% end %>
+
+<div class="fa-filter small mb-2 d-flex flex-wrap gap-2 align-items-center">
+  <% { "want" => "Want to go", "been" => "Been", "favorites" => "Favorites", "all" => "All" }.each do |key, label| %>
+    <%= link_to family_places_path(view: key, kind: params[:kind]),
+                class: "fa-chip text-decoration-none #{'fw-bold' if @view == key}" do %>
+      <%= label %> <span class="fa-muted"><%= @counts[key] %></span>
+    <% end %>
+  <% end %>
+</div>
+
+<% if @kinds.any? %>
+  <div class="fa-filter small mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <span class="fa-muted">Kind</span>
+    <%= link_to "Any", family_places_path(view: @view), class: "fa-chip text-decoration-none #{'fw-bold' if @kind.blank?}" %>
+    <% Family::PLACE_KINDS.each do |key, label| %>
+      <% next unless @kinds[key] %>
+      <%= link_to family_places_path(view: @view, kind: key),
+                  class: "fa-chip text-decoration-none #{'fw-bold' if @kind == key}" do %>
+        <%= label %> <span class="fa-muted"><%= @kinds[key] %></span>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @places.any? %>
+  <%= render partial: "place", collection: @places %>
+<% else %>
+  <p class="fa-muted text-center py-4 mb-0">
+    <% if @view == "want" %>
+      Nothing on the list yet. Add the next place you want to try.
+    <% else %>
+      Nothing here yet.
+      <%= link_to "See the want-to-go list", family_places_path, class: "text-decoration-none" %>
+    <% end %>
+  </p>
+<% end %>

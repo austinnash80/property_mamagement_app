@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rails-dev",
+      "runtimeExecutable": "zsh",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.zshrc; export DISABLE_SPRING=1; bundle exec rails server -p 3010"
+      ],
+      "port": 3010
+    },
+    {
+      "name": "rails-dev-3011",
+      "runtimeExecutable": "zsh",
+      "runtimeArgs": [
+        "-lc",
+        "source ~/.zshrc; export DISABLE_SPRING=1; bundle exec rails server -p 3011 --pid tmp/pids/server3011.pid"
+      ],
+      "port": 3011
+    }
+  ]
+}

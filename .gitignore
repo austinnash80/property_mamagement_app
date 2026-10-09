@@ -34,3 +34,6 @@
 /yarn-error.log
 yarn-debug.log*
 .yarn-integrity
+
+# Family App push notification keys (production uses ENV; see config/initializers/family_push.rb)
+/config/vapid.yml

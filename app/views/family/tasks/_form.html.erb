@@ -1,0 +1,43 @@
+<%= form_with model: task, url: (task.persisted? ? family_task_path(task) : family_tasks_path), local: true do |f| %>
+  <% if task.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= task.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div class="mb-3">
+    <%= f.label :title, class: "form-label" %>
+    <%= f.text_field :title, class: "form-control", autofocus: true %>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-sm-4">
+      <%= f.label :list_id, "List", class: "form-label" %>
+      <%= f.collection_select :list_id, @lists, :id, :name, {}, class: "form-select" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :assignee_id, "Assigned to", class: "form-label" %>
+      <%= f.collection_select :assignee_id, @people, :id, :display_name, { include_blank: "Anyone" }, class: "form-select" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :due_on, "Due", class: "form-label" %>
+      <%= f.date_field :due_on, class: "form-control" %>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <%= f.label :tags, "Tags", class: "form-label" %>
+    <%= f.text_field :tags, class: "form-control", list: "fa-tags", placeholder: "Errand, Yard" %>
+    <datalist id="fa-tags">
+      <% (@tags || []).each do |tag| %><option value="<%= tag %>"></option><% end %>
+    </datalist>
+    <div class="form-text">Comma separated.</div>
+  </div>
+
+  <div class="mb-3">
+    <%= f.label :notes, class: "form-label" %>
+    <%= f.text_area :notes, rows: 3, class: "form-control" %>
+  </div>
+
+  <% unless task.persisted? %><%= render "family/shared/notify_checkbox" %><% end %>
+  <%= f.submit (task.persisted? ? "Save task" : "Add task"), class: "btn btn-primary" %>
+  <%= link_to "Cancel", family_tasks_path, class: "btn btn-link fa-muted" %>
+<% end %>

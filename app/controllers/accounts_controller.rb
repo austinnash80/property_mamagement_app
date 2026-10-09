@@ -1,4 +1,5 @@
 class AccountsController < ApplicationController
+  skip_before_action :require_full_access   # everyone may change their own password
   layout "auth"
 
   def edit; end

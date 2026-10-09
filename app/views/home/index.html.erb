@@ -1,0 +1,60 @@
+<div class="mb-4">
+  <h2 class="h5 mb-1">Sections</h2>
+  <div class="hm-muted small"><%= full_access? ? "Pick a section to work in." : "Welcome#{", #{current_user.display_name}" if current_user}." %></div>
+</div>
+
+<%
+  sections = [
+    { name:   "Property Management",
+      path:   pages_homepage_path,
+      accent: "#2563eb",
+      blurb:  "Rentals, bookings, revenue and expenses across the properties.",
+      stat:   "#{@counts[:properties]} #{'property'.pluralize(@counts[:properties])}",
+      links:  { "Properties" => properties_path, "Bookings" => bookings_path, "Revenue/Expenses" => accountings_path } },
+
+    { name:   "Project Portfolio",
+      path:   portfolio_root_path,
+      accent: "#0f766e",
+      blurb:  "Construction projects, work items, vendors, photos and documents.",
+      stat:   "#{@counts[:projects]} #{'project'.pluralize(@counts[:projects])}",
+      links:  { "All Projects" => portfolio_projects_path, "Properties" => portfolio_properties_path, "Vendors / Subs" => portfolio_vendors_path } },
+
+    { name:   "Design Center",
+      path:   design_root_path,
+      accent: "#1f2a37",
+      blurb:  "Design concepts, idea notes, inspiration images and floor plans.",
+      stat:   "#{@counts[:concepts]} #{'concept'.pluralize(@counts[:concepts])}",
+      links:  { "Concepts" => design_concepts_path, "Notes" => design_notes_path, "Floor plans" => design_floor_plans_path } },
+
+    { name:   "Nash Family",
+      path:   family_root_path,
+      accent: "#2563eb",
+      blurb:  "The shared to-do list: tasks by list and tag, with due dates and who they are for.",
+      stat:   "#{@counts[:open_tasks]} open #{'task'.pluralize(@counts[:open_tasks])}",
+      family: true,
+      links:  { "To-do" => family_todo_path } }
+  ]
+
+  # Belt and braces: HomeController sends family-only accounts to /family before
+  # this renders, but if that ever changes they still only see their section.
+  sections = sections.select { |s| s[:family] } unless full_access?
+%>
+
+<div class="row g-3">
+  <% sections.each do |section| %>
+    <div class="col-md-6 d-flex flex-column">
+      <%= link_to section[:path], class: "hm-card flex-grow-1 #{'hm-soon' if section[:soon]}", style: "--hm-accent: #{section[:accent]}" do %>
+        <h2><%= section[:name] %></h2>
+        <p><%= section[:blurb] %></p>
+        <div class="hm-stat"><%= section[:stat] %></div>
+      <% end %>
+      <% if section[:links].any? %>
+        <div class="small mt-2 ps-1">
+          <% section[:links].each do |label, path| %>
+            <%= link_to label, path, class: "me-3 text-decoration-none hm-muted" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

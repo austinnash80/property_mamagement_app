@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_09_09_010000) do
+ActiveRecord::Schema.define(version: 2026_10_05_000600) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -141,6 +141,102 @@ ActiveRecord::Schema.define(version: 2026_09_09_010000) do
     t.datetime "updated_at", precision: 6, null: false
     t.index ["concept_id"], name: "index_design_notes_on_concept_id"
     t.index ["pinned"], name: "index_design_notes_on_pinned"
+  end
+
+  create_table "family_events", force: :cascade do |t|
+    t.string "title", null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.time "start_time"
+    t.time "end_time"
+    t.string "location"
+    t.text "notes"
+    t.bigint "person_id"
+    t.bigint "created_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["person_id"], name: "index_family_events_on_person_id"
+    t.index ["starts_on"], name: "index_family_events_on_starts_on"
+  end
+
+  create_table "family_lists", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "color", default: "#2563eb", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["position"], name: "index_family_lists_on_position"
+  end
+
+  create_table "family_notes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["user_id", "updated_at"], name: "index_family_notes_on_user_id_and_updated_at"
+    t.index ["user_id"], name: "index_family_notes_on_user_id"
+  end
+
+  create_table "family_places", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "kind", default: "other", null: false
+    t.string "area"
+    t.string "url"
+    t.text "notes"
+    t.datetime "visited_at"
+    t.boolean "favorite", default: false, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["kind"], name: "index_family_places_on_kind"
+    t.index ["visited_at"], name: "index_family_places_on_visited_at"
+  end
+
+  create_table "family_push_subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "endpoint", null: false
+    t.string "p256dh", null: false
+    t.string "auth", null: false
+    t.string "user_agent"
+    t.date "last_digest_on"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["endpoint"], name: "index_family_push_subscriptions_on_endpoint", unique: true
+    t.index ["user_id"], name: "index_family_push_subscriptions_on_user_id"
+  end
+
+  create_table "family_references", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "category", default: "Other", null: false
+    t.string "value"
+    t.text "notes"
+    t.boolean "pinned", default: false, null: false
+    t.bigint "updated_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["category"], name: "index_family_references_on_category"
+    t.index ["pinned"], name: "index_family_references_on_pinned"
+  end
+
+  create_table "family_tasks", force: :cascade do |t|
+    t.bigint "list_id", null: false
+    t.string "title", null: false
+    t.text "notes"
+    t.bigint "assignee_id"
+    t.date "due_on"
+    t.datetime "done_at"
+    t.bigint "done_by_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.string "tags"
+    t.bigint "created_by_id"
+    t.index ["assignee_id"], name: "index_family_tasks_on_assignee_id"
+    t.index ["created_by_id"], name: "index_family_tasks_on_created_by_id"
+    t.index ["done_at"], name: "index_family_tasks_on_done_at"
+    t.index ["due_on"], name: "index_family_tasks_on_due_on"
+    t.index ["list_id"], name: "index_family_tasks_on_list_id"
   end
 
   create_table "portfolio_documents", force: :cascade do |t|
@@ -307,8 +403,11 @@ ActiveRecord::Schema.define(version: 2026_09_09_010000) do
     t.string "remember_token", null: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.string "role", default: "family", null: false
+    t.string "name"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["remember_token"], name: "index_users_on_remember_token", unique: true
+    t.index ["role"], name: "index_users_on_role"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -316,6 +415,16 @@ ActiveRecord::Schema.define(version: 2026_09_09_010000) do
   add_foreign_key "design_floor_plans", "design_concepts", column: "concept_id"
   add_foreign_key "design_images", "design_concepts", column: "concept_id"
   add_foreign_key "design_notes", "design_concepts", column: "concept_id"
+  add_foreign_key "family_events", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "family_events", "users", column: "person_id", on_delete: :nullify
+  add_foreign_key "family_notes", "users", on_delete: :cascade
+  add_foreign_key "family_places", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "family_push_subscriptions", "users", on_delete: :cascade
+  add_foreign_key "family_references", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "family_tasks", "family_lists", column: "list_id"
+  add_foreign_key "family_tasks", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "family_tasks", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "family_tasks", "users", column: "done_by_id", on_delete: :nullify
   add_foreign_key "portfolio_documents", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_expenses", "portfolio_projects", column: "project_id"
   add_foreign_key "portfolio_expenses", "portfolio_vendors", column: "vendor_id"

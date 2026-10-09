@@ -1,0 +1,30 @@
+<%= form_with model: member, url: (member.persisted? ? family_member_path(member) : family_members_path),
+               local: true, scope: :user do |f| %>
+  <% if member.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= member.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div class="row g-2">
+    <div class="col-sm-3">
+      <%= f.label :name, class: "form-label" %>
+      <%= f.text_field :name, class: "form-control", placeholder: "First name" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :email, "Email (used to sign in)", class: "form-label" %>
+      <%= f.email_field :email, class: "form-control" %>
+    </div>
+    <div class="col-sm-3">
+      <%= f.label :password, (member.persisted? ? "New password" : "Password"), class: "form-label" %>
+      <%= f.password_field :password, class: "form-control", autocomplete: "new-password" %>
+      <div class="form-text"><%= member.persisted? ? "Leave blank to keep it." : "At least 4 characters." %></div>
+    </div>
+    <div class="col-sm-2">
+      <%= f.label :role, "Access", class: "form-label" %>
+      <%= f.select :role, [["Family App only", "family"], ["Everything", "full"], ["Owner", "owner"]],
+                   {}, class: "form-select", disabled: (member.persisted? && member == current_user) %>
+    </div>
+  </div>
+  <div class="mt-2">
+    <%= f.submit (member.persisted? ? "Save" : "Add member"), class: "btn btn-primary" %>
+    <% if member.persisted? %><%= link_to "Cancel", family_members_path, class: "btn btn-link fa-muted" %><% end %>
+  </div>
+<% end %>

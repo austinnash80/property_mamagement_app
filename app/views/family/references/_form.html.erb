@@ -1,0 +1,36 @@
+<%= form_with model: reference,
+              url: (reference.persisted? ? family_reference_path(reference) : family_references_path),
+              local: true do |f| %>
+  <% if reference.errors.any? %>
+    <div class="alert alert-danger py-2 small"><%= reference.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div class="row g-2">
+    <div class="col-sm-4">
+      <%= f.label :title, "What is it", class: "form-label" %>
+      <%= f.text_field :title, class: "form-control", placeholder: "Wifi — upstairs" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :value, "The answer", class: "form-label" %>
+      <%= f.text_field :value, class: "form-control", placeholder: "the password, size, number…" %>
+    </div>
+    <div class="col-sm-4">
+      <%= f.label :category, class: "form-label" %>
+      <%= f.select :category, Family::REFERENCE_CATEGORIES, {}, class: "form-select" %>
+    </div>
+  </div>
+  <div class="mt-2">
+    <%= f.label :notes, "Notes (optional)", class: "form-label" %>
+    <%= f.text_area :notes, rows: 2, class: "form-control", placeholder: "Where it is, when it was last changed, anything else." %>
+  </div>
+  <div class="mt-2 d-flex align-items-center gap-3 flex-wrap">
+    <%= f.submit (reference.persisted? ? "Save" : "Add"), class: "btn btn-primary" %>
+    <% unless reference.persisted? %><%= render "family/shared/notify_checkbox", compact: true, id: "ref" %><% end %>
+    <div class="form-check mb-0">
+      <%= f.check_box :pinned, class: "form-check-input" %>
+      <%= f.label :pinned, "Pin to the top", class: "form-check-label small" %>
+    </div>
+    <% if reference.persisted? %>
+      <%= link_to "Cancel", family_references_path, class: "btn btn-link fa-muted" %>
+    <% end %>
+  </div>
+<% end %>
