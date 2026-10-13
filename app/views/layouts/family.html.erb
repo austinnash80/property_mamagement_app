@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Nash</title>
+    <title>Nash Family</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
     <%# rails-ujs powers `method: :delete`/`:patch` links and data-confirm dialogs %>
@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Nash">
+    <meta name="apple-mobile-web-app-title" content="Nash Family">
     <%= yield :head %>
     <%# Same palette and fonts as the property-management section: Playfair title on a
         Verdana body, #fafafa page on a white header, blue underline on nav hover.
@@ -191,7 +191,7 @@
     <header class="fa-header mb-4">
       <div class="container py-3">
         <%= render "application/feature_menu", extra: "family/shared/push_menu" %>
-        <h1><%= link_to "Nash", family_root_path %></h1>
+        <h1><%= link_to "Nash Family", family_root_path %></h1>
         <%# The dashboard is itself the feature launcher, so it carries no nav. Every
             other page lists the Family App features; the title links back home. %>
         <% unless controller_name == "dashboard" %>
