@@ -1,0 +1,67 @@
+# Checks for Family App changes (Christina's Codex branches).
+#
+#   family-guard  fails a pull request that reaches outside the Family App
+#                 (see bin/family-guard). Skipped for Austin's own pull requests.
+#   family-tests  runs the Family tests on every pull request and every push to main.
+#
+# Branch protection on main requires both, and Heroku's "Wait for CI to pass"
+# deploys main only once family-tests is green.
+name: Family checks
+
+on:
+  # pull_request_target runs the workflow (and bin/family-guard) as they are on
+  # main, so a branch can't switch the guard off by editing it. The guard only
+  # reads git objects from the branch; it never runs the branch's code.
+  pull_request_target:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  family-guard:
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.user.login != 'austinnash80'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+      - name: Fetch the pull request branch
+        run: git fetch origin "pull/${{ github.event.pull_request.number }}/head:pr-head"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2.11"
+      - name: Only Family App files changed
+        run: ruby bin/family-guard "${{ github.event.pull_request.base.sha }}" pr-head
+
+  family-tests:
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/property_management_app_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2.11"
+          bundler-cache: true
+      - name: Load the schema
+        run: bin/rails db:create db:schema:load
+      - name: Migrations apply cleanly
+        run: bin/rails db:migrate
+      - name: Family tests
+        run: bin/rails test $(ls -d test/*/family)

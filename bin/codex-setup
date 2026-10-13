@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Setup script for a ChatGPT Codex cloud environment (Christina's Family App work).
+# Paste `bin/codex-setup` into the environment's "Setup script" box in Codex.
+# Codex runs it as root in its Ubuntu container, with internet on.
+#
+# Installs Postgres and Ruby 3.2.11, then builds the dev and test databases from
+# db/schema.rb so the agent can run migrations and `bin/rails test`.
+set -euo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -y -qq postgresql libpq-dev libyaml-dev >/dev/null
+
+# Postgres: a superuser role named after the current user, so database.yml's
+# socket defaults work without a password.
+service postgresql start
+su postgres -c "createuser -s $(whoami)" 2>/dev/null || true
+
+# Ruby: Gemfile pins 3.2.11, which the Codex image may not ship.
+if [ "$(ruby -e 'print RUBY_VERSION' 2>/dev/null || true)" != "3.2.11" ]; then
+  if command -v mise >/dev/null; then
+    mise install ruby@3.2.11 && mise use -g ruby@3.2.11
+    eval "$(mise activate bash)"
+  else
+    apt-get install -y -qq rbenv ruby-build >/dev/null
+    git clone -q https://github.com/rbenv/ruby-build.git /tmp/ruby-build && /tmp/ruby-build/install.sh
+    rbenv install -s 3.2.11
+    rbenv global 3.2.11
+    eval "$(rbenv init - bash)"
+    echo 'eval "$(rbenv init - bash)"' >> ~/.bashrc
+  fi
+fi
+
+gem install bundler --conservative -q
+bundle install --quiet
+
+bin/rails db:create db:schema:load
+RAILS_ENV=test bin/rails db:create db:schema:load
+
+echo "Ready. Run the family tests with: bin/rails test \$(ls -d test/*/family)"

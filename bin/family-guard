@@ -1,0 +1,141 @@
+#!/usr/bin/env ruby
+# Fails when a change reaches outside the Family App section.
+#
+#   bin/family-guard BASE [HEAD]     e.g. bin/family-guard origin/main HEAD
+#
+# Run by .github/workflows/family.yml on pull requests from family
+# contributors (Christina's Codex branches). Only stdlib, and it only reads git
+# objects, so CI can run it from main against an untrusted PR branch.
+#
+# Allowed:
+#   - files in the family paths below (added, changed, deleted or renamed)
+#   - NEW migrations named *family* that only touch family_ tables
+#   - db/schema.rb, as long as every non-family part of it is unchanged
+require "open3"
+
+Encoding.default_external = Encoding::UTF_8
+
+ALLOWED = [
+  %r{\Aapp/(models|controllers|views|services|helpers)/family/},
+  %r{\Aapp/models/family\.rb\z},
+  %r{\Aapp/controllers/concerns/family_[\w]+\.rb\z},
+  %r{\Aapp/views/layouts/family\.html\.erb\z},
+  %r{\Aconfig/routes/family\.rb\z},
+  %r{\Aconfig/initializers/family_[\w]+\.rb\z},
+  %r{\Alib/tasks/family_[\w]+\.rake\z},
+  %r{\Atest/(controllers|models|services|helpers|fixtures)/family/}
+].freeze
+
+MIGRATION = %r{\Adb/migrate/\d+_\w*family\w*\.rb\z}
+SCHEMA    = "db/schema.rb".freeze
+
+# Schema statements whose first argument is a table name.
+TABLE_METHODS = %w[
+  create_table drop_table change_table rename_table create_join_table
+  add_column remove_column remove_columns rename_column change_column
+  change_column_default change_column_null change_column_comment change_table_comment
+  add_index remove_index rename_index add_reference remove_reference
+  add_belongs_to remove_belongs_to add_timestamps remove_timestamps
+  add_foreign_key remove_foreign_key add_check_constraint remove_check_constraint
+].freeze
+
+# Raw SQL and bulk data changes can reach any table, so they are never allowed.
+FORBIDDEN = /\b(execute|exec_query|exec_update|exec_delete|select_all|select_value|connection|update_all|delete_all|destroy_all|update_columns|find_by_sql)\b/
+
+# Top-level constants a family migration may mention.
+CONSTANTS = %w[ActiveRecord Family].freeze
+
+def git(*args)
+  out, err, status = Open3.capture3("git", *args)
+  abort "git #{args.join(' ')} failed: #{err}" unless status.success?
+  out
+end
+
+def strip_comments_and_strings(src)
+  src.gsub(/^\s*#.*$/, "")
+     .gsub(/"(?:\\.|[^"\\])*"/, '""')
+     .gsub(/'(?:\\.|[^'\\])*'/, "''")
+end
+
+def migration_problems(src)
+  problems = []
+  code = strip_comments_and_strings(src)
+  problems << "uses raw SQL or a bulk data change (#{code[FORBIDDEN]})" if code =~ FORBIDDEN
+
+  # Table names live inside strings too, so read them from the original source.
+  src.scan(/\b(#{TABLE_METHODS.join('|')})\b\s*\(?\s*[:"']?(\w+)(?:["']?\s*,\s*[:"']?(\w+))?/) do |meth, first, second|
+    tables = [first]
+    tables << second if %w[rename_table create_join_table].include?(meth)
+    tables.each do |t|
+      problems << "#{meth} on #{t} (only family_ tables are allowed)" unless t.start_with?("family_")
+    end
+  end
+
+  defined = code.scan(/\bclass\s+([A-Z]\w*)/).flatten
+  code.scan(/(?<![\w:])([A-Z]\w*)/).flatten.uniq.each do |const|
+    next if CONSTANTS.include?(const) || defined.include?(const)
+    problems << "mentions #{const} (only Family:: models are allowed)"
+  end
+  problems
+end
+
+# Splits schema.rb into the parts that belong to non-family tables, so two
+# versions can be compared while ignoring every family_ change.
+def non_family_schema(src)
+  return "" if src.nil?
+  kept = []
+  skipping = false
+  src.each_line do |line|
+    if skipping
+      skipping = false if line =~ /^  end\b/
+      next
+    end
+    if line =~ /^  create_table "family_/
+      skipping = true
+      next
+    end
+    next if line =~ /^  add_foreign_key "family_/
+    next if line =~ /^ActiveRecord::Schema.*define\(version:/
+    kept << line
+  end
+  kept.join.gsub(/\n{3,}/, "\n\n")
+end
+
+def show(rev, path)
+  out, _, status = Open3.capture3("git", "show", "#{rev}:#{path}")
+  status.success? ? out : nil
+end
+
+base = ARGV[0] or abort "usage: bin/family-guard BASE [HEAD]"
+head = ARGV[1] || "HEAD"
+merge_base = git("merge-base", base, head).strip
+
+errors = []
+git("diff", "--name-status", "-M", merge_base, head).each_line do |line|
+  status, *paths = line.chomp.split("\t")
+  paths.each do |path|
+    next if ALLOWED.any? { |re| path =~ re }
+
+    if path =~ MIGRATION
+      if status == "A"
+        migration_problems(show(head, path).to_s).each { |p| errors << "#{path}: #{p}" }
+      else
+        errors << "#{path}: existing migrations can't be changed or deleted, add a new one instead"
+      end
+    elsif path == SCHEMA
+      unless non_family_schema(show(merge_base, path)) == non_family_schema(show(head, path))
+        errors << "#{path}: changes a non-family table"
+      end
+    else
+      errors << "#{path}: outside the Family App"
+    end
+  end
+end
+
+if errors.empty?
+  puts "family-guard: every change is inside the Family App."
+else
+  puts "family-guard: this change reaches outside the Family App. Ask Austin to make these:"
+  errors.uniq.each { |e| puts "  - #{e}" }
+  exit 1
+end
