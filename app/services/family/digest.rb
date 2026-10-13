@@ -17,7 +17,7 @@ module Family::Digest
     sent = 0
     subs.find_each do |sub|
       body = body_for(events_for(events, sub.user_id), day, todos: todos.fetch(sub.user_id, 0))
-      if Family::Notifier.deliver(sub, title: "Nash Family · Today", body: body, url: "/family/calendar", tag: "digest-#{day}")
+      if Family::Notifier.deliver(sub, title: "Nash · Today", body: body, url: "/family/calendar", tag: "digest-#{day}")
         sub.update_column(:last_digest_on, day)
         sent += 1
       end
