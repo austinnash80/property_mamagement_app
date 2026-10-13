@@ -16,6 +16,6 @@ module FamilyNotifies
     who  = current_user&.display_name || "Someone"
     body = "#{who} added #{kind.start_with?(*%w[a e i o u]) ? 'an' : 'a'} #{kind}: #{title}"
     body += " (#{detail})" if detail.present?
-    Family::Notifier.notify_others(current_user, title: "Nash", body: body, url: url)
+    Family::Notifier.notify_others(current_user, title: "Nash Family", body: body, url: url)
   end
 end
