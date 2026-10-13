@@ -21,7 +21,7 @@ class Family::EventsController < Family::BaseController
 
   def new
     @people = User.by_name
-    @event  = Family::Event.new(starts_on: date_param || Family.today)
+    @event  = Family::Event.new(starts_on: date_param || Family.today, person: current_user)
   end
 
   def edit
