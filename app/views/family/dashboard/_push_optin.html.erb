@@ -13,7 +13,7 @@
           <% if others.any? %>
             On for <%= others.map(&:device_label).tally.map { |d, n| n > 1 ? "#{n} #{d.pluralize}" : d }.to_sentence %>, not on this device yet.
           <% else %>
-            Get a ping on this device when someone adds something for you, plus the 7am digest.
+            Get a ping on this device when someone adds something for you, plus a 7am rundown of your day.
           <% end %>
         </span>
         <div class="fa-muted small" id="fa-push-ios" hidden>

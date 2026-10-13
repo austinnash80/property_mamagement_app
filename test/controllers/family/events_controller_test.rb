@@ -29,4 +29,10 @@ class Family::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.fa-cal-task", 0
     assert_no_match "Fix the gate latch", response.body
   end
+
+  test "event titles lose stray spaces, so the morning digest reads cleanly" do
+    event = Family::Event.create!(title: "Gym - Reformer lesson ", starts_on: Family.today, start_time: "14:00")
+    assert_equal "Gym - Reformer lesson", event.title
+    assert_equal "Gym - Reformer lesson 2p (both)", Family::Digest.body_for([event], Family.today)
+  end
 end

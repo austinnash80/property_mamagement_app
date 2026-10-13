@@ -2,6 +2,8 @@ class Family::Event < ApplicationRecord
   belongs_to :person,     class_name: "User", optional: true
   belongs_to :created_by, class_name: "User", optional: true
 
+  before_validation { self.title = title.strip if title }
+
   validates :title, presence: true
   validates :starts_on, presence: true
   validate  :ends_on_after_starts_on
