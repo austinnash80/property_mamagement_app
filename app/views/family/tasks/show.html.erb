@@ -53,6 +53,6 @@
 </div>
 
 <div class="text-end">
-  <%= link_to "Delete task", family_task_path(@task), method: :delete,
-              data: { confirm: "Delete “#{@task.title}”?" }, class: "small fa-muted text-decoration-none" %>
+  <%= link_to "Archive task", family_task_path(@task), method: :delete,
+              data: { confirm: "Archive “#{@task.title}”?" }, class: "small fa-muted text-decoration-none" %>
 </div>

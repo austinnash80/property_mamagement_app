@@ -1,8 +1,8 @@
 class Family::ListsController < Family::BaseController
-  before_action :set_list, only: %i[edit update destroy]
+  before_action :set_list, only: %i[edit update destroy restore]
 
   def index
-    @lists = Family::List.ordered
+    @lists = Family::List.active.ordered
     @list  = Family::List.new
   end
 
@@ -17,7 +17,7 @@ class Family::ListsController < Family::BaseController
     if @list.save
       redirect_to family_lists_path, notice: "List created."
     else
-      @lists = Family::List.ordered
+      @lists = Family::List.active.ordered
       render :index, status: :unprocessable_entity
     end
   end
@@ -30,17 +30,22 @@ class Family::ListsController < Family::BaseController
     end
   end
 
-  # Deleting a list takes its tasks with it, so say how many first.
+  # Retain every task, including its notes, assignment and completion history.
   def destroy
-    count = @list.tasks.count
-    @list.destroy
-    redirect_to family_lists_path, notice: "List deleted#{" with #{count} #{'task'.pluralize(count)}" if count > 0}."
+    @list.archive!
+    redirect_to family_lists_path, notice: "List archived with its tasks. You can restore it from Archived work."
+  end
+
+  def restore
+    @list.restore!
+    redirect_to family_archive_path, notice: "List restored. Tasks archived separately stay archived."
   end
 
   private
 
   def set_list
-    @list = Family::List.find(params[:id])
+    scope = %w[destroy restore].include?(action_name) ? Family::List.all : Family::List.active
+    @list = scope.find(params[:id])
   end
 
   def list_params

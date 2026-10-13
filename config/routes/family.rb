@@ -17,7 +17,10 @@ namespace :family, path: "family" do
 
   # Tasks have a detail page (show): the row in the list links to it.
   resources :tasks do
-    member { patch :toggle }
+    member do
+      patch :toggle
+      patch :restore
+    end
   end
 
   # Calendar: /family/calendar is the month grid, events have their own pages.
@@ -55,7 +58,10 @@ namespace :family, path: "family" do
     post :test
   end
 
-  resources :lists, except: :show
+  get "todo/archive", to: "archives#index", as: :archive
+  resources :lists, except: :show do
+    member { patch :restore }
+  end
 
   # Family logins. Owner-only: see Family::MembersController.
   resources :members, except: :show

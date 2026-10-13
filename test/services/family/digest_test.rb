@@ -66,4 +66,19 @@ class Family::DigestTest < ActiveSupport::TestCase
   test "a free day with one to-do" do
     assert_equal "Nothing on the calendar today · 1 to-do for you", Family::Digest.body_for([], @day, todos: 1)
   end
+  test "archived tasks and lists stay out of the morning task count" do
+    active_list = Family::List.create!(name: "Active list")
+    archived_list = Family::List.create!(name: "Archived list")
+    Family::Task.create!(list: active_list, title: "Active work", assignee: @christina)
+    Family::Task.create!(list: active_list, title: "Old work", assignee: @christina).archive!
+    Family::Task.create!(list: archived_list, title: "Hidden with list", assignee: @christina)
+    archived_list.archive!
+    Family::PushSubscription.create!(user: @christina, endpoint: "https://push.example/archive", p256dh: "k", auth: "a")
+    sent = []
+    Family::Notifier.stub(:deliver, ->(_s, **msg) { sent << msg[:body]; true }) do
+      Family::Digest.send_morning!(@day)
+    end
+    assert_equal ["Nothing on the calendar today · 1 to-do for you"], sent
+  end
+
 end

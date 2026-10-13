@@ -1,0 +1,28 @@
+<div class="mb-2"><%= link_to "← To-do", family_todo_path, class: "small fa-muted text-decoration-none" %></div>
+<div class="fa-page-head">
+  <h2>Archived work</h2>
+  <p class="fa-muted">Restore a list to bring back its tasks. Tasks archived separately stay archived.</p>
+</div>
+<h3 class="h5">Lists</h3>
+<% if @lists.empty? %><p class="fa-muted">No archived lists.</p><% end %>
+<% @lists.each do |list| %>
+  <div class="fa-task">
+    <div class="fa-task-body"><div class="fa-task-title"><%= list.name %></div><div class="fa-task-meta"><%= pluralize list.tasks.count, "task" %></div></div>
+    <%= button_to "Restore list", restore_family_list_path(list), method: :patch, class: "btn btn-outline-secondary btn-sm" %>
+  </div>
+<% end %>
+<h3 class="h5 mt-4">Tasks</h3>
+<% if @tasks.empty? %><p class="fa-muted">No archived tasks.</p><% end %>
+<% @tasks.each do |task| %>
+  <div class="fa-task">
+    <div class="fa-task-body">
+      <div class="fa-task-title"><%= task.title %></div>
+      <div class="fa-task-meta"><%= task.list.name %> · <%= task.done? ? "Completed" : "Open" %></div>
+    </div>
+    <% if task.list.archived_at.present? %>
+      <span class="small fa-muted">Restore the list first</span>
+    <% else %>
+      <%= button_to "Restore task", restore_family_task_path(task), method: :patch, class: "btn btn-outline-secondary btn-sm" %>
+    <% end %>
+  </div>
+<% end %>
