@@ -1,0 +1,40 @@
+# Runs the Family tests on every pull request and every push to main. Required
+# by branch protection, and Heroku's "Wait for CI to pass" deploys main only
+# once this is green.
+name: Family tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  family-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/property_management_app_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2.11"
+          bundler-cache: true
+      - name: Load the schema
+        run: bin/rails db:create db:schema:load
+      - name: Migrations apply cleanly
+        run: bin/rails db:migrate
+      - name: Family tests
+        run: bin/rails test $(ls -d test/*/family)

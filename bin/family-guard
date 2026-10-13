@@ -3,7 +3,7 @@
 #
 #   bin/family-guard BASE [HEAD]     e.g. bin/family-guard origin/main HEAD
 #
-# Run by .github/workflows/family.yml on pull requests from family
+# Run by .github/workflows/family-guard.yml on pull requests from family
 # contributors (Christina's Codex branches). Only stdlib, and it only reads git
 # objects, so CI can run it from main against an untrusted PR branch.
 #
