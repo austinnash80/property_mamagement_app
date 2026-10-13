@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_09_000100) do
+ActiveRecord::Schema.define(version: 2026_10_13_000100) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -215,6 +215,17 @@ ActiveRecord::Schema.define(version: 2026_10_09_000100) do
     t.datetime "updated_at", precision: 6, null: false
     t.index ["endpoint"], name: "index_family_push_subscriptions_on_endpoint", unique: true
     t.index ["user_id"], name: "index_family_push_subscriptions_on_user_id"
+  end
+
+  create_table "family_rae_entries", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "section", default: "Other", null: false
+    t.string "value"
+    t.text "notes"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["section"], name: "index_family_rae_entries_on_section"
   end
 
   create_table "family_references", force: :cascade do |t|
@@ -430,6 +441,7 @@ ActiveRecord::Schema.define(version: 2026_10_09_000100) do
   add_foreign_key "family_notes", "users", on_delete: :cascade
   add_foreign_key "family_places", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "family_push_subscriptions", "users", on_delete: :cascade
+  add_foreign_key "family_rae_entries", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "family_references", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "family_tasks", "family_lists", column: "list_id"
   add_foreign_key "family_tasks", "users", column: "assignee_id", on_delete: :nullify

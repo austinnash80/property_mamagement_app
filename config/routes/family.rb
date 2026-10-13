@@ -34,6 +34,9 @@ namespace :family, path: "family" do
   # Everything lives on the index page, so there is no show action.
   resources :andie_entries, path: "andie", except: :show
 
+  # Rae (the dog): vet, food and meds, grooming, boarding. Same shape as Andie.
+  resources :rae_entries, path: "rae", except: :show
+
   # Places to go: restaurants, shops, the farmers market.
   resources :places do
     member do
