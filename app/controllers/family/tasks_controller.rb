@@ -1,5 +1,5 @@
 class Family::TasksController < Family::BaseController
-  before_action :set_task, only: %i[show edit update destroy toggle]
+  before_action :set_task, only: %i[show edit update destroy toggle restore]
 
   # /family/todo — the to-do overview: one card per list, showing the first few
   # open tasks on it. The card links to that list's own page, where everything
@@ -7,22 +7,22 @@ class Family::TasksController < Family::BaseController
   PREVIEW = 5
 
   def overview
-    @lists = Family::List.ordered
-    @open_by_list = Family::Task.unfinished.ordered.group_by(&:list_id)
+    @lists = Family::List.active.ordered
+    @open_by_list = Family::Task.active.unfinished.ordered.group_by(&:list_id)
     @task = Family::Task.new(list: @lists.first)
   end
 
   # The task list itself, filtered by whichever view was picked on the overview:
   # `list`, `tag` or `person` (an id, or "none" for unassigned).
   def index
-    @lists  = Family::List.ordered
-    @list   = @lists.find_by(id: params[:list]) if params[:list].present?
+    @lists  = Family::List.active.ordered
+    @list   = @lists.find(params[:list]) if params[:list].present?
     @people = User.by_name
     @tag    = params[:tag].presence
     @person = User.find_by(id: params[:person]) if params[:person].present?
     @unassigned_only = params[:person] == "none"
 
-    scope = Family::Task.includes(:list, :assignee)
+    scope = Family::Task.active.includes(:list, :assignee)
     scope = scope.where(list_id: @list.id)   if @list
     scope = scope.where(assignee_id: nil)    if @unassigned_only
     scope = scope.where(assignee_id: @person.id) if @person
@@ -75,8 +75,17 @@ class Family::TasksController < Family::BaseController
   end
 
   def destroy
-    @task.destroy
-    redirect_back fallback_location: current_view_path, notice: "Task deleted."
+    @task.archive!
+    redirect_to current_view_path, notice: "Task archived. You can restore it from Archived work."
+  end
+
+  def restore
+    if @task.list.archived_at.present?
+      redirect_to family_archive_path, alert: "Restore the list before restoring its tasks."
+    else
+      @task.restore!
+      redirect_to family_archive_path, notice: "Task restored."
+    end
   end
 
   # Check off / un-check. Shared list: anyone may toggle anyone's task, but the
@@ -89,7 +98,8 @@ class Family::TasksController < Family::BaseController
   private
 
   def set_task
-    @task = Family::Task.find(params[:id])
+    scope = %w[destroy restore].include?(action_name) ? Family::Task.all : Family::Task.active
+    @task = scope.find(params[:id])
   end
 
   # The view the row was checked off from, so a missing Referer still lands you
@@ -99,7 +109,7 @@ class Family::TasksController < Family::BaseController
   end
 
   def form_options
-    @lists  = Family::List.ordered
+    @lists  = Family::List.active.ordered
     @people = User.by_name
     @tags   = Family::Task.all_tags
   end

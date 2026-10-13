@@ -21,7 +21,7 @@ class Family::PushSubscriptionsController < Family::BaseController
 
   # Sends a test notification to the signed-in person's own devices.
   def test
-    sent = Family::Notifier.notify([current_user], title: "Nash Family",
+    sent = Family::Notifier.notify([current_user], title: "Nash",
                                    body: "Notifications are on for this device. 🎉", url: "/family", tag: "test")
     redirect_back fallback_location: family_root_path,
                   notice: (sent.positive? ? "Test notification sent to #{sent} #{'device'.pluralize(sent)}." : "No devices are turned on for you yet.")

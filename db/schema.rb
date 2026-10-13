@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_13_000100) do
+ActiveRecord::Schema.define(version: 2026_10_13_000200) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -176,6 +176,8 @@ ActiveRecord::Schema.define(version: 2026_10_13_000100) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_family_lists_on_archived_at"
     t.index ["position"], name: "index_family_lists_on_position"
   end
 
@@ -253,6 +255,8 @@ ActiveRecord::Schema.define(version: 2026_10_13_000100) do
     t.datetime "updated_at", precision: 6, null: false
     t.string "tags"
     t.bigint "created_by_id"
+    t.datetime "archived_at"
+    t.index ["archived_at"], name: "index_family_tasks_on_archived_at"
     t.index ["assignee_id"], name: "index_family_tasks_on_assignee_id"
     t.index ["created_by_id"], name: "index_family_tasks_on_created_by_id"
     t.index ["done_at"], name: "index_family_tasks_on_done_at"

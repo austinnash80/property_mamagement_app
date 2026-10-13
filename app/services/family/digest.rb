@@ -10,14 +10,14 @@ module Family::Digest
   # Returns a short summary string for the log.
   def send_morning!(day, force: false)
     events = Family::Event.overlapping(day..day).to_a
-    todos  = Family::Task.unfinished.where.not(assignee_id: nil).group(:assignee_id).count
+    todos  = Family::Task.active.unfinished.where.not(assignee_id: nil).group(:assignee_id).count
     subs = Family::PushSubscription.all
     subs = subs.where("last_digest_on IS NULL OR last_digest_on < ?", day) unless force
 
     sent = 0
     subs.find_each do |sub|
       body = body_for(events_for(events, sub.user_id), day, todos: todos.fetch(sub.user_id, 0))
-      if Family::Notifier.deliver(sub, title: "Nash Family · Today", body: body, url: "/family/calendar", tag: "digest-#{day}")
+      if Family::Notifier.deliver(sub, title: "Nash · Today", body: body, url: "/family/calendar", tag: "digest-#{day}")
         sub.update_column(:last_digest_on, day)
         sent += 1
       end
