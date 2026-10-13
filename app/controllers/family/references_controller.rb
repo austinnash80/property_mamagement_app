@@ -17,8 +17,9 @@ class Family::ReferencesController < Family::BaseController
   def create
     @reference = Family::Reference.new(reference_params.merge(updated_by: current_user))
     if @reference.save
-      notify_others_about("reference entry", @reference.title, url: family_references_path,
-                          detail: @reference.value.presence)
+      # Title only: the value is often a code, a password or a health detail,
+      # and notifications can show on a locked phone.
+      notify_others_about("reference entry", @reference.title, url: family_references_path)
       redirect_to family_references_path, notice: "Saved."
     else
       load_index

@@ -52,14 +52,13 @@ class Family::TasksController < Family::BaseController
       notify_others_about("task", @task.title, url: family_task_path(@task),
                           detail: [@task.list.name, (@task.assignee && "for #{@task.assignee.display_name}")].compact.join(", "))
       redirect_to after_save_path, notice: "Task added."
+    elsif params[:quick].present?
+      # Quick-add sits on a page full of other tasks: go back to that page with
+      # the error, rather than re-rendering it without its tasks.
+      redirect_to after_save_path, alert: @task.errors.full_messages.to_sentence
     else
       form_options
-      if params[:quick].present?
-        @open, @done = Family::Task.none, Family::Task.none
-        render :index, status: :unprocessable_entity
-      else
-        render :new, status: :unprocessable_entity
-      end
+      render :new, status: :unprocessable_entity
     end
   end
 

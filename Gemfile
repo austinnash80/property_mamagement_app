@@ -23,6 +23,7 @@ gem 'jbuilder', '~> 2.7'
 # Use Active Model has_secure_password
 gem 'bcrypt', '~> 3.1.7'   # User passwords (has_secure_password)
 gem 'web-push', '~> 3.0'   # Family App push notifications (VAPID, no third-party service)
+gem 'rack-attack', '~> 6.7' # Login throttling, counted in-process (no external service)
 
 # Use Active Storage variant
 # gem 'image_processing', '~> 1.2'

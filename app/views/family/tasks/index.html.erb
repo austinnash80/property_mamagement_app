@@ -26,11 +26,8 @@
   <%= hidden_field_tag :list,   params[:list] %>
   <%= hidden_field_tag :tag,    params[:tag] %>
   <%= hidden_field_tag :person, params[:person] %>
-  <% if @task.errors.any? %>
-    <div class="alert alert-danger py-2 small"><%= @task.errors.full_messages.to_sentence %></div>
-  <% end %>
   <div class="input-group">
-    <%= f.text_field :title, class: "form-control", placeholder: "Add a task…", autocomplete: "off" %>
+    <%= f.text_field :title, class: "form-control", placeholder: "Add a task…", autocomplete: "off", required: true %>
     <% if @lists.any? %>
       <%= f.collection_select :list_id, @lists, :id, :name, {}, class: "form-select", style: "max-width: 13rem" %>
     <% end %>

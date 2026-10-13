@@ -17,8 +17,9 @@ class Family::RaeEntriesController < Family::BaseController
   def create
     @entry = Family::RaeEntry.new(entry_params.merge(updated_by: current_user))
     if @entry.save
-      notify_others_about("note for Rae", @entry.title, url: family_rae_entries_path,
-                          detail: @entry.value.presence)
+      # Title only: the value is often a code, a password or a health detail,
+      # and notifications can show on a locked phone.
+      notify_others_about("note for Rae", @entry.title, url: family_rae_entries_path)
       redirect_to family_rae_entries_path, notice: "Saved."
     else
       load_index
