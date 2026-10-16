@@ -8,15 +8,18 @@ class Family::EventsController < Family::BaseController
 
     # One entry per day the event covers, so multi-day events show on each day.
     @events_by_day = Hash.new { |h, k| h[k] = [] }
-    Family::Event.overlapping(@grid_range).includes(:person).each do |event|
-      event.days.each { |day| @events_by_day[day] << event if @grid_range.cover?(day) }
+    Family::Event.occurrences_between(@grid_range).each do |event|
+      first_day = [event.starts_on, @grid_range.first].max
+      last_day = [event.last_day, @grid_range.last].min
+      (first_day..last_day).each { |day| @events_by_day[day] << event }
     end
 
-    @upcoming     = Family::Event.upcoming.includes(:person).limit(8)
+    @upcoming     = Family::Event.upcoming_occurrences
   end
 
   def show
     @people = User.by_name
+    @display_event = @occurrence || @event
   end
 
   def new
@@ -26,6 +29,7 @@ class Family::EventsController < Family::BaseController
 
   def edit
     @people = User.by_name
+    @event = occurrence_record if @occurrence
   end
 
   def create
@@ -41,8 +45,11 @@ class Family::EventsController < Family::BaseController
   end
 
   def update
-    if @event.update(event_params)
-      redirect_to family_event_path(@event), notice: "Event updated."
+    @event = occurrence_record if @occurrence
+    attributes = event_params
+    attributes = attributes.except(:repeat_frequency, :repeat_until) if @occurrence
+    if @event.update(attributes)
+      redirect_to family_event_path(@series || @event, occurrence_on: @occurrence&.original_on), notice: "Event updated."
     else
       @people = User.by_name
       render :edit, status: :unprocessable_entity
@@ -50,15 +57,36 @@ class Family::EventsController < Family::BaseController
   end
 
   def destroy
-    month = @event.starts_on.strftime("%Y-%m")
-    @event.destroy
+    month = (@occurrence || @event).starts_on.strftime("%Y-%m")
+    if @occurrence
+      occurrence_record.update!(cancelled: true)
+    else
+      @event.destroy
+    end
     redirect_to family_calendar_path(month: month), notice: "Event deleted."
   end
 
   private
 
   def set_event
-    @event = Family::Event.find(params[:id])
+    @event = Family::Event.series.find(params[:id])
+    return unless @event.repeating? && params[:occurrence_on].present?
+    @series = @event
+    day = Date.iso8601(params[:occurrence_on])
+    @occurrence = @series.occurrence_on(day)
+    raise ActiveRecord::RecordNotFound unless @occurrence
+  rescue ArgumentError, TypeError
+    raise ActiveRecord::RecordNotFound
+  end
+
+  def occurrence_record
+    @series.recurrence_overrides.find_by(original_on: @occurrence.original_on) ||
+      @series.recurrence_overrides.build(
+        @series.attributes.slice("title", "start_time", "end_time", "location", "notes", "person_id", "created_by_id").merge(
+          starts_on: @occurrence.starts_on, ends_on: @occurrence.ends_on,
+          original_on: @occurrence.original_on, repeat_frequency: "none"
+        )
+      )
   end
 
   def date_param
@@ -76,6 +104,6 @@ class Family::EventsController < Family::BaseController
 
   def event_params
     params.require(:family_event)
-          .permit(:title, :starts_on, :ends_on, :start_time, :end_time, :location, :notes, :person_id)
+          .permit(:title, :starts_on, :ends_on, :start_time, :end_time, :location, :notes, :person_id, :repeat_frequency, :repeat_until)
   end
 end

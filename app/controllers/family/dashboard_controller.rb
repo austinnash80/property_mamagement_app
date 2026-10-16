@@ -5,8 +5,8 @@ class Family::DashboardController < Family::BaseController
     @open_count    = Family::Task.active.unfinished.count
     @mine_count    = current_user ? Family::Task.active.unfinished.where(assignee_id: current_user.id).count : 0
 
-    @next_event       = Family::Event.upcoming.first
-    @events_this_week = Family::Event.overlapping(Family.today..(Family.today + 7)).count
+    @next_event       = Family::Event.upcoming_occurrences(limit: 1).first
+    @events_this_week = Family::Event.occurrences_between(Family.today..(Family.today + 7)).count
 
     @reference_count = Family::Reference.count
     @andie_count     = Family::AndieEntry.count

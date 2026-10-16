@@ -9,7 +9,7 @@ module Family::Digest
 
   # Returns a short summary string for the log.
   def send_morning!(day, force: false)
-    events = Family::Event.overlapping(day..day).to_a
+    events = Family::Event.occurrences_between(day..day).to_a
     todos  = Family::Task.active.unfinished.where.not(assignee_id: nil).group(:assignee_id).count
     subs = Family::PushSubscription.all
     subs = subs.where("last_digest_on IS NULL OR last_digest_on < ?", day) unless force

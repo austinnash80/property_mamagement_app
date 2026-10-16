@@ -36,6 +36,11 @@ module Family
   # Rae (the dog): the sections entries are filed under, in the order they are shown.
   RAE_SECTIONS = ["Vet", "Food & meds", "Grooming & boarding", "Health & records", "Other"].freeze
 
+  EVENT_REPEAT_OPTIONS = {
+    "Does not repeat" => "none", "Daily" => "daily", "Weekly" => "weekly",
+    "Monthly" => "monthly", "Annually" => "annually"
+  }.freeze
+
   # Places to go: kind => label.
   PLACE_KINDS = {
     "restaurant" => "Restaurant",
