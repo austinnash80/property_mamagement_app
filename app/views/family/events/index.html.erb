@@ -33,7 +33,7 @@
       </div>
 
       <% events.first(3).each do |event| %>
-        <%= link_to family_event_path(event), class: "fa-cal-item fa-cal-event", title: event.title do %>
+        <%= link_to family_event_path(event.series, occurrence_on: event.original_on), class: "fa-cal-item fa-cal-event", title: event.title do %>
           <% if (t = event.short_time) %><span class="fa-cal-time"><%= t %></span><% end %>
           <%= event.title %>
         <% end %>
@@ -56,11 +56,12 @@
         </div>
         <div class="fa-task-body">
           <div class="fa-task-title">
-            <%= link_to event.title, family_event_path(event), class: "text-decoration-none text-reset" %>
+            <%= link_to event.title, family_event_path(event.series, occurrence_on: event.original_on), class: "text-decoration-none text-reset" %>
           </div>
           <div class="fa-task-meta">
             <span><%= event.starts_on.strftime("%A") %><%= " – #{event.last_day.strftime('%b %-d')}" if event.multi_day? %></span>
             <span><%= event.time_label %></span>
+            <% if event.series.repeating? %><span><%= event.series.repeat_label %></span><% end %>
             <% if event.location.present? %><span><%= event.location %></span><% end %>
             <% if event.person %><span class="fa-chip"><%= event.person.display_name %></span><% end %>
           </div>

@@ -8,7 +8,7 @@ class Family::DigestTest < ActiveSupport::TestCase
   end
 
   def body_for(user)
-    events = Family::Event.overlapping(@day..@day).to_a
+    events = Family::Event.occurrences_between(@day..@day).to_a
     Family::Digest.body_for(Family::Digest.events_for(events, user.id), @day)
   end
 
@@ -79,6 +79,17 @@ class Family::DigestTest < ActiveSupport::TestCase
       Family::Digest.send_morning!(@day)
     end
     assert_equal ["Nothing on the calendar today · 1 to-do for you"], sent
+  end
+
+  test "digest includes repeated events and honors individual moves and cancellations" do
+    birthday = Family::Event.create!(title: "Birthday", starts_on: @day.advance(years: -3), repeat_frequency: "annually", start_time: "14:00")
+    assert_equal "Birthday 2p (both)", body_for(@christina)
+    birthday.recurrence_overrides.create!(title: "Party", starts_on: @day + 1, original_on: @day, start_time: "15:00")
+    assert_equal Family::Digest::FREE_DAY, body_for(@christina)
+    @day += 1
+    assert_equal "Party 3p (both)", body_for(@christina)
+    birthday.recurrence_overrides.first.update!(cancelled: true)
+    assert_equal Family::Digest::FREE_DAY, body_for(@christina)
   end
 
 end

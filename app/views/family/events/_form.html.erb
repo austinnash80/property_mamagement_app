@@ -1,4 +1,4 @@
-<%= form_with model: event, url: (event.persisted? ? family_event_path(event) : family_events_path), local: true do |f| %>
+<%= form_with model: event, url: (@series ? family_event_path(@series, occurrence_on: @occurrence.original_on) : event.persisted? ? family_event_path(event) : family_events_path), method: (@series || event.persisted? ? :patch : :post), local: true do |f| %>
   <% if event.errors.any? %>
     <div class="alert alert-danger py-2 small"><%= event.errors.full_messages.to_sentence %></div>
   <% end %>
@@ -19,6 +19,29 @@
       <div class="form-text">Only for something spanning days.</div>
     </div>
   </div>
+
+  <% if @occurrence %>
+    <p class="form-text mb-3">Changes apply only to this occurrence. Other dates in the series stay the same.</p>
+  <% else %>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <%= f.label :repeat_frequency, "Repeats", class: "form-label" %>
+        <%= f.select :repeat_frequency, Family::EVENT_REPEAT_OPTIONS, {}, class: "form-select" %>
+      </div>
+      <div class="col-sm-6">
+        <%= f.label :repeat_until, "Repeat until (optional)", class: "form-label" %>
+        <%= f.date_field :repeat_until, class: "form-control" %>
+        <div class="form-text">Last allowed start date. Leave blank to repeat indefinitely.</div>
+      </div>
+    </div>
+    <p class="form-text">Monthly repeats use the last day of shorter months when needed. February 29 repeats on February 28 in other years.</p>
+    <% if event.persisted? && event.repeating? %>
+      <p class="form-text">Editing this form changes the whole series. Individually changed occurrences keep their saved details.</p>
+      <% if event.recurrence_overrides.exists? %>
+        <p class="form-text">This series has individual changes. Its original start date and repeat frequency must stay the same; create a new series to change those.</p>
+      <% end %>
+    <% end %>
+  <% end %>
 
   <div class="row g-3 mb-3">
     <div class="col-sm-6">
@@ -48,7 +71,7 @@
     <%= f.text_area :notes, rows: 3, class: "form-control" %>
   </div>
 
-  <% unless event.persisted? %><%= render "family/shared/notify_checkbox" %><% end %>
-  <%= f.submit (event.persisted? ? "Save event" : "Add event"), class: "btn btn-primary" %>
+  <% unless event.persisted? || @series %><%= render "family/shared/notify_checkbox" %><% end %>
+  <%= f.submit (@series || event.persisted? ? "Save event" : "Add event"), class: "btn btn-primary" %>
   <%= link_to "Cancel", family_calendar_path, class: "btn btn-link fa-muted" %>
 <% end %>

@@ -1,5 +1,5 @@
 <div class="mb-2">
-  <%= link_to "← Calendar", family_calendar_path(month: @event.starts_on.strftime("%Y-%m")),
+  <%= link_to "← Calendar", family_calendar_path(month: @display_event.starts_on.strftime("%Y-%m")),
               class: "small fa-muted text-decoration-none" %>
 </div>
 
@@ -7,30 +7,38 @@
   <div class="card-body">
     <div class="d-flex align-items-start gap-3">
       <div class="flex-grow-1">
-        <h2 class="h5 mb-1 <%= "fa-muted" if @event.past? %>"><%= @event.title %></h2>
-        <div class="fa-muted small"><%= @event.time_label %></div>
+        <h2 class="h5 mb-1 <%= "fa-muted" if @display_event.past? && (!@event.repeating? || @occurrence) %>"><%= @display_event.title %></h2>
+        <div class="fa-muted small"><%= @display_event.time_label %></div>
       </div>
-      <%= link_to "Edit", edit_family_event_path(@event), class: "btn btn-outline-secondary btn-sm" %>
+      <% if @occurrence %>
+        <%= link_to "Edit this occurrence", edit_family_event_path(@event, occurrence_on: @display_event.original_on || @event.starts_on), class: "btn btn-outline-secondary btn-sm" %>
+      <% end %>
+      <%= link_to (@event.repeating? ? "Edit series" : "Edit"), edit_family_event_path(@event), class: "btn btn-outline-secondary btn-sm" %>
     </div>
 
     <dl class="row mb-0 mt-3 small">
-      <dt class="col-4 col-sm-3 fa-muted fw-normal">When</dt>
+      <dt class="col-4 col-sm-3 fa-muted fw-normal"><%= @event.repeating? && !@occurrence ? "Series starts" : "When" %></dt>
       <dd class="col-8 col-sm-9">
-        <%= @event.starts_on.strftime("%A, %B %-d, %Y") %>
-        <% if @event.multi_day? %> – <%= @event.last_day.strftime("%A, %B %-d, %Y") %><% end %>
+        <%= @display_event.starts_on.strftime("%A, %B %-d, %Y") %>
+        <% if @display_event.multi_day? %> – <%= @display_event.last_day.strftime("%A, %B %-d, %Y") %><% end %>
       </dd>
 
-      <% if @event.location.present? %>
+      <% if @event.repeating? %>
+        <dt class="col-4 col-sm-3 fa-muted fw-normal">Repeats</dt>
+        <dd class="col-8 col-sm-9"><%= @event.repeat_label %><%= " until #{@event.repeat_until.strftime('%b %-d, %Y')}" if @event.repeat_until %></dd>
+      <% end %>
+
+      <% if @display_event.location.present? %>
         <dt class="col-4 col-sm-3 fa-muted fw-normal">Where</dt>
-        <dd class="col-8 col-sm-9"><%= @event.location %></dd>
+        <dd class="col-8 col-sm-9"><%= @display_event.location %></dd>
       <% end %>
 
       <dt class="col-4 col-sm-3 fa-muted fw-normal">Who</dt>
-      <dd class="col-8 col-sm-9"><%= @event.person&.display_name || "Everyone" %></dd>
+      <dd class="col-8 col-sm-9"><%= @display_event.person&.display_name || "Everyone" %></dd>
 
-      <% if @event.notes.present? %>
+      <% if @display_event.notes.present? %>
         <dt class="col-4 col-sm-3 fa-muted fw-normal">Notes</dt>
-        <dd class="col-8 col-sm-9" style="white-space: pre-wrap"><%= @event.notes %></dd>
+        <dd class="col-8 col-sm-9" style="white-space: pre-wrap"><%= @display_event.notes %></dd>
       <% end %>
 
       <dt class="col-4 col-sm-3 fa-muted fw-normal">Added</dt>
@@ -42,6 +50,10 @@
 </div>
 
 <div class="text-end">
-  <%= link_to "Delete event", family_event_path(@event), method: :delete,
-              data: { confirm: "Delete “#{@event.title}”?" }, class: "small fa-muted text-decoration-none" %>
+  <% if @occurrence %>
+    <%= link_to "Delete this occurrence", family_event_path(@event, occurrence_on: @display_event.original_on || @event.starts_on), method: :delete,
+                data: { confirm: "Delete only this occurrence of “#{@display_event.title}”?" }, class: "small fa-muted text-decoration-none me-3" %>
+  <% end %>
+  <%= link_to (@event.repeating? ? "Delete series" : "Delete event"), family_event_path(@event), method: :delete,
+              data: { confirm: (@event.repeating? ? "Delete this entire series and all individual changes?" : "Delete “#{@display_event.title}”?") }, class: "small fa-muted text-decoration-none" %>
 </div>

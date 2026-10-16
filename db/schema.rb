@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_16_000100) do
+ActiveRecord::Schema.define(version: 2026_10_16_000200) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -177,7 +177,13 @@ ActiveRecord::Schema.define(version: 2026_10_16_000100) do
     t.bigint "created_by_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.string "repeat_frequency", default: "none", null: false
+    t.date "repeat_until"
+    t.bigint "recurrence_parent_id"
+    t.date "original_on"
+    t.boolean "cancelled", default: false, null: false
     t.index ["person_id"], name: "index_family_events_on_person_id"
+    t.index ["recurrence_parent_id", "original_on"], name: "index_family_events_on_series_and_original_date", unique: true
     t.index ["starts_on"], name: "index_family_events_on_starts_on"
   end
 
@@ -452,6 +458,7 @@ ActiveRecord::Schema.define(version: 2026_10_16_000100) do
   add_foreign_key "design_notes", "design_concepts", column: "concept_id"
   add_foreign_key "family_andie_entries", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "family_austin_entries", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "family_events", "family_events", column: "recurrence_parent_id"
   add_foreign_key "family_events", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "family_events", "users", column: "person_id", on_delete: :nullify
   add_foreign_key "family_notes", "users", on_delete: :cascade
