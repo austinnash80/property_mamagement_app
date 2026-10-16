@@ -5,6 +5,8 @@ class Family::Event < ApplicationRecord
   before_validation do
     self.title = title.strip if title
     self.repeat_until = nil unless repeating?
+    self.repeat_weekday = nil unless repeat_frequency == "weekly"
+    self.repeat_day_of_month = nil unless repeat_frequency == "monthly"
   end
 
   validates :title, presence: true
@@ -18,6 +20,8 @@ class Family::Event < ApplicationRecord
 
   validates :repeat_frequency, inclusion: { in: Family::EVENT_REPEAT_OPTIONS.values }
   validates :original_on, presence: true, uniqueness: { scope: :recurrence_parent_id }, if: :recurrence_parent_id?
+  validates :repeat_weekday, inclusion: { in: 0..6 }, allow_nil: true
+  validates :repeat_day_of_month, inclusion: { in: 1..31 }, allow_nil: true
   validate :valid_recurrence
 
   scope :series, -> { where(recurrence_parent_id: nil) }
@@ -27,7 +31,11 @@ class Family::Event < ApplicationRecord
   end
 
   def repeat_label
-    Family::EVENT_REPEAT_OPTIONS.key(repeat_frequency)
+    case repeat_frequency
+    when "weekly" then "Every #{Family::EVENT_WEEKDAYS[repeat_weekday || starts_on.wday]}"
+    when "monthly" then "Monthly on the #{(repeat_day_of_month || starts_on.day).ordinalize}"
+    else Family::EVENT_REPEAT_OPTIONS.key(repeat_frequency)
+    end
   end
 
   # Expand only the requested window, with dates calculated from the original
@@ -45,19 +53,18 @@ class Family::Event < ApplicationRecord
     index = [distance - 1, 0].max
     dates = []
     loop do
-      day = case repeat_frequency
-            when "daily" then starts_on + index
-            when "weekly" then starts_on + index * 7
-            when "monthly" then starts_on.advance(months: index)
-            when "annually" then starts_on.advance(years: index)
-            else starts_on
-            end
+      day = scheduled_date(index)
       break if day > range.last || (repeat_until && day > repeat_until)
-      dates << day if day + duration >= range.first
+      dates << day if day >= starts_on && day + duration >= range.first
       break if !repeating? || (limit && dates.size >= limit)
       index += 1
     end
     dates
+  end
+
+  def first_occurrence_on
+    first = scheduled_date(0)
+    first < starts_on ? scheduled_date(1) : first
   end
 
   def occurrence_on(day)
@@ -140,16 +147,32 @@ class Family::Event < ApplicationRecord
 
   private
 
+  def scheduled_date(index)
+    case repeat_frequency
+    when "daily" then starts_on + index
+    when "weekly" then starts_on + ((repeat_weekday || starts_on.wday) - starts_on.wday) % 7 + index * 7
+    when "monthly"
+      month = starts_on.beginning_of_month.advance(months: index)
+      month.change(day: [repeat_day_of_month || starts_on.day, month.end_of_month.day].min)
+    when "annually" then starts_on.advance(years: index)
+    else starts_on
+    end
+  end
+
   def valid_recurrence
     if repeat_until.present? && starts_on.present? && repeat_until < starts_on
       errors.add(:repeat_until, "can't be before the start date")
+    end
+    if starts_on.present? && repeat_until.present? && errors.empty? && repeat_until < first_occurrence_on
+      errors.add(:repeat_until, "can't be before the first matching occurrence")
     end
     if recurrence_parent_id.present? && (repeating? || original_on.blank?)
       errors.add(:base, "An individual occurrence cannot repeat")
     end
     if recurrence_parent_id.blank? && recurrence_overrides.any? &&
-       (will_save_change_to_starts_on? || will_save_change_to_repeat_frequency?)
-      errors.add(:base, "This series has individual changes. Keep its start date and repeat frequency, or delete the series and create a new one.")
+       (will_save_change_to_starts_on? || will_save_change_to_repeat_frequency? ||
+        will_save_change_to_repeat_weekday? || will_save_change_to_repeat_day_of_month?)
+      errors.add(:base, "This series has individual changes. Keep its start date and repeat pattern, or delete the series and create a new one.")
     end
   end
 

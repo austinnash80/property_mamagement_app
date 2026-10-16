@@ -34,11 +34,36 @@
         <div class="form-text">Last allowed start date. Leave blank to repeat indefinitely.</div>
       </div>
     </div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6" data-repeat-weekday <%= "hidden" unless event.repeat_frequency == "weekly" %>>
+        <%= f.label :repeat_weekday, "Repeat on", class: "form-label" %>
+        <%= f.select :repeat_weekday, Family::EVENT_WEEKDAYS.each_with_index.to_a,
+                     { include_blank: "Same weekday as the start date" }, class: "form-select" %>
+      </div>
+      <div class="col-sm-6" data-repeat-monthday <%= "hidden" unless event.repeat_frequency == "monthly" %>>
+        <%= f.label :repeat_day_of_month, "Repeat on day of month", class: "form-label" %>
+        <%= f.select :repeat_day_of_month, (1..31).map { |day| [day.ordinalize, day] },
+                     { include_blank: "Same day as the start date" }, class: "form-select" %>
+      </div>
+    </div>
+    <p class="form-text">Repeats begin on or after the start date, on the selected day.</p>
+    <script>
+      (() => {
+        const form = document.currentScript.closest("form");
+        const frequency = form.querySelector("[name='family_event[repeat_frequency]']");
+        const update = () => {
+          form.querySelector("[data-repeat-weekday]").hidden = frequency.value !== "weekly";
+          form.querySelector("[data-repeat-monthday]").hidden = frequency.value !== "monthly";
+        };
+        frequency.addEventListener("change", update);
+        update();
+      })();
+    </script>
     <p class="form-text">Monthly repeats use the last day of shorter months when needed. February 29 repeats on February 28 in other years.</p>
     <% if event.persisted? && event.repeating? %>
       <p class="form-text">Editing this form changes the whole series. Individually changed occurrences keep their saved details.</p>
       <% if event.recurrence_overrides.exists? %>
-        <p class="form-text">This series has individual changes. Its original start date and repeat frequency must stay the same; create a new series to change those.</p>
+        <p class="form-text">This series has individual changes. Its original start date and repeat pattern must stay the same; create a new series to change those.</p>
       <% end %>
     <% end %>
   <% end %>

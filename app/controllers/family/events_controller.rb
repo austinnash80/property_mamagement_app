@@ -36,8 +36,8 @@ class Family::EventsController < Family::BaseController
     @event = Family::Event.new(event_params.merge(created_by: current_user))
     if @event.save
       notify_others_about("event", @event.title, url: family_event_path(@event),
-                          detail: [@event.starts_on.strftime("%a %b %-d"), (@event.all_day? ? nil : @event.time_label)].compact.join(", "))
-      redirect_to family_calendar_path(month: @event.starts_on.strftime("%Y-%m")), notice: "Event added."
+                          detail: [@event.first_occurrence_on.strftime("%a %b %-d"), (@event.all_day? ? nil : @event.time_label)].compact.join(", "))
+      redirect_to family_calendar_path(month: @event.first_occurrence_on.strftime("%Y-%m")), notice: "Event added."
     else
       @people = User.by_name
       render :new, status: :unprocessable_entity
@@ -47,7 +47,7 @@ class Family::EventsController < Family::BaseController
   def update
     @event = occurrence_record if @occurrence
     attributes = event_params
-    attributes = attributes.except(:repeat_frequency, :repeat_until) if @occurrence
+    attributes = attributes.except(:repeat_frequency, :repeat_until, :repeat_weekday, :repeat_day_of_month) if @occurrence
     if @event.update(attributes)
       redirect_to family_event_path(@series || @event, occurrence_on: @occurrence&.original_on), notice: "Event updated."
     else
@@ -104,6 +104,6 @@ class Family::EventsController < Family::BaseController
 
   def event_params
     params.require(:family_event)
-          .permit(:title, :starts_on, :ends_on, :start_time, :end_time, :location, :notes, :person_id, :repeat_frequency, :repeat_until)
+          .permit(:title, :starts_on, :ends_on, :start_time, :end_time, :location, :notes, :person_id, :repeat_frequency, :repeat_until, :repeat_weekday, :repeat_day_of_month)
   end
 end
