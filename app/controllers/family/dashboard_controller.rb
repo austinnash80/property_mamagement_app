@@ -10,6 +10,7 @@ class Family::DashboardController < Family::BaseController
 
     @reference_count = Family::Reference.count
     @andie_count     = Family::AndieEntry.count
+    @austin_count    = Family::AustinEntry.count
     @rae_count       = Family::RaeEntry.count
     @note_count      = Family::Note.for_user(current_user).count
     @places_want     = Family::Place.want_to_go.count
