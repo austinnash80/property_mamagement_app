@@ -41,7 +41,9 @@ class Family::AustinEntriesControllerTest < ActionDispatch::IntegrationTest
     get family_root_path
     assert_response :success
     assert_select "h5", text: "Austin"
-    assert_select "a[href=?]", family_austin_entries_path, minimum: 2
+    assert_select "a[href=?]", family_austin_entries_path
+    get family_austin_entries_path
+    assert_select "a.active[href=?]", family_austin_entries_path
   end
 
   test "keeps Austin entries separate from Andie" do
