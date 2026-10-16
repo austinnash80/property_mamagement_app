@@ -33,9 +33,6 @@ module Family
   # Andie: the sections entries are filed under, in the order they are shown.
   ANDIE_SECTIONS = ["Doctors", "Contacts & addresses", "School & care", "Health", "Other"].freeze
 
-  # Austin: the same sections offered for Andie.
-  AUSTIN_SECTIONS = ["Doctors", "Contacts & addresses", "School & care", "Health", "Other"].freeze
-
   # Rae (the dog): the sections entries are filed under, in the order they are shown.
   RAE_SECTIONS = ["Vet", "Food & meds", "Grooming & boarding", "Health & records", "Other"].freeze
 
