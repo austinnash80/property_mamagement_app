@@ -36,6 +36,8 @@ module Family
   # Rae (the dog): the sections entries are filed under, in the order they are shown.
   RAE_SECTIONS = ["Vet", "Food & meds", "Grooming & boarding", "Health & records", "Other"].freeze
 
+  EVENT_WEEKDAYS = %w[Sunday Monday Tuesday Wednesday Thursday Friday Saturday].freeze
+
   EVENT_REPEAT_OPTIONS = {
     "Does not repeat" => "none", "Daily" => "daily", "Weekly" => "weekly",
     "Monthly" => "monthly", "Annually" => "annually"

@@ -147,4 +147,35 @@ class Family::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "weekly Monday choice is saved and appears on Mondays in the calendar" do
+    post family_events_path, params: { family_event: {
+      title: "Monday class", starts_on: "2026-10-14", repeat_frequency: "weekly", repeat_weekday: "1"
+    } }
+    meeting = Family::Event.last
+    assert_equal 1, meeting.repeat_weekday
+    get family_calendar_path(month: "2026-10")
+    assert_response :success
+    assert_select "a.fa-cal-event[href=?]", family_event_path(meeting, occurrence_on: "2026-10-19"), text: /Monday class/
+    assert_select "a.fa-cal-event[href=?]", family_event_path(meeting, occurrence_on: "2026-10-14"), count: 0
+    get edit_family_event_path(meeting)
+    assert_select "select#family_event_repeat_weekday option[selected][value='1']", text: "Monday"
+    get family_event_path(meeting, occurrence_on: "2026-10-19")
+    assert_match "Every Monday", response.body
+  end
+
+  test "monthly day choice is editable and preserved in the form" do
+    post family_events_path, params: { family_event: {
+      title: "Monthly bill", starts_on: "2026-10-16", repeat_frequency: "monthly", repeat_day_of_month: "14"
+    } }
+    assert_redirected_to family_calendar_path(month: "2026-11")
+    bill = Family::Event.last
+    assert_equal 14, bill.repeat_day_of_month
+    get edit_family_event_path(bill)
+    assert_select "select#family_event_repeat_day_of_month option[selected][value='14']", text: "14th"
+    patch family_event_path(bill), params: { family_event: { repeat_day_of_month: "15" } }
+    assert_redirected_to family_event_path(bill)
+    get family_calendar_path(month: "2026-11")
+    assert_select "a.fa-cal-event[href=?]", family_event_path(bill, occurrence_on: "2026-11-15"), text: /Monthly bill/
+  end
+
 end

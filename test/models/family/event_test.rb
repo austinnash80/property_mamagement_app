@@ -114,4 +114,51 @@ class Family::EventTest < ActiveSupport::TestCase
     assert_nil birthday.occurrence_on(Date.new(2030, 5, 12))
   end
 
+  test "weekly repeats on the selected weekday starting on or after the start date" do
+    meeting = event(starts_on: Date.new(2026, 10, 14), repeat_frequency: "weekly", repeat_weekday: 1)
+    assert_equal [Date.new(2026, 10, 19), Date.new(2026, 10, 26)], meeting.occurrence_dates(Date.new(2026, 10, 1)..Date.new(2026, 10, 31))
+    assert_equal "Every Monday", meeting.repeat_label
+    assert_nil meeting.occurrence_on(Date.new(2026, 10, 14))
+    assert meeting.occurrence_on(Date.new(2026, 10, 19))
+  end
+
+  test "monthly repeats use the selected day and skip dates before the start" do
+    bill = event(starts_on: Date.new(2026, 10, 16), repeat_frequency: "monthly", repeat_day_of_month: 14)
+    assert_equal [Date.new(2026, 11, 14), Date.new(2026, 12, 14)], bill.occurrence_dates(Date.new(2026, 10, 1)..Date.new(2026, 12, 31))
+    assert_equal "Monthly on the 14th", bill.repeat_label
+    bill.update!(repeat_day_of_month: 31)
+    assert_equal [Date.new(2026, 10, 31), Date.new(2026, 11, 30), Date.new(2026, 12, 31)], bill.occurrence_dates(Date.new(2026, 10, 1)..Date.new(2026, 12, 31))
+  end
+
+  test "selected repeat days respect cutoff, duration and individual changes" do
+    meeting = event(starts_on: Date.new(2026, 10, 14), ends_on: Date.new(2026, 10, 15), repeat_frequency: "weekly", repeat_weekday: 1, repeat_until: Date.new(2026, 10, 26))
+    occurrence = meeting.occurrence_on(Date.new(2026, 10, 19))
+    assert_equal Date.new(2026, 10, 20), occurrence.last_day
+    meeting.recurrence_overrides.create!(title: "Moved", original_on: occurrence.original_on, starts_on: Date.new(2026, 10, 21))
+    assert_not meeting.update(repeat_weekday: 2)
+    meeting.reload
+    assert_empty meeting.occurrence_dates(Date.new(2026, 11, 1)..Date.new(2026, 11, 30))
+    assert_equal ["Moved"], Family::Event.occurrences_between(Date.new(2026, 10, 21)..Date.new(2026, 10, 21)).map(&:title)
+  end
+
+  test "invalid repeat days are rejected and irrelevant choices are cleared" do
+    weekly = event(repeat_frequency: "weekly")
+    assert_not weekly.update(repeat_weekday: 7)
+    monthly = event(repeat_frequency: "monthly")
+    assert_not monthly.update(repeat_day_of_month: 0)
+    assert_not monthly.update(repeat_day_of_month: 32)
+    weekly.reload.update!(repeat_frequency: "daily", repeat_weekday: 1, repeat_day_of_month: 14)
+    assert_nil weekly.repeat_weekday
+    assert_nil weekly.repeat_day_of_month
+  end
+
+  test "a cutoff before the first selected weekday is rejected" do
+    meeting = Family::Event.new(title: "Monday", starts_on: "2026-10-14", repeat_frequency: "weekly", repeat_weekday: 1, repeat_until: "2026-10-16")
+    assert_not meeting.valid?
+    assert meeting.errors[:repeat_until].any?
+    meeting.repeat_until = Date.new(2026, 10, 19)
+    assert meeting.valid?
+    assert_equal Date.new(2026, 10, 19), meeting.first_occurrence_on
+  end
+
 end

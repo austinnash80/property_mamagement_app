@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_10_16_000200) do
+ActiveRecord::Schema.define(version: 2026_10_16_000300) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -182,6 +182,8 @@ ActiveRecord::Schema.define(version: 2026_10_16_000200) do
     t.bigint "recurrence_parent_id"
     t.date "original_on"
     t.boolean "cancelled", default: false, null: false
+    t.integer "repeat_weekday"
+    t.integer "repeat_day_of_month"
     t.index ["person_id"], name: "index_family_events_on_person_id"
     t.index ["recurrence_parent_id", "original_on"], name: "index_family_events_on_series_and_original_date", unique: true
     t.index ["starts_on"], name: "index_family_events_on_starts_on"
