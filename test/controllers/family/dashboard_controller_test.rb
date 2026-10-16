@@ -15,4 +15,16 @@ class Family::DashboardControllerTest < ActionDispatch::IntegrationTest
       assert_select 'meta[name="apple-mobile-web-app-title"][content="Nash Family"]'
     end
   end
+  test "Austin feature is removed from home and navigation" do
+    [family_root_path, family_andie_entries_path].each do |path|
+      get path
+      assert_response :success
+      assert_select "a[href^='/family/austin']", count: 0
+      assert_select ".card-title", text: "Austin", count: 0
+    end
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/family/austin", method: :get)
+    end
+  end
+
 end
