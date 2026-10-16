@@ -37,6 +37,9 @@ namespace :family, path: "family" do
   # Everything lives on the index page, so there is no show action.
   resources :andie_entries, path: "andie", except: :show
 
+  # Austin: personal reference entries, following Andie.
+  resources :austin_entries, path: "austin", except: :show
+
   # Rae (the dog): vet, food and meds, grooming, boarding. Same shape as Andie.
   resources :rae_entries, path: "rae", except: :show
 
